@@ -1,0 +1,52 @@
+from gower_distance import make_gower_matrix
+import numpy as np
+import polars as pl
+import pytest
+
+def test_gower_matrix_polars():
+    engagement_levels = ["Muy motivado", "Motivado", "Neutro", "Poco Motivado", "Desmotivado"]
+    # Crear un DataFrame de Polars con datos mixtos
+    df = pl.DataFrame({
+        "linguistic": [1.0, 0.8, 0.3],
+        "logical": [0.5, 0.7, 0.2],
+        "Musical": [0.2, 0.4, 0.9],
+        "Bodily": [0.9, 0.6, 0.1],
+        "Intrapersonal": [0.3, 0.5, 0.8],
+        "Interpersonal": [0.4, 0.2, 0.7],
+        "Naturalist": [0.6, 0.9, 0.4],
+        "Visual": [0.7, 0.1, 0.5],
+        "Aural": [0.8, 0.3, 0.6],
+        "Read_Write": [0.2, 0.4, 0.9],
+        "Kinesthetic": [0.5, 0.7, 0.2],
+        "Behavioral": ["Motivado", "Neutro", "Desmotivado"],
+        "Emotional": ["Motivado", "Desmotivado", "Neutro"],
+        "Cognitive": ["Desmotivado", "Motivado", "Neutro"]
+    },
+    schema={
+        "linguistic": pl.Float64,
+        "logical": pl.Float64,
+        "Musical": pl.Float64,
+        "Bodily": pl.Float64,
+        "Intrapersonal": pl.Float64,
+        "Interpersonal": pl.Float64,
+        "Naturalist": pl.Float64,
+        "Visual": pl.Float64,
+        "Aural": pl.Float64,
+        "Read_Write": pl.Float64,
+        "Kinesthetic": pl.Float64,
+        "Behavioral": pl.Categorical,
+        "Emotional": pl.Categorical,
+        "Cognitive": pl.Categorical
+    })
+
+    # Calcular la matriz de Gower
+    gower_matrix = make_gower_matrix(df)
+    return
+
+    # Verificar la forma de la matriz resultante
+    assert gower_matrix.shape == (3, 3)
+
+    # Verificar algunos valores específicos en la matriz de Gower
+    assert np.isclose(gower_matrix[0, 0], 0.0)  # Distancia consigo mismo
+    assert np.isclose(gower_matrix[0, 1], 0.5)  # Distancia entre filas 0 y 1
+    assert np.isclose(gower_matrix[0, 2], 0.33333333)  # Distancia entre filas 0 y 2
