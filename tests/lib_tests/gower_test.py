@@ -43,6 +43,10 @@ def test_gower_matrix_polars():
     gower_matrix = make_gower_matrix(df)
     # Verificar la forma de la matriz resultante
     assert gower_matrix.size == 3
+    
+    for i in range(3):
+        for j in range(3):
+            assert 0.0 <= gower_matrix.get(i, j) <= 1.0
 
     # Verificar algunos valores específicos en la matriz de Gower
     assert np.isclose(gower_matrix.get(0, 0), 0.0)  # Distancia consigo mismo

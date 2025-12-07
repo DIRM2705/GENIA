@@ -8,6 +8,7 @@ name="gower_distance"
 crate-type = ["cdylib"]
 
 [dependencies]
+num_cpus = "1.17.0"
 numpy = "0.26.0"
 polars = "0.52.0"
 pyo3 = "0.26.0"
