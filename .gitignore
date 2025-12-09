@@ -1,4 +1,4 @@
 /.venv
 */target/
-*/__pycache__/
+tests/lib_tests/__pycache__/
 /.pytest_cache/
