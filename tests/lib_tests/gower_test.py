@@ -4,7 +4,6 @@ import polars as pl
 import pytest
 
 def test_gower_matrix_polars():
-    engagement_levels = ["Muy motivado", "Motivado", "Neutro", "Poco Motivado", "Desmotivado"]
     # Crear un DataFrame de Polars con datos mixtos
     df = pl.DataFrame({
         "Linguistic": [1.0, 0.8, 0.3],
