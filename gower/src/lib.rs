@@ -118,15 +118,15 @@ mod gower_distance {
         let mut threads: Vec<thread::JoinHandle<()>> = vec![]; //Vector to hold thread handles
         let rows = student_data.lock().unwrap().rows;
         //Determine the number of threads to use
-        let max_threads = min(rows, num_cpus::get() - 2);
+        let max_threads = num_cpus::get() - 2;
 
         //Calculate number of operations between students per thread
-        let ops_per_thread = (rows * (rows - 1) / 2) / max_threads;
+        let ops_per_thread = (rows * (rows - 1) / 2) / max_threads+1;
 
         //Create threads to compute Gower distances in parallel
         for thread_index in 0..max_threads {
             let begin_index = thread_index * ops_per_thread;
-            if begin_index >= rows {
+            if begin_index >= gower_matrix.data.len() {
                 break;
             }
             threads.push(create_thread(
@@ -149,6 +149,7 @@ mod gower_distance {
         sender: Sender<(usize, f64)>,
     ) -> thread::JoinHandle<()> {
         let (mut i, mut j) = gower_matrix.get_indices(op_idx);
+        let size = gower_matrix.size;
         return thread::spawn(move || {
             let student_data_guard = student_data.lock().unwrap();
             let total_categories = student_data_guard.category_count;
@@ -175,8 +176,11 @@ mod gower_distance {
                 ops_per_thread -= 1;
                 op_idx += 1;
                 
-                if j + 1 >= student_data.lock().unwrap().rows {
+                if j + 1 >= size {
                     i += 1;
+                    if i >= size-1 {
+                        break; //All pairs processed
+                    }
                     let student_data_guard = student_data.lock().unwrap();
                     i_num_distances = student_data_guard.get_row_numerical(i);
                     i_cat_distances = student_data_guard.get_row_categorical(i);
