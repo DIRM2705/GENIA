@@ -8,6 +8,7 @@ name="gower_distance"
 crate-type = ["cdylib"]
 
 [dependencies]
+symmetric_matrix = {path = "../symmetric_matrix"}
 num_cpus = "1.17.0"
 numpy = "0.26.0"
 polars = {version = "0.52.0", features = ["lazy", "rows", "timezones"]}

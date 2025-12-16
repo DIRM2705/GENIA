@@ -3,105 +3,34 @@ mod student_data;
 #[pyo3::pymodule]
 mod gower_distance {
     use crate::student_data::StudentData;
-    use numpy::ndarray;
+    use symmetric_matrix::symmetric_matrix::SymmetricMatrix;
     use pyo3::prelude::*;
     use pyo3_polars::PyDataFrame;
-    use std::cmp::{max, min};
     use std::sync::mpsc::Sender;
     use std::sync::{Arc, Mutex, mpsc};
     use std::thread;
     use std::time::Duration;
     use std::vec;
 
-    #[pyclass]
-    struct GowerMatrix {
-        data: ndarray::Array<f64, ndarray::Dim<[usize; 1]>>, //1D array to store upper triangular matrix values
-        #[pyo3(get)]
-        size: usize,
-        row_starts: Vec<i32>,
-    }
-
-    #[pymethods]
-    impl GowerMatrix {
-        #[new]
-        fn new(size: usize) -> Self {
-            //Create a new GowerMatrix with given size
-
-            //The array only needs to store the upper triangular matrix thus, its max size is n*(n+1)/2 according
-            //to the formula for the sum of the first n natural numbers
-            let array_size = size * (size - 1) / 2; //max size of the array to store the upper triangular matrix
-
-            //Precompute the starting indices of each row in the 1D array
-            let mut row_starts = Vec::with_capacity(size);
-            let n = size as i32;
-            row_starts.push(-1);
-            for i in 1..size as i32 {
-                let start_index = row_starts[(i - 1) as usize] - 1 + n - i;
-                row_starts.push(start_index);
-            }
-            return GowerMatrix {
-                data: ndarray::Array::zeros((array_size,)), //Initialize the array with zeros
-                size,       //number of rows/columns in the square matrix
-                row_starts, //starting indices of each virtual row representation
-            };
-        }
-
-        fn get_indices(&self, index: usize) -> (usize, usize) {
-            /*
-               Given a linear index in the 1D array representation of the upper triangular matrix,
-               return the corresponding (i, j) indices in the 2D matrix.
-            */
-            let p = index as f64;
-            let n = self.size as f64;
-            assert!(index < self.data.len(), "Index out of bounds");
-            let b = 2.0 * n - 3.0; //Coefficient for the quadratic equation
-            let c = 8.0 * (p - n + 2.0); //Constant term for the quadratic equation
-
-            //Solve the quadratic equation to find the row index i
-            let i = ((b - (b * b - c).sqrt()) / 2.0).ceil() as usize;
-            //Calculate the column index j
-            let j = (p - self.row_starts[i] as f64) as usize;
-            return (i, j);
-        }
-
-        fn get(&self, i1: usize, j1: usize) -> f64 {
-            assert!(i1 < self.size && j1 < self.size, "Index out of bounds");
-            if i1 == j1 {
-                return 0.0; //Distance to self is zero
-            }
-            
-            //else
-            //Get the value at position (i,j) in the Gower matrix
-            let i = min(i1, j1);
-            let j = max(i1, j1);
-            let index = self.row_starts[i] + j as i32; //Calculate the index in the 1D array
-            return self.data[index as usize];
-        }
-
-        fn set(&mut self, index : usize, value: f64) {
-            assert!(index < self.data.len(), "Index out of bounds");
-            self.data[index] = value; //Set the value in the 1D array
-        }
-    }
     #[pyfunction]
-    fn make_gower_matrix(pydf: PyDataFrame) -> PyResult<GowerMatrix> {
+    fn make_gower_matrix(pydf: PyDataFrame) -> PyResult<SymmetricMatrix> {
         /*
            Gower distance calculation
            ARGS:
                df: DataFrame that includes both numerical and categorical variables
            RETURNS:
-               struct GowerMatrix that includes the gower distance matrix and its size
+               struct SymmetricMatrix that includes the gower distance matrix and its size
         */
 
         let students_data = Arc::new(Mutex::new(StudentData::new(pydf.into())));
         let student_count = students_data.lock().unwrap().rows;
-        let mut gower_matrix = GowerMatrix::new(student_count);
+        let mut gower_matrix = SymmetricMatrix::new(student_count);
         let (tx, rx) = mpsc::channel();
         let threads = create_threads(Arc::clone(&students_data), &gower_matrix, tx);
 
         // Wait for all threads to finish and collect results
         while let Ok((idx, distance)) = rx.recv_timeout(Duration::from_millis(500)) {
-            gower_matrix.set(idx, distance);
+            gower_matrix.data[idx] = distance;
         }
         for handle in threads {
             handle.join().expect("Thread panicked");
@@ -112,7 +41,7 @@ mod gower_distance {
 
     fn create_threads(
         student_data: Arc<Mutex<StudentData>>,
-        gower_matrix: &GowerMatrix,
+        gower_matrix: &SymmetricMatrix,
         sender: Sender<(usize, f64)>,
     ) -> Vec<thread::JoinHandle<()>> {
         let mut threads: Vec<thread::JoinHandle<()>> = vec![]; //Vector to hold thread handles
@@ -144,7 +73,7 @@ mod gower_distance {
     fn create_thread(
         mut op_idx: usize,
         mut ops_per_thread: usize,
-        gower_matrix: &GowerMatrix,
+        gower_matrix: &SymmetricMatrix,
         student_data: Arc<Mutex<StudentData>>,
         sender: Sender<(usize, f64)>,
     ) -> thread::JoinHandle<()> {
