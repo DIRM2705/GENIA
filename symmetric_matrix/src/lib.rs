@@ -61,7 +61,7 @@ pub mod symmetric_matrix {
             }
             //else
             let (i, j) = if i1 < j1 { (i1, j1) } else { (j1, i1) }; //Ensure i < j for upper triangular access
-            let index = (self.row_starts[i] + (j - i) as i32) as usize; //Calculate the linear index
+            let index = (self.row_starts[i] + j as i32) as usize; //Calculate the linear index
             return self.data[index]; //Return the stored value
         }
     }
