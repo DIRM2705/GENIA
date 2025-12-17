@@ -1,7 +1,7 @@
 use polars::prelude::DataFrame;
 use polars::prelude::*;
 use std::sync::mpsc::Sender;
-use std::sync::{Arc, Mutex, mpsc};
+use std::sync::{Arc, mpsc};
 use std::thread;
 use std::time::Duration;
 use std::vec;
@@ -30,7 +30,7 @@ pub fn make_matrix(dataframe: DataFrame) -> Result<SymmetricMatrix, Box<dyn std:
         .unwrap()
         .into_no_null_iter()
         .collect::<Vec<f64>>();
-    let gpa_ref = Arc::new(Mutex::new(gpas));
+    let gpa_ref = Arc::new(gpas);
     drop(dataframe); //Free up memory
     let mut bmatrix = SymmetricMatrix::new(student_count);
     let (tx, rx) = mpsc::channel();
@@ -49,7 +49,7 @@ pub fn make_matrix(dataframe: DataFrame) -> Result<SymmetricMatrix, Box<dyn std:
 
 fn create_threads(
     avg: f64,
-    gpa_ref: Arc<Mutex<Vec<f64>>>,
+    gpa_ref: Arc<Vec<f64>>,
     bmatrix: &SymmetricMatrix,
     sender: Sender<(usize, f64)>,
 ) -> Vec<thread::JoinHandle<()>> {
@@ -81,7 +81,7 @@ fn create_threads(
 
 fn create_thread(
     avg: f64,
-    gpa_ref: Arc<Mutex<Vec<f64>>>,
+    gpa_ref: Arc<Vec<f64>>,
     mut op_idx: usize,
     mut ops_per_thread: usize,
     bmatrix: &SymmetricMatrix,
@@ -90,14 +90,10 @@ fn create_thread(
     let (mut i, mut j) = bmatrix.get_indices(op_idx);
     let size = bmatrix.size;
     return thread::spawn(move || {
-        let student_data_guard = gpa_ref.lock().unwrap();
-        let mut i_value = student_data_guard[i];
-        drop(student_data_guard); //Release the lock before entering the loop
+        let mut i_value = gpa_ref[i];
 
         while ops_per_thread > 0 {
-            let student_data_guard = gpa_ref.lock().unwrap();
-            let j_value = student_data_guard[j];
-            drop(student_data_guard); //Release the lock before calculating distances
+            let j_value = gpa_ref[j];
 
             //Calculate distances for numerical columns
             let total_distance = (avg - (i_value + j_value) / 2.0).abs();
@@ -112,9 +108,7 @@ fn create_thread(
                 if i >= size - 1 {
                     break; //All pairs processed
                 }
-                let student_data_guard = gpa_ref.lock().unwrap();
-                i_value = student_data_guard[i];
-                drop(student_data_guard); //Release the lock before continuing
+                i_value = gpa_ref[i];
                 j = i + 1;
             } else {
                 j += 1;
