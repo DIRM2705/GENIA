@@ -1,5 +1,5 @@
-
 use priority_queue::PriorityQueue;
+use pyo3::prelude::*;
 use std::cmp::Reverse;
 use std::collections::HashSet;
 use symmetric_matrix::SymmetricMatrix;
@@ -16,6 +16,7 @@ impl Ord for OrderedF64 {
 }
 
 #[derive(Debug, Copy, Clone, Hash)]
+#[pyclass]
 pub struct Edge {
     u: usize,
     v: usize,
@@ -34,46 +35,41 @@ impl PartialEq for Edge {
 
 impl Eq for Edge {}
 
-pub struct MST
-{
-    adj_list : Vec<Vec<usize>>,
-    len : usize
+#[pyclass]
+#[derive(Clone)]
+pub struct MST {
+    pub adj_list: Vec<Vec<usize>>,
+    len: usize,
 }
 
-impl MST
-{
-    pub fn new(size : usize) -> Self
-    {
+#[pymethods]
+impl MST {
+    #[new]
+    fn new(size: usize) -> Self {
         let adj_list = vec![Vec::new(); size];
-        return MST
-        {
-            adj_list,
-            len : 0
-        }
+        return MST { adj_list, len: 0 };
     }
 
-    pub fn insert_edge(&mut self, edge : &Edge)
-    {
+    fn insert_edge(&mut self, edge: &Edge) {
         self.adj_list[edge.u].push(edge.v);
-        self.adj_list[edge.v].push(edge.u);
         self.len += 1;
     }
 }
 
 pub fn apply_kruscal(graph: &SymmetricMatrix) -> MST {
     let mut sorted_edges = sort_edges(graph);
-    let mut mst_nodes: HashSet<usize> = HashSet::new();
     let mut mst = MST::new(graph.size);
+    let mut included_nodes: HashSet<usize> = HashSet::new();
+    included_nodes.insert(0); //Start from node 0
 
     while mst.len < graph.size - 1 && !sorted_edges.is_empty() {
-        let edge_op = sorted_edges.pop();
-        println!("Edge {:?} popped from queue", edge_op);
-        let edge = edge_op.unwrap().0;
+        let edge = sorted_edges.pop().unwrap().0;
 
-        if !mst_nodes.contains(&edge.u) || !mst_nodes.contains(&edge.v) {
+        //Check if adding this edge would create a cycle
+        //Only is required to check the arrival node, since we are iterating in order
+        if !included_nodes.contains(&edge.v) {
+            included_nodes.insert(edge.v);
             mst.insert_edge(&edge);
-            mst_nodes.insert(edge.u);
-            mst_nodes.insert(edge.v);
         }
     }
 
@@ -101,3 +97,7 @@ fn sort_edges(matrix: &SymmetricMatrix) -> PriorityQueue<Edge, Reverse<OrderedF6
         } else {
             j += 1;
         }
+    }
+
+    return queue;
+}

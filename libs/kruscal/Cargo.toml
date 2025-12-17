@@ -6,3 +6,4 @@ edition = "2024"
 [dependencies]
 symmetric_matrix = {path = "../symmetric_matrix"}
 priority-queue = "2.7.0"
+pyo3 = "0.26.0"
