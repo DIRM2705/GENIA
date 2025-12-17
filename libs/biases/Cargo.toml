@@ -1,0 +1,9 @@
+[package]
+name = "biases"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+symmetric_matrix = {path = "../symmetric_matrix"}
+num_cpus = "1.17.0"
+polars = "0.52.0"

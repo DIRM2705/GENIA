@@ -1,4 +1,4 @@
-from gower_distance import make_gower_matrix
+from group_enhancer import make_gower_matrix
 import numpy as np
 import polars as pl
 import pytest
@@ -41,7 +41,7 @@ def test_gower_matrix_polars():
     # Calcular la matriz de Gower
     gower_matrix = make_gower_matrix(df)
     # Verificar la forma de la matriz resultante
-    assert gower_matrix.size == 3
+    assert len(gower_matrix) == 3
     
     for i in range(3):
         for j in range(3):
