@@ -1,16 +1,61 @@
 #[pyo3::pymodule]
 mod group_enhancer {
-    use hypergraph::Hypergraph;
+    use hypergraph::{Hypergraph, Student};
     use pyo3::exceptions::PyRuntimeError;
     use pyo3::prelude::*;
     use pyo3_polars::PyDataFrame;
-    use std::collections::VecDeque;
+    use gower::calculate_gower_distance;
     use symmetric_matrix::SymmetricMatrix;
 
     #[pyclass]
     struct PyHypergraph
     {
         inner: Hypergraph
+    }
+
+    #[pyclass]
+    struct PyStudent
+    {
+        inner: Student
+    }
+
+    #[pymethods]
+    impl PyStudent
+    {
+        #[new]
+        fn new(
+            id: usize,
+            ndd: u8,
+            mi_order: [u8; 8],
+            vark_scores: [f64; 4],
+            be: f64,
+            ee: f64,
+            ce: f64,
+            autonomous_motivation: f64,
+            competitive_motivation: f64,
+            relationship_motivation: f64,
+            gpa: f64,
+        ) -> Self {
+            return PyStudent {
+                inner: Student {
+                    id,
+                    ndd,
+                    mi_order,
+                    vark_scores,
+                    be,
+                    ee,
+                    ce,
+                    autonomous_motivation,
+                    competitive_motivation,
+                    relationship_motivation,
+                    gpa,
+                },
+            };
+        }
+
+        fn get_distance_to(&self, other: &PyStudent, ranks: Vec<f64>) -> f64 {
+            return calculate_gower_distance(&self.inner, &other.inner, ranks.as_ref());
+        }
     }
 
     #[pyclass]
@@ -29,60 +74,11 @@ mod group_enhancer {
         }
     }
 
-    #[pyclass]
-    struct PyMST {
-        inner: MST,
-        bfs_queue: VecDeque<usize>
-    }
-
-    #[pymethods]
-    impl PyMST {
-        #[new]
-        fn new(inner: MST) -> Self {
-            return PyMST {
-                inner,
-                bfs_queue: VecDeque::from([0usize]), //Start BFS from node 0
-            };
-        }
-
-        fn next(&mut self) -> Option<usize> {
-            //If there is no current pointer and the queue is empty, we have finished the traversal
-            if self.bfs_queue.is_empty()
-            {
-                return Option::None;
-            }
-
-            let return_value = self.bfs_queue.pop_front().unwrap(); //Get the next node from the queue
-
-            for neighbor in &self.inner.adj_list[return_value] {
-                self.bfs_queue.push_back(*neighbor); //Add all neighbors to the queue
-            }
-
-            return Option::Some(return_value); //Return the current node
-        }
-    }
-
-    #[pyfunction]
-    fn make_gower_matrix(pydf: PyDataFrame) -> PyResult<PySymmetricMatrix> {
-        let dataframe = pydf.into();
-        let gower_matrix = gower::make_matrix(dataframe)
-            .map_err(|e| PyErr::new::<PyRuntimeError, _>(format!("{}", e)))?;
-        return Ok(PySymmetricMatrix {
-            inner: gower_matrix,
-        });
-    }
-
     #[pyfunction]
     fn make_bias_matrix(pydf: PyDataFrame) -> PyResult<PySymmetricMatrix> {
         let dataframe = pydf.into();
         let bias_matrix = biases::make_matrix(dataframe)
             .map_err(|e| PyErr::new::<PyRuntimeError, _>(format!("{}", e)))?;
         return Ok(PySymmetricMatrix { inner: bias_matrix });
-    }
-
-    #[pyfunction]
-    fn kruscal_minimum_spanning_tree(matrix: &PySymmetricMatrix) -> PyResult<PyMST> {
-        let edges = apply_kruscal(&matrix.inner);
-        return Ok(PyMST::new(edges));
     }
 }
