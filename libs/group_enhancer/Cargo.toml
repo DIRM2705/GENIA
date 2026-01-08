@@ -7,7 +7,7 @@ edition = "2024"
 biases = {path = "../biases"}
 gower = {path = "../gower"}
 symmetric_matrix = {path = "../symmetric_matrix"}
-kruscal = {path = "../kruscal"}
+hypergraph = {path = "../hypergraph"}
 pyo3 = "0.26.0"
 pyo3-polars = "0.25.0"
 polars = "0.52.0"

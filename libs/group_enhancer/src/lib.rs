@@ -1,12 +1,17 @@
 #[pyo3::pymodule]
 mod group_enhancer {
-    use kruscal::apply_kruscal;
-    use kruscal::MST;
+    use hypergraph::Hypergraph;
     use pyo3::exceptions::PyRuntimeError;
     use pyo3::prelude::*;
     use pyo3_polars::PyDataFrame;
     use std::collections::VecDeque;
     use symmetric_matrix::SymmetricMatrix;
+
+    #[pyclass]
+    struct PyHypergraph
+    {
+        inner: Hypergraph
+    }
 
     #[pyclass]
     struct PySymmetricMatrix {
