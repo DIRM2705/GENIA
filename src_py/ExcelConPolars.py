@@ -1,5 +1,6 @@
 import polars as pl 
 from xlsx2csv import Xlsx2csv #para convertir excel a csv
+from grading import grade_students
 
 #instalé: pip install polars xlsx2csv fastexcel
 #También instalé: pip install openpyxl   -> pero tengo DUDA
@@ -59,4 +60,6 @@ print(df.schema)
 
 #Imprimir DataFrame
 print(df)
+
+grade_students(df)
 
