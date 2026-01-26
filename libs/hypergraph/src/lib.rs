@@ -1,30 +1,27 @@
-use std::collections::HashSet;
+use std::collections::{HashSet, HashMap, BTreeMap};
+use ordered_f64::OrderedF64;
 
 pub struct Hypergraph 
 {
-    hyperedges : Vec<Hyperedge>,
+    nodes : BTreeMap<usize, Student>,
+    hyperedges : HashMap<String, HashSet<usize>>,
 }
 
-pub struct Hyperedge
-{
-    name_id : String,
-    nodes : HashSet<Student>,
-}
-
+#[derive(Hash, Eq, PartialEq, Clone)]
 pub struct Student
 {
     pub id : usize,
     pub cronotype: u8, //Chronotype bit map
     pub ndd: u8, //Bit map for neurodevelopmental disorders 
     pub mi_order: [u8; 8], //Order of multiple intelligences
-    pub vark_scores: [f64; 4], //VARK learning style scores
-    pub be : f64, //Behavioral engagement percentage
-    pub ee: f64, //Emotional engagement percentage
-    pub ce : f64, //Cognitive engagement percentage
-    pub autonomous_motivation : f64, //Autonomous motivation percentage
-    pub competitive_motivation : f64, //Competitive motivation percentage
-    pub relationship_motivation : f64, //Relationship motivation percentage
-    pub gpa : f64,
+    pub vark_scores: [OrderedF64; 4], //VARK learning style scores
+    pub be : OrderedF64, //Behavioral engagement percentage
+    pub ee: OrderedF64, //Emotional engagement percentage
+    pub ce : OrderedF64, //Cognitive engagement percentage
+    pub autonomous_motivation : OrderedF64, //Autonomous motivation percentage
+    pub competitive_motivation : OrderedF64, //Competitive motivation percentage
+    pub relationship_motivation : OrderedF64, //Relationship motivation percentage
+    pub gpa : OrderedF64,
 }
 
 
@@ -35,64 +32,36 @@ impl Hypergraph
         //Create an empty hypergraph
         Hypergraph 
         {
-            hyperedges : Vec::new(),
+            nodes : BTreeMap::new(),
+            hyperedges : HashMap::new(),
         }
     }
 
-    pub fn add_hyperedge(&mut self, hyperedge: Hyperedge) 
+    pub fn add_hyperedge(&mut self, hyperedge_id : String) 
     {
-        self.hyperedges.push(hyperedge);
+
+        self.hyperedges.insert(hyperedge_id, HashSet::new());
     }
 
     pub fn add_node_to_hyperedge(&mut self, hyperedge_id: &str, student : &Student) 
     {
-        for he in &mut self.hyperedges 
+        if self.nodes.get(&student.id).is_none() 
         {
-            if he.name_id == hyperedge_id 
-            {
-                he.nodes.insert(student.clone());
-                return;
-            }
-        }
+            self.nodes.insert(student.id, student.clone());
+        } 
+
+        self.hyperedges.get_mut(hyperedge_id).unwrap().insert(student.id);
     }
 
     pub fn print(&self) 
     {
-        for he in &self.hyperedges 
+        for (hyperedge_id, node_idxs) in self.hyperedges.iter() 
         {
-            println!("Hyperedge: {}", he.name_id);
-            for node in &he.nodes 
+            println!("Hyperedge: {}", hyperedge_id);
+            for node in node_idxs.iter()
             {
-                println!(" - Student ID: {}", node.id);
+                println!(" - Student ID: {}", node);
             }
         }
-    }
-}
-
-impl Hyperedge
-{
-    //Create an empty hyperedge with a given name_id
-    pub fn new_empty(name_id: String) -> Self 
-    {
-        Hyperedge 
-        {
-            name_id,
-            nodes : HashSet::new(),
-        }
-    }
-
-    //Create a hyperedge with a given name_id and set of nodes
-    pub fn new(name_id: String, nodes: HashSet<Student>) -> Self 
-    {
-        Hyperedge 
-        {
-            name_id,
-            nodes,
-        }
-    }
-
-    pub fn add_node(&mut self, student: Student) 
-    {
-        self.nodes.insert(student);
     }
 }
