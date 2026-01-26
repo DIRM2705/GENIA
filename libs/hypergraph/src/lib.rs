@@ -42,6 +42,18 @@ impl Hypergraph
     {
         self.hyperedges.push(hyperedge);
     }
+
+    pub fn print(&self) 
+    {
+        for he in &self.hyperedges 
+        {
+            println!("Hyperedge: {}", he.name_id);
+            for node in &he.nodes 
+            {
+                println!(" - Student ID: {}", node.id);
+            }
+        }
+    }
 }
 
 impl Hyperedge
