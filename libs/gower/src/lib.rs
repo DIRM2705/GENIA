@@ -1,5 +1,4 @@
 use hypergraph::Student;
-use ordered_f64::OrderedF64;
 
 const TOTAL_ATTRIBUTES: f64 = 17.0; //Total number of attributes per student
 const NUMERICAL_ATTRIBUTES: usize = 10; //Number of numerical attributes
