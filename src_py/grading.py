@@ -6,7 +6,7 @@ AURAL_IDX = 1
 READWRITE_IDX = 2
 KINESTHETIC_IDX = 3
 
-def grade_students(students : pl.DataFrame):
+def grade_students(students : pl.DataFrame) -> pl.DataFrame:
     """
     Given a student record, return a PyStudent object with the results of the tests
     
@@ -24,7 +24,7 @@ def grade_students(students : pl.DataFrame):
             - "Motivation 36-43": The student's answers to the motivation questionnaire
             
     Returns:
-        PyStudent: An object containing the student's ID and their test results
+        DataFrame: A Polars DataFrame with the data obtained by grading student's formularies
     """
     VARK_scores = get_VARK_scores(students.select([f"VARK{i}" for i in range(1,14)]))
     students = students.with_columns(
@@ -38,24 +38,7 @@ def grade_students(students : pl.DataFrame):
     
     students = students.hstack(VARK_scores)
     
-    print(students)
-    
-    #cronotype = 
-    
-    
-    #Evaluate IM answers
-    
-    #Evaluate VARK answers
-    #vark_scores = [0, 0, 0, 0]  # Visual, Aural, Read/Write, Kinesthetic
-    #for i in range(1, 14):
-        #answers = student[f"VARK{i}"].split(';')
-        #score = get_VARK_scores(answers)
-        #vark_scores[VISUAL_IDX] += score[VISUAL_IDX]
-        #vark_scores[AURAL_IDX] += score[AURAL_IDX]
-        #vark_scores[READWRITE_IDX] += score[READWRITE_IDX]
-        #vark_scores[KINESTHETIC_IDX] += score[KINESTHETIC_IDX]
-        
-    #Evaluate Engagement answers
+    return students
     
         
         

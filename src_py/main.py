@@ -61,5 +61,7 @@ print(df.schema)
 #Imprimir DataFrame
 print(df)
 
-grade_students(df)
+df = grade_students(df)
 
+for row in df.iter_rows():
+    print(row)
