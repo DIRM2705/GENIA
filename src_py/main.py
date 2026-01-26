@@ -1,12 +1,15 @@
 import polars as pl 
 from xlsx2csv import Xlsx2csv #para convertir excel a csv
 from grading import grade_students
+from math import log10, floor
+from consts import *
+from group_enhancer import PyHypergraph, PyStudent
 
 #instalé: pip install polars xlsx2csv fastexcel
 #También instalé: pip install openpyxl   -> pero tengo DUDA
 
 #Convertir excel a csv
-Xlsx2csv("C:\\Users\\Daniel\\Desktop\\Identificación de ventajas y desventajas.xlsx").convert("Pruebas1.csv")
+#Xlsx2csv("C:\\Users\\Daniel\\Desktop\\Identificación de ventajas y desventajas.xlsx").convert("Pruebas1.csv")
 
 #Leer csv con polars, y hacer el DataFrame
 df = pl.read_csv("Pruebas1.csv",infer_schema_length=1000) #infer_schema_length para que detecte bien los tipos de datos, y analice las primeras 1000 filas
@@ -54,14 +57,67 @@ df = df.rename({"Trabajo mejor":"Cronotipo",
             "Usualmente, me siento libre de expresar mis ideas y opiniones":"AM3", 
             "He sido capaz de aprender nuevas habilidades interesantes últimamente":"CM2"}) 
 
-
+df = grade_students(df)
 #Imprimir esquema (schema) y datos -> diccionario interno -> Te dice: qué columnas hay y qué tipo tiene cada una
 print(df.schema)
 
 #Imprimir DataFrame
 print(df)
 
-df = grade_students(df)
+#Obtener número de clases
+n = df.height
+clases = floor(1 + 3.3*log10(n))
 
-for row in df.iter_rows():
-    print(row)
+#Clases de VARK
+rango_Visual = (df['Visual'].max() - df['Visual'].min())
+rango_Aural = (df['Aural'].max() - df['Aural'].min())
+rango_ReadWrite = (df['ReadWrite'].max() - df['ReadWrite'].min())
+rango_Kinesthetic = (df['Kinesthetic'].max() - df['Kinesthetic'].min())
+
+ancho_clase_Visual = rango_Visual / clases
+ancho_clase_Aural = rango_Aural / clases
+ancho_clase_ReadWrite = rango_ReadWrite / clases
+ancho_clase_Kinesthetic = rango_Kinesthetic / clases
+
+#Clases de motivación
+rango_AM = (df['AM'].max() - df['AM'].min())
+rango_RM = (df['RM'].max() - df['RM'].min())
+rango_CM = (df['CM'].max() - df['CM'].min())
+
+ancho_clase_AM = rango_AM / clases
+ancho_clase_RM = rango_RM / clases
+ancho_clase_CM = rango_CM / clases
+
+#Crear hipergrafo
+hypergraph = PyHypergraph()
+hypergraph.add_hyperedges_from_classes(clases, 'Visual')
+hypergraph.add_hyperedges_from_classes(clases, 'Aural')
+hypergraph.add_hyperedges_from_classes(clases, 'ReadWrite')
+hypergraph.add_hyperedges_from_classes(clases, 'Kinesthetic')
+hypergraph.add_hyperedges_from_classes(clases, 'AM')
+hypergraph.add_hyperedges_from_classes(clases, 'RM')
+hypergraph.add_hyperedges_from_classes(clases, 'CM')
+for tnd in NDD_LIST:
+    hypergraph.add_hyperedge(tnd)
+    
+    
+for student in df.iter_rows(named = True):
+    #Crear PyStudent
+    py_student = PyStudent(
+        student['Id'],
+        student["TND"],
+        [0]*8, #Placeholder para scores de IM
+        [student['Visual'], student['Aural'], student['ReadWrite'], student['Kinesthetic']],
+        0, #Placeholder para be
+        0, #Placeholder para ee
+        0, #Placeholder para ce
+        student['AM'],
+        student['RM'],
+        student['CM'],
+        0 #Placeholder para gpa
+    )
+    
+    #Añadir a hipergrafo
+    
+
+hypergraph.print()
