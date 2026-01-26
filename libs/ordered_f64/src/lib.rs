@@ -2,7 +2,7 @@ use std::ops;
 use std::hash::Hash;
 
 #[derive(Clone, Copy)]
-pub struct OrderedF64(f64);
+pub struct OrderedF64(pub f64);
 
 impl Hash for OrderedF64 {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
