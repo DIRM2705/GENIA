@@ -1,27 +1,54 @@
 #[pyo3::pymodule]
 mod group_enhancer {
-    use hypergraph::{Hypergraph, Student};
+    use gower::calculate_gower_distance;
+    use hypergraph::{Hyperedge, Hypergraph, Student};
     use pyo3::exceptions::PyRuntimeError;
     use pyo3::prelude::*;
     use pyo3_polars::PyDataFrame;
-    use gower::calculate_gower_distance;
     use symmetric_matrix::SymmetricMatrix;
 
     #[pyclass]
-    struct PyHypergraph
-    {
-        inner: Hypergraph
-    }
-
-    #[pyclass]
-    struct PyStudent
-    {
-        inner: Student
+    struct PyHypergraph {
+        inner: Hypergraph,
     }
 
     #[pymethods]
-    impl PyStudent
-    {
+    impl PyHypergraph {
+        #[new]
+        fn new() -> Self {
+            return PyHypergraph {
+                inner: Hypergraph::new(),
+            };
+        }
+
+        fn add_hyperedges_from_classes(&mut self, class_count: usize, class_base_name: &str) {
+            for class in 0..class_count {
+                let class_name = format!("{}{}", class_base_name, class);
+                self.inner.add_hyperedge(Hyperedge::new_empty(class_name));
+            }
+        }
+
+        fn add_hyperedge(&mut self, hyperedge_id : &str) {
+            self.inner.add_hyperedge(Hyperedge::new_empty(hyperedge_id.to_string()));
+        }
+
+        fn add_node_to_hyperedge(&mut self, student: &PyStudent, hyperedge_id: &str) {
+            self.inner
+                .add_node_to_hyperedge(hyperedge_id, &student.inner);
+        }
+
+        pub fn print(&self) {
+            self.inner.print();
+        }
+    }
+
+    #[pyclass]
+    struct PyStudent {
+        inner: Student,
+    }
+
+    #[pymethods]
+    impl PyStudent {
         #[new]
         fn new(
             id: usize,
