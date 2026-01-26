@@ -1,10 +1,9 @@
 #[pyo3::pymodule]
 mod group_enhancer {
     use gower::calculate_gower_distance;
-    use hypergraph::{Hyperedge, Hypergraph, Student};
-    use pyo3::exceptions::PyRuntimeError;
+    use hypergraph::{Hypergraph, Student};
+    use ordered_f64::OrderedF64;
     use pyo3::prelude::*;
-    use pyo3_polars::PyDataFrame;
     use symmetric_matrix::SymmetricMatrix;
 
     #[pyclass]
@@ -24,12 +23,12 @@ mod group_enhancer {
         fn add_hyperedges_from_classes(&mut self, class_count: usize, class_base_name: &str) {
             for class in 0..class_count {
                 let class_name = format!("{}{}", class_base_name, class);
-                self.inner.add_hyperedge(Hyperedge::new_empty(class_name));
+                self.inner.add_hyperedge(class_name);
             }
         }
 
         fn add_hyperedge(&mut self, hyperedge_id : &str) {
-            self.inner.add_hyperedge(Hyperedge::new_empty(hyperedge_id.to_string()));
+            self.inner.add_hyperedge(hyperedge_id.to_string());
         }
 
         fn add_node_to_hyperedge(&mut self, student: &PyStudent, hyperedge_id: &str) {
@@ -52,6 +51,7 @@ mod group_enhancer {
         #[new]
         fn new(
             id: usize,
+            cronotype: u8,
             ndd: u8,
             mi_order: [u8; 8],
             vark_scores: [f64; 4],
@@ -66,16 +66,22 @@ mod group_enhancer {
             return PyStudent {
                 inner: Student {
                     id,
+                    cronotype,
                     ndd,
                     mi_order,
-                    vark_scores,
-                    be,
-                    ee,
-                    ce,
-                    autonomous_motivation,
-                    competitive_motivation,
-                    relationship_motivation,
-                    gpa,
+                    vark_scores : [
+                        OrderedF64(vark_scores[0]),
+                        OrderedF64(vark_scores[1]),
+                        OrderedF64(vark_scores[2]),
+                        OrderedF64(vark_scores[3]),
+                    ],
+                    be : OrderedF64(be),
+                    ee : OrderedF64(ee),
+                    ce : OrderedF64(ce),
+                    autonomous_motivation : OrderedF64(autonomous_motivation),
+                    competitive_motivation : OrderedF64(competitive_motivation),
+                    relationship_motivation : OrderedF64(relationship_motivation),
+                    gpa : OrderedF64(gpa),
                 },
             };
         }
@@ -99,13 +105,5 @@ mod group_enhancer {
         fn get(&self, i: usize, j: usize) -> PyResult<f64> {
             return Ok(self.inner.get(i, j));
         }
-    }
-
-    #[pyfunction]
-    fn make_bias_matrix(pydf: PyDataFrame) -> PyResult<PySymmetricMatrix> {
-        let dataframe = pydf.into();
-        let bias_matrix = biases::make_matrix(dataframe)
-            .map_err(|e| PyErr::new::<PyRuntimeError, _>(format!("{}", e)))?;
-        return Ok(PySymmetricMatrix { inner: bias_matrix });
     }
 }

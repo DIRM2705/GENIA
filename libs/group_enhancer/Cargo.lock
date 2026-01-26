@@ -737,7 +737,6 @@ name = "gower"
 version = "0.1.0"
 dependencies = [
  "hypergraph",
- "ordered_f64",
 ]
 
 [[package]]
@@ -746,6 +745,7 @@ version = "0.1.0"
 dependencies = [
  "gower",
  "hypergraph",
+ "ordered_f64",
  "polars",
  "pyo3",
  "pyo3-polars",

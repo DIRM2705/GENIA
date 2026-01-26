@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+ordered_f64 = {path = "../ordered_f64"}
 gower = {path = "../gower"}
 symmetric_matrix = {path = "../symmetric_matrix"}
 hypergraph = {path = "../hypergraph"}
