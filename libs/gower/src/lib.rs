@@ -1,4 +1,5 @@
 use hypergraph::Student;
+use ordered_f64::OrderedF64;
 
 const TOTAL_ATTRIBUTES: f64 = 17.0; //Total number of attributes per student
 const NUMERICAL_ATTRIBUTES: usize = 10; //Number of numerical attributes
@@ -43,7 +44,7 @@ fn calculate_distances_numerical(s1 : &Student, s2: &Student, ranks: &Vec<f64>) 
     s2_row.extend(s2.vark_scores.iter()); //Add VARK scores
 
     for k in 0..NUMERICAL_ATTRIBUTES {
-        let diff = (s1_row[k] - s2_row[k]).abs();
+        let diff : f64 = (s1_row[k] - s2_row[k]).abs().into();
         distance += 1.0 - diff / ranks[k];
     }
     return distance;
