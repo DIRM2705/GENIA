@@ -43,6 +43,18 @@ impl Hypergraph
         self.hyperedges.push(hyperedge);
     }
 
+    pub fn add_node_to_hyperedge(&mut self, hyperedge_id: &str, student : &Student) 
+    {
+        for he in &mut self.hyperedges 
+        {
+            if he.name_id == hyperedge_id 
+            {
+                he.nodes.insert(student.clone());
+                return;
+            }
+        }
+    }
+
     pub fn print(&self) 
     {
         for he in &self.hyperedges 
@@ -76,5 +88,10 @@ impl Hyperedge
             name_id,
             nodes,
         }
+    }
+
+    pub fn add_node(&mut self, student: Student) 
+    {
+        self.nodes.insert(student);
     }
 }
