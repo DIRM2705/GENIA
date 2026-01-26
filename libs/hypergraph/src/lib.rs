@@ -14,6 +14,7 @@ pub struct Hyperedge
 pub struct Student
 {
     pub id : usize,
+    pub cronotype: u8, //Chronotype bit map
     pub ndd: u8, //Bit map for neurodevelopmental disorders 
     pub mi_order: [u8; 8], //Order of multiple intelligences
     pub vark_scores: [f64; 4], //VARK learning style scores
