@@ -3,7 +3,7 @@ from xlsx2csv import Xlsx2csv #para convertir excel a csv
 from grading import grade_students
 from math import log10, floor
 from consts import *
-from group_enhancer import PyHypergraph, PyStudent
+from group_enhancer import PyHypergraph
 
 #instalé: pip install polars xlsx2csv fastexcel
 #También instalé: pip install openpyxl   -> pero tengo DUDA
@@ -89,7 +89,7 @@ ancho_clase_RM = rango_RM / clases
 ancho_clase_CM = rango_CM / clases
 
 #Crear hipergrafo
-hypergraph = PyHypergraph()
+hypergraph = PyHypergraph(df)
 hypergraph.add_hyperedges_from_classes(clases, 'Visual')
 hypergraph.add_hyperedges_from_classes(clases, 'Aural')
 hypergraph.add_hyperedges_from_classes(clases, 'ReadWrite')
@@ -99,23 +99,6 @@ hypergraph.add_hyperedges_from_classes(clases, 'RM')
 hypergraph.add_hyperedges_from_classes(clases, 'CM')
 for tnd in NDD_LIST:
     hypergraph.add_hyperedge(tnd)
-    
-    
-for student in df.iter_rows(named = True):
-    #Crear PyStudent
-    py_student = PyStudent(
-        student['Id'],
-        student["TND"],
-        [0]*8, #Placeholder para scores de IM
-        [student['Visual'], student['Aural'], student['ReadWrite'], student['Kinesthetic']],
-        0, #Placeholder para be
-        0, #Placeholder para ee
-        0, #Placeholder para ce
-        student['AM'],
-        student['RM'],
-        student['CM'],
-        0 #Placeholder para gpa
-    )
     
     #Añadir a hipergrafo
     

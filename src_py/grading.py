@@ -53,7 +53,7 @@ def get_NDD_bitmask(tnd_series : pl.Series) -> pl.Series:
     aux_df = pl.DataFrame()
     aux_df = aux_df.with_columns(
         answers = tnd_series.str.to_lowercase().str.split(';'),
-        TND = pl.Series("TND", [0]*len(tnd_series), dtype=pl.Int8)
+        TND = pl.Series("TND", [0]*len(tnd_series), dtype=pl.UInt8)
     )
     
     for i in range(len(NDD_LIST)):
