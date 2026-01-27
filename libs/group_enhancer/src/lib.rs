@@ -1,11 +1,37 @@
 #[pyo3::pymodule]
 mod group_enhancer {
     use gower::calculate_gower_distance;
-    use hypergraph::{Hypergraph, Student};
+    use hypergraph::{Hypergraph, Student, CharacteristicType};
     use pyo3::prelude::*;
     use pyo3_polars::PyDataFrame;
     use pyo3::exceptions::PyValueError;
     use symmetric_matrix::SymmetricMatrix;
+
+    #[pyclass]
+    struct PyCharacteristicType {
+        inner: CharacteristicType
+    }
+    /*enum PyCharacteristicType
+    {
+        Chronotype(CharacteristicType::Chronotype(u8)),
+        AUTSIM(CharacteristicType::AUTSIM),
+        DISCALCULIA(CharacteristicType::DISCALCULIA),
+        ADHD(CharacteristicType::ADHD),
+        DISGRAFIA(CharacteristicType::DISGRAFIA),
+        MI_1(CharacteristicType::MI_1(u8)),
+        MI_2(CharacteristicType::MI_2(u8)),
+        MI_3(CharacteristicType::MI_3(u8)),
+        VARK_VISUAL(CharacteristicType::VARK_VISUAL(f64)),
+        VARK_AURAL(CharacteristicType::VARK_AURAL(f64)),
+        VARK_RW(CharacteristicType::VARK_RW(f64)),
+        VARK_KINESTHETIC(CharacteristicType::VARK_KINESTHETIC(f64)),
+        BE(CharacteristicType::BE(f64)),
+        EE(CharacteristicType::EE(f64)),
+        CE(CharacteristicType::CE(f64)),
+        AM(CharacteristicType::AM(f64)),
+        CM(CharacteristicType::CM(f64)),
+        RM(CharacteristicType::RM(f64)),
+    }*/
 
     #[pyclass]
     struct PyHypergraph {
@@ -15,31 +41,20 @@ mod group_enhancer {
     #[pymethods]
     impl PyHypergraph {
         #[new]
-        fn new(py_df : PyDataFrame) -> Self {
+        fn new() -> Self {
             return PyHypergraph {
-                inner: Hypergraph::new(py_df.into()),
+                inner: Hypergraph::new(),
             };
         }
 
-        fn add_hyperedges_from_classes(&mut self, class_count: usize, class_base_name: &str) {
-            for class in 0..class_count {
-                let class_name = format!("{}{}", class_base_name, class);
-                self.inner.add_hyperedge(class_name);
+        fn add_students_to_characteristic(&mut self, characteristic : &PyCharacteristicType, student_ids: Vec<usize>) {
+            for student_id in student_ids
+            {
+                self.inner.add_student_to_characteristic(&characteristic.inner, student_id);
             }
         }
 
-        fn add_hyperedge(&mut self, hyperedge_id : &str) {
-            self.inner.add_hyperedge(hyperedge_id.to_string());
-        }
-
-        fn add_student_to_hyperedge(&mut self, student_id: usize, hyperedge_id: &str) -> PyResult<()>
-        {
-            self.inner
-                .add_student_to_hyperedge(hyperedge_id, student_id).map_err(|e| PyErr::new::<PyValueError, _>(e))?;
-            return Ok(());
-        }
-
-        pub fn print(&self) {
+        fn print(&self) {
             self.inner.print();
         }
     }
