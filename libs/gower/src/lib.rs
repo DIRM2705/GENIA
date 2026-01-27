@@ -43,7 +43,7 @@ fn calculate_distances_numerical(s1 : &Student, s2: &Student, ranks: &Vec<f64>) 
     s2_row.extend(s2.vark_scores.iter()); //Add VARK scores
 
     for k in 0..NUMERICAL_ATTRIBUTES {
-        let diff : f64 = (s1_row[k] - s2_row[k]).abs().into();
+        let diff : f64 = (s1_row[k] - s2_row[k]).abs();
         distance += 1.0 - diff / ranks[k];
     }
     return distance;

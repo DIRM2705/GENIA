@@ -5,3 +5,4 @@ edition = "2024"
 
 [dependencies]
 ordered_f64 = {path = "../ordered_f64"}
+polars = "0.52.0"

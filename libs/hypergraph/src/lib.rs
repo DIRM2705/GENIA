@@ -1,38 +1,37 @@
-use std::collections::{HashSet, HashMap, BTreeMap};
-use ordered_f64::OrderedF64;
+use std::collections::{HashSet, HashMap};
+use polars::prelude::*;
 
 pub struct Hypergraph 
 {
-    nodes : BTreeMap<usize, Student>,
+    nodes : DataFrame,
     hyperedges : HashMap<String, HashSet<usize>>,
 }
 
-#[derive(Hash, Eq, PartialEq, Clone)]
 pub struct Student
 {
     pub id : usize,
     pub cronotype: u8, //Chronotype bit map
     pub ndd: u8, //Bit map for neurodevelopmental disorders 
     pub mi_order: [u8; 8], //Order of multiple intelligences
-    pub vark_scores: [OrderedF64; 4], //VARK learning style scores
-    pub be : OrderedF64, //Behavioral engagement percentage
-    pub ee: OrderedF64, //Emotional engagement percentage
-    pub ce : OrderedF64, //Cognitive engagement percentage
-    pub autonomous_motivation : OrderedF64, //Autonomous motivation percentage
-    pub competitive_motivation : OrderedF64, //Competitive motivation percentage
-    pub relationship_motivation : OrderedF64, //Relationship motivation percentage
-    pub gpa : OrderedF64,
+    pub vark_scores: [f64; 4], //VARK learning style scores
+    pub be : f64, //Behavioral engagement percentage
+    pub ee: f64, //Emotional engagement percentage
+    pub ce : f64, //Cognitive engagement percentage
+    pub autonomous_motivation : f64, //Autonomous motivation percentage
+    pub competitive_motivation : f64, //Competitive motivation percentage
+    pub relationship_motivation : f64, //Relationship motivation percentage
+    pub gpa : f64,
 }
 
 
 impl Hypergraph 
 {
-    pub fn new() -> Self 
+    pub fn new(nodes : DataFrame) -> Self 
     {
         //Create an empty hypergraph
         Hypergraph 
         {
-            nodes : BTreeMap::new(),
+            nodes,
             hyperedges : HashMap::new(),
         }
     }
@@ -43,14 +42,15 @@ impl Hypergraph
         self.hyperedges.insert(hyperedge_id, HashSet::new());
     }
 
-    pub fn add_node_to_hyperedge(&mut self, hyperedge_id: &str, student : &Student) 
+    pub fn add_student_to_hyperedge(&mut self, hyperedge_id: &str, student_id : usize) -> Result<(), String>
     {
-        if self.nodes.get(&student.id).is_none() 
+        if self.nodes.get(student_id).is_none() 
         {
-            self.nodes.insert(student.id, student.clone());
+            return Err(format!("Student with id {} does not exist in the hypergraph", student_id).into());
         } 
 
-        self.hyperedges.get_mut(hyperedge_id).unwrap().insert(student.id);
+        self.hyperedges.get_mut(hyperedge_id).unwrap().insert(student_id);
+        return Ok(());
     }
 
     pub fn print(&self) 

@@ -930,6 +930,7 @@ name = "hypergraph"
 version = "0.1.0"
 dependencies = [
  "ordered_f64",
+ "polars",
 ]
 
 [[package]]

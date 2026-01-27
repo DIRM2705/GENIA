@@ -2,8 +2,9 @@
 mod group_enhancer {
     use gower::calculate_gower_distance;
     use hypergraph::{Hypergraph, Student};
-    use ordered_f64::OrderedF64;
     use pyo3::prelude::*;
+    use pyo3_polars::PyDataFrame;
+    use pyo3::exceptions::PyValueError;
     use symmetric_matrix::SymmetricMatrix;
 
     #[pyclass]
@@ -14,9 +15,9 @@ mod group_enhancer {
     #[pymethods]
     impl PyHypergraph {
         #[new]
-        fn new() -> Self {
+        fn new(py_df : PyDataFrame) -> Self {
             return PyHypergraph {
-                inner: Hypergraph::new(),
+                inner: Hypergraph::new(py_df.into()),
             };
         }
 
@@ -31,9 +32,11 @@ mod group_enhancer {
             self.inner.add_hyperedge(hyperedge_id.to_string());
         }
 
-        fn add_node_to_hyperedge(&mut self, student: &PyStudent, hyperedge_id: &str) {
+        fn add_student_to_hyperedge(&mut self, student_id: usize, hyperedge_id: &str) -> PyResult<()>
+        {
             self.inner
-                .add_node_to_hyperedge(hyperedge_id, &student.inner);
+                .add_student_to_hyperedge(hyperedge_id, student_id).map_err(|e| PyErr::new::<PyValueError, _>(e))?;
+            return Ok(());
         }
 
         pub fn print(&self) {
@@ -48,44 +51,6 @@ mod group_enhancer {
 
     #[pymethods]
     impl PyStudent {
-        #[new]
-        fn new(
-            id: usize,
-            cronotype: u8,
-            ndd: u8,
-            mi_order: [u8; 8],
-            vark_scores: [f64; 4],
-            be: f64,
-            ee: f64,
-            ce: f64,
-            autonomous_motivation: f64,
-            competitive_motivation: f64,
-            relationship_motivation: f64,
-            gpa: f64,
-        ) -> Self {
-            return PyStudent {
-                inner: Student {
-                    id,
-                    cronotype,
-                    ndd,
-                    mi_order,
-                    vark_scores : [
-                        OrderedF64(vark_scores[0]),
-                        OrderedF64(vark_scores[1]),
-                        OrderedF64(vark_scores[2]),
-                        OrderedF64(vark_scores[3]),
-                    ],
-                    be : OrderedF64(be),
-                    ee : OrderedF64(ee),
-                    ce : OrderedF64(ce),
-                    autonomous_motivation : OrderedF64(autonomous_motivation),
-                    competitive_motivation : OrderedF64(competitive_motivation),
-                    relationship_motivation : OrderedF64(relationship_motivation),
-                    gpa : OrderedF64(gpa),
-                },
-            };
-        }
-
         fn get_distance_to(&self, other: &PyStudent, ranks: Vec<f64>) -> f64 {
             return calculate_gower_distance(&self.inner, &other.inner, ranks.as_ref());
         }
