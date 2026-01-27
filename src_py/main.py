@@ -3,7 +3,7 @@ from xlsx2csv import Xlsx2csv #para convertir excel a csv
 from grading import grade_students
 from math import log10, floor
 from consts import *
-from group_enhancer import PyHypergraph
+from group_enhancer import PyHypergraph, PyCharacteristicType
 
 #instalé: pip install polars xlsx2csv fastexcel
 #También instalé: pip install openpyxl   -> pero tengo DUDA
@@ -89,18 +89,20 @@ ancho_clase_RM = rango_RM / clases
 ancho_clase_CM = rango_CM / clases
 
 #Crear hipergrafo
-hypergraph = PyHypergraph(df)
-hypergraph.add_hyperedges_from_classes(clases, 'Visual')
-hypergraph.add_hyperedges_from_classes(clases, 'Aural')
-hypergraph.add_hyperedges_from_classes(clases, 'ReadWrite')
-hypergraph.add_hyperedges_from_classes(clases, 'Kinesthetic')
-hypergraph.add_hyperedges_from_classes(clases, 'AM')
-hypergraph.add_hyperedges_from_classes(clases, 'RM')
-hypergraph.add_hyperedges_from_classes(clases, 'CM')
-for tnd in NDD_LIST:
-    hypergraph.add_hyperedge(tnd)
-    
-    #Añadir a hipergrafo
+hypergraph = PyHypergraph()
+
+#Añadir los estuciantes con últimas 3 clases de Visual
+visual_students = df.select("Id", "Visual").filter(
+    pl.col("Visual") >= df['Visual'].max() - 3*ancho_clase_Visual
+    ).iter_rows()
+
+for row in visual_students:
+    if row[1] <= df['Visual'].max() - 2*ancho_clase_Visual:
+        hypergraph.add_students_to_characteristic([row[0]], PyCharacteristicType.VarkVisual, clases-2);
+    elif row[1] <= df['Visual'].max() - ancho_clase_Visual:
+        hypergraph.add_students_to_characteristic([row[0]], PyCharacteristicType.VarkVisual, clases-1);
+    else:
+        hypergraph.add_students_to_characteristic([row[0]], PyCharacteristicType.VarkVisual, clases);
     
 
 hypergraph.print()
