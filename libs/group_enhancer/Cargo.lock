@@ -733,17 +733,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0cc23270f6e1808e30a928bdc84dea0b9b4136a8bc82338574f23baf47bbd280"
 
 [[package]]
-name = "gower"
-version = "0.1.0"
-dependencies = [
- "hypergraph",
-]
-
-[[package]]
 name = "group_enhancer"
 version = "0.1.0"
 dependencies = [
- "gower",
  "hypergraph",
  "ordered_f64",
  "polars",

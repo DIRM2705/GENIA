@@ -6,20 +6,6 @@ pub struct Hypergraph
     hyperedges : HashMap<String, HashSet<usize>>,
 }
 
-/*pub struct Student
-{
-    pub cronotype: u8, //Chronotype class
-    pub ndd: u8, //Bit map for neurodevelopmental disorders 
-    pub mi_classes: [u8; 3], //Top three MI
-    pub vark_classes: [f64; 4], //VARK learning style classes
-    pub be_class : u8, //Behavioral engagement class
-    pub ee_class: u8, //Emotional engagement class
-    pub ce_class : u8, //Cognitive engagement class
-    pub autonomous_motivation_class : u8, //Autonomous motivation class
-    pub competitive_motivation_class : u8, //Competitive motivation class
-    pub relationship_motivation_class : u8, //Relationship motivation class
-}*/
-
 #[derive(Clone)]
 pub struct Student
 {
@@ -79,7 +65,7 @@ impl Hypergraph
         }
     }
 
-    fn get_hyperedge_name(&mut self, characteristic : CharacteristicType) -> String
+    fn get_hyperedge_name(&mut self, characteristic : &CharacteristicType) -> String
     {
         return match characteristic 
         {
@@ -105,7 +91,7 @@ impl Hypergraph
         }
     }
 
-    pub fn add_student_to_characteristic(&mut self, characteristic : CharacteristicType, student_id : usize)
+    pub fn add_student_to_characteristic(&mut self, characteristic : &CharacteristicType, student_id : usize)
     {
         if !self.nodes.contains_key(&student_id)
         {

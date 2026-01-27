@@ -1,6 +1,6 @@
 #[pyo3::pymodule]
 mod group_enhancer {
-    use gower::calculate_gower_distance;
+    //use gower::calculate_gower_distance;
     use hypergraph::{Hypergraph, Student, CharacteristicType};
     use pyo3::prelude::*;
     use pyo3_polars::PyDataFrame;
@@ -11,27 +11,6 @@ mod group_enhancer {
     struct PyCharacteristicType {
         inner: CharacteristicType
     }
-    /*enum PyCharacteristicType
-    {
-        Chronotype(CharacteristicType::Chronotype(u8)),
-        AUTSIM(CharacteristicType::AUTSIM),
-        DISCALCULIA(CharacteristicType::DISCALCULIA),
-        ADHD(CharacteristicType::ADHD),
-        DISGRAFIA(CharacteristicType::DISGRAFIA),
-        MI_1(CharacteristicType::MI_1(u8)),
-        MI_2(CharacteristicType::MI_2(u8)),
-        MI_3(CharacteristicType::MI_3(u8)),
-        VARK_VISUAL(CharacteristicType::VARK_VISUAL(f64)),
-        VARK_AURAL(CharacteristicType::VARK_AURAL(f64)),
-        VARK_RW(CharacteristicType::VARK_RW(f64)),
-        VARK_KINESTHETIC(CharacteristicType::VARK_KINESTHETIC(f64)),
-        BE(CharacteristicType::BE(f64)),
-        EE(CharacteristicType::EE(f64)),
-        CE(CharacteristicType::CE(f64)),
-        AM(CharacteristicType::AM(f64)),
-        CM(CharacteristicType::CM(f64)),
-        RM(CharacteristicType::RM(f64)),
-    }*/
 
     #[pyclass]
     struct PyHypergraph {
@@ -64,12 +43,12 @@ mod group_enhancer {
         inner: Student,
     }
 
-    #[pymethods]
+    /*#[pymethods]
     impl PyStudent {
         fn get_distance_to(&self, other: &PyStudent, ranks: Vec<f64>) -> f64 {
             return calculate_gower_distance(&self.inner, &other.inner, ranks.as_ref());
         }
-    }
+    }*/
 
     #[pyclass]
     struct PySymmetricMatrix {
