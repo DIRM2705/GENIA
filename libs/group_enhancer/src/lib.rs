@@ -9,7 +9,7 @@ mod group_enhancer {
 
     #[pyclass]
     enum PyCharacteristicType {
-        CChronotype,
+        Chronotype,
         ADHD,
         AUTSIM,
         DISLEXIA,
@@ -34,7 +34,7 @@ mod group_enhancer {
     {
         fn to_characteristic_type(&self, value: u8) -> CharacteristicType {
             return match self {
-                PyCharacteristicType::CChronotype => CharacteristicType::Chronotype(value),
+                PyCharacteristicType::Chronotype => CharacteristicType::Chronotype(value),
                 PyCharacteristicType::ADHD => CharacteristicType::ADHD,
                 PyCharacteristicType::AUTSIM => CharacteristicType::AUTSIM,
                 PyCharacteristicType::DISLEXIA => CharacteristicType::DISLEXIA,
