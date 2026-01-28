@@ -11,26 +11,27 @@ VISUAL_ANSWERS = [
         "revisa las imágenes del libro de recetas en busca de ideas?",
         "les muestra diapositivas y fotografías de los parques?",
         "se ve de buena calidad",
-        "representaciones visuales – imágenes, diagramas, tablas",
+        "representaciones visuales - imágenes, diagramas, tablas",
         "pictionary",
         "observa la palabra en su mente y escoge la opción que se ve mejor?",
-        "se ve ""ok""",
+        "se ve \"ok\"",
         "ver un tráiler de la película",
         "diagramas de flujo, tablas y diapositivas?"
     ]
     
 AURAL_ANSWERS = [
         "daría instrucciones verbalmente?",
-        "le den las direcciones por llamada telfónica?",
+        "le den las direcciones por llamada telefónica?",
         "lo llamaría de inmediato y le contaría al respecto?",
         "busca consejo de alguien más?",
         "les da una charla/exposición sobre parques nacionales?",
         "la recomendación de un amigo",
         "escuchar la explicación de alguien más",
+        "escucharlo sonar",
         "llamaría por teléfono a un amigo y le preguntaría sobre el programa?",
         "la pronuncia lenta y articuladamente en su mente?",
         "la opinión de un amigo",
-        "qué sus amigos hablen de la película",
+        "que sus amigos hablen de la película",
         "discusión en grupos, conferencias?"
     ]
     

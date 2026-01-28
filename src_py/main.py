@@ -11,6 +11,9 @@ from group_enhancer import PyHypergraph, PyCharacteristicType
 #Convertir excel a csv
 #Xlsx2csv("C:\\Users\\Daniel\\Desktop\\Identificación de ventajas y desventajas.xlsx").convert("Pruebas1.csv")
 
+pl.Config.set_tbl_cols(-1)
+pl.Config.set_tbl_rows(-1)
+
 #Leer csv con polars, y hacer el DataFrame
 df = pl.read_csv("Pruebas1.csv",infer_schema_length=1000) #infer_schema_length para que detecte bien los tipos de datos, y analice las primeras 1000 filas
 
@@ -61,12 +64,14 @@ df = grade_students(df)
 #Imprimir esquema (schema) y datos -> diccionario interno -> Te dice: qué columnas hay y qué tipo tiene cada una
 print(df.schema)
 
+
 #Imprimir DataFrame
 print(df)
 
 #Obtener número de clases
 n = df.height
 clases = floor(1 + 3.3*log10(n))
+anchos_clases = {}
 
 #Clases de VARK
 rango_Visual = (df['Visual'].max() - df['Visual'].min())
@@ -74,35 +79,41 @@ rango_Aural = (df['Aural'].max() - df['Aural'].min())
 rango_ReadWrite = (df['ReadWrite'].max() - df['ReadWrite'].min())
 rango_Kinesthetic = (df['Kinesthetic'].max() - df['Kinesthetic'].min())
 
-ancho_clase_Visual = rango_Visual / clases
-ancho_clase_Aural = rango_Aural / clases
-ancho_clase_ReadWrite = rango_ReadWrite / clases
-ancho_clase_Kinesthetic = rango_Kinesthetic / clases
+anchos_clases['Visual'] = rango_Visual / clases
+anchos_clases['Aural'] = rango_Aural / clases
+anchos_clases['ReadWrite'] = rango_ReadWrite / clases
+anchos_clases['Kinesthetic'] = rango_Kinesthetic / clases
 
 #Clases de motivación
 rango_AM = (df['AM'].max() - df['AM'].min())
 rango_RM = (df['RM'].max() - df['RM'].min())
 rango_CM = (df['CM'].max() - df['CM'].min())
 
-ancho_clase_AM = rango_AM / clases
-ancho_clase_RM = rango_RM / clases
-ancho_clase_CM = rango_CM / clases
+anchos_clases['AM'] = rango_AM / clases
+anchos_clases['RM'] = rango_RM / clases
+anchos_clases['CM'] = rango_CM / clases
+
+caracteristicas = {
+    'Visual': PyCharacteristicType.VarkVisual,
+    'Aural': PyCharacteristicType.VarkAural,
+    'ReadWrite': PyCharacteristicType.VarkRW,
+    'Kinesthetic': PyCharacteristicType.VarkKinesthetic,
+    'AM': PyCharacteristicType.AM,
+    'RM': PyCharacteristicType.RM,
+    'CM': PyCharacteristicType.CM
+}
 
 #Crear hipergrafo
 hypergraph = PyHypergraph()
 
-#Añadir los estuciantes con últimas 3 clases de Visual
-visual_students = df.select("Id", "Visual").filter(
-    pl.col("Visual") >= df['Visual'].max() - 3*ancho_clase_Visual
-    ).iter_rows()
-
-for row in visual_students:
-    if row[1] <= df['Visual'].max() - 2*ancho_clase_Visual:
-        hypergraph.add_students_to_characteristic([row[0]], PyCharacteristicType.VarkVisual, clases-2);
-    elif row[1] <= df['Visual'].max() - ancho_clase_Visual:
-        hypergraph.add_students_to_characteristic([row[0]], PyCharacteristicType.VarkVisual, clases-1);
-    else:
-        hypergraph.add_students_to_characteristic([row[0]], PyCharacteristicType.VarkVisual, clases);
-    
+for item in ['Visual', 'Aural', 'ReadWrite', 'Kinesthetic', 'AM', 'RM', 'CM']:
+    for i in range(clases):
+        min_val = df[item].min() + i*anchos_clases[item]
+        max_val = df[item].min() + (i+1)*anchos_clases[item]
+        students  = df.select("Id", item).filter(
+            (pl.col(item) >= min_val) &
+            (pl.col(item) < max_val)
+            )["Id"].to_list()
+        hypergraph.add_students_to_characteristic(students, caracteristicas[item], i+1);
 
 hypergraph.print()

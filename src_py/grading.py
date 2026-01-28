@@ -90,14 +90,17 @@ def get_VARK_scores(vark_answers: pl.DataFrame) -> pl.DataFrame:
     """
     
     vark_answers = vark_answers.with_columns(
-        Answers=pl.concat_list([pl.col(f"VARK{i}").str.to_lowercase().str.split(";") for i in range(1,14)]),
-    ).select("Answers")    
+        Answers=pl.concat_list([
+            pl.col(f"VARK{i}").str.to_lowercase()
+            .str.split(";") for i in range(1,14)])
+        .list.set_difference(['']),
+    ).select("Answers")
     
     vark_answers = vark_answers.with_columns(
-        Visual = pl.col("Answers").list.set_intersection(VISUAL_ANSWERS).list.len()/len(VISUAL_ANSWERS),
-        Aural = pl.col("Answers").list.set_intersection(AURAL_ANSWERS).list.len()/len(AURAL_ANSWERS),
-        ReadWrite = pl.col("Answers").list.set_intersection(READ_WRITE_ANSWERS).list.len()/len(READ_WRITE_ANSWERS),
-        Kinesthetic = pl.col("Answers").list.set_intersection(KINESTHETIC_ANSWERS).list.len()/len(KINESTHETIC_ANSWERS)
+        Visual = pl.col("Answers").list.set_intersection(VISUAL_ANSWERS).list.len()/pl.col("Answers").list.len(),
+        Aural = pl.col("Answers").list.set_intersection(AURAL_ANSWERS).list.len()/pl.col("Answers").list.len(),
+        ReadWrite = pl.col("Answers").list.set_intersection(READ_WRITE_ANSWERS).list.len()/pl.col("Answers").list.len(),
+        Kinesthetic = pl.col("Answers").list.set_intersection(KINESTHETIC_ANSWERS).list.len()/pl.col("Answers").list.len(),
     )
     
     return vark_answers.select(["Visual", "Aural", "ReadWrite", "Kinesthetic"])
