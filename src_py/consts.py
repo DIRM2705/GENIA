@@ -63,3 +63,52 @@ KINESTHETIC_ANSWERS = [
         "usar la copia del libro de un amigo",
         "investigación de campo, laboratorios, sesiones prácticas?"
     ]
+
+
+ANSWER_LISTS = {
+    "IM1": [
+        "tengo un estilo de vida activo",
+        "los ejercicios de meditación son satisfactorios",
+        "me \"pongo la camiseta\" por el equipo",
+        "la justicia es importante para mi",
+        "estructurar mis ideas me ayuda a ser exitoso",
+        "disfruto muchos tipos de música",
+        "en mi casa tengo un sistema de reciclaje",
+        "tengo un diario personal",
+        "disfruto hacer rompecabezas tridimensionales",
+    ],
+    "IM2": [
+        "disfruto los deportes y jugar afuera",
+        "las preguntas sobre el significado de la vida son importantes para mí",
+        "aprendo mejor interactuando con otros",
+        "la injusticia social me preocupa",
+        "me frustro fácilmente con personas desorganizadas",
+        "siempre me ha interesado tocar un instrumento musical",
+        "los animales son importantes en mi vida",
+        "escribo por placer",
+        "puedo recordar cosas en imágenes mentales",
+    ],
+    "IM3": [
+        "me gusta trabajar con herramientas",
+        "me gusta discutir cuestiones relacionadas a la vida",
+        "actividades como los clubs escolares y las actividades extracurriculares son divertidas",
+        "aprendo mejor cuando estoy involucrado emocionalmente con el tema",
+        "las instrucciones paso a paso son una gran ayuda",
+        "recordar letras de canciones es fácil para mí",
+        "el senderismo es una actividad entretenida",
+        "me interesan las lenguas extranjeras",
+        "puedo ilustrar con imágenes las ideas en mi mente",
+    ],
+}
+
+INTELLIGENCE_BY_INDEX = [
+        "C-C", #corporal-cinestésica
+        "Exis", #Existencial
+        "Inter", #interpersonal
+        "Intra", #intrapersonal
+        "Log", #logico-matemática
+        "Mus", #musical
+        "Nat", #naturalista
+        "Ver", #verbal
+        "Vis(IM)" #visual (Inteligencia múltiple)
+    ]
