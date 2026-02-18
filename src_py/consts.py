@@ -102,7 +102,7 @@ ANSWER_LISTS = {
 }
 
 INTELLIGENCE_BY_INDEX = [
-        "C-C", #corporal-cinestésica
+        "Kin", #corporal-cinestésica
         "Exis", #Existencial
         "Inter", #interpersonal
         "Intra", #intrapersonal
@@ -110,5 +110,5 @@ INTELLIGENCE_BY_INDEX = [
         "Mus", #musical
         "Nat", #naturalista
         "Ver", #verbal
-        "Vis(IM)" #visual (Inteligencia múltiple)
+        "Vis" #visual (Inteligencia múltiple)
     ]
