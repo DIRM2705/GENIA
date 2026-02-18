@@ -10,7 +10,6 @@ from group_enhancer import PyHypergraph, PyCharacteristicType
 
 #Convertir excel a csv
 #Xlsx2csv("C:\\Users\\Daniel\\Desktop\\Identificación de ventajas y desventajas.xlsx").convert("Pruebas1.csv")
-Xlsx2csv("Pruebas1 (CON MACROS).xlsx").convert("Pruebas1.csv")
 
 
 pl.Config.set_tbl_cols(-1)
@@ -62,21 +61,9 @@ df = df.rename({"Trabajo mejor":"Cronotipo",
             "Usualmente, me siento libre de expresar mis ideas y opiniones":"AM3", 
             "He sido capaz de aprender nuevas habilidades interesantes últimamente":"CM2"}) 
 
-print(df.schema)
-
 df = grade_students(df) #aplicamos una función que procesa las notas/puntajes de los estudiantes
-#Imprimir esquema (schema) y datos -> diccionario interno -> Te dice: qué columnas hay y qué tipo tiene cada una
-print(df.schema)
-
-
 #Imprimir DataFrame
-#print(df)
-
-#Imprimir columnas específicas
-print(df.select(df.columns[13:22]))
-
-# Imprimir fila específica 
-#print(df[20])
+print(df)
 
 #Obtener número de clases
 n = df.height #número de filas, o sea, número de estudiantes
@@ -126,4 +113,5 @@ for item in ['Visual', 'Aural', 'ReadWrite', 'Kinesthetic', 'AM', 'RM', 'CM']:#i
             )["Id"].to_list()
         hypergraph.add_students_to_characteristic(students, caracteristicas[item], i+1);#agregar los estudiantes al hipergrafo, asignándoles la clase i+1 para la característica item (i+1 porque las clases empiezan en 1 y no en 0)
 
-#hypergraph.print()
+
+hypergraph.print()
