@@ -63,23 +63,12 @@ df = df.rename({"Trabajo mejor":"Cronotipo",
 
 df = grade_students(df) #aplicamos una función que procesa las notas/puntajes de los estudiantes
 #Imprimir DataFrame
-print(df)
+print(df.filter(pl.col("Id") <= 10)) #imprimir la fila del estudiante con Id 1 para verificar que se hayan agregado las columnas de VARK y motivación correctamente
 
 #Obtener número de clases
 n = df.height #número de filas, o sea, número de estudiantes
 clases = floor(1 + 3.3*log10(n)) #formula de Sturges para obtener número de clases
 anchos_clases = {} #diccionario para guardar el ancho de cada clase para cada característica, para luego asignar a cada estudiante su clase correspondiente
-
-#Clases de VARK
-rango_Visual = (df['Visual'].max() - df['Visual'].min())
-rango_Aural = (df['Aural'].max() - df['Aural'].min())
-rango_ReadWrite = (df['ReadWrite'].max() - df['ReadWrite'].min())
-rango_Kinesthetic = (df['Kinesthetic'].max() - df['Kinesthetic'].min())
-
-anchos_clases['Visual'] = rango_Visual / clases
-anchos_clases['Aural'] = rango_Aural / clases
-anchos_clases['ReadWrite'] = rango_ReadWrite / clases
-anchos_clases['Kinesthetic'] = rango_Kinesthetic / clases
 
 #Clases de motivación
 rango_AM = (df['AM'].max() - df['AM'].min())
@@ -90,20 +79,28 @@ anchos_clases['AM'] = rango_AM / clases
 anchos_clases['RM'] = rango_RM / clases
 anchos_clases['CM'] = rango_CM / clases
 
+#Clases de compromiso
+rango_BE = (df['BE'].max() - df['BE'].min())
+rango_EE = (df['EE'].max() - df['EE'].min())
+rango_CE = (df['CE'].max() - df['CE'].min())
+
+anchos_clases['BE'] = rango_BE / clases
+anchos_clases['EE'] = rango_EE / clases
+anchos_clases['CE'] = rango_CE / clases
+
 caracteristicas = { #Diccionario para mapear el nombre de la característica a su tipo en el hipergrafo
-    'Visual': PyCharacteristicType.VarkVisual,
-    'Aural': PyCharacteristicType.VarkAural,
-    'ReadWrite': PyCharacteristicType.VarkRW,
-    'Kinesthetic': PyCharacteristicType.VarkKinesthetic,
     'AM': PyCharacteristicType.AM,
     'RM': PyCharacteristicType.RM,
-    'CM': PyCharacteristicType.CM
+    'CM': PyCharacteristicType.CM,
+    'BE': PyCharacteristicType.BE,
+    'EE': PyCharacteristicType.EE,
+    'CE': PyCharacteristicType.CE,
 }
 
 #Crear hipergrafo
 hypergraph = PyHypergraph()
 
-for item in ['Visual', 'Aural', 'ReadWrite', 'Kinesthetic', 'AM', 'RM', 'CM']:#iterar sobre cada característica para asignar a cada estudiante su clase correspondiente
+for item in ['AM', 'RM', 'CM', 'BE', 'EE', 'CE']:#iterar sobre cada característica para asignar a cada estudiante su clase correspondiente
     for i in range(clases):
         min_val = df[item].min() + i*anchos_clases[item] #calcular el valor mínimo de la clase i para la característica item
         max_val = df[item].min() + (i+1)*anchos_clases[item] #calcular el valor máximo de la clase i para la característica item
