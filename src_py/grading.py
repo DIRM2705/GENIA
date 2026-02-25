@@ -16,7 +16,7 @@ def grade_students(students : pl.DataFrame) -> pl.DataFrame:
             - "IM2": The student's answers to the second multiple intelligence set
             - "IM3": The student's answers to the third multiple intelligence set
             - "VARK 8-20": The student's answers to the VARK questionnaire
-            - "Engagement 21-35: The student's answers to the engagement questionnaire
+            - "Engagement 21-35": The student's answers to the engagement questionnaire
             - "Motivation 36-43": The student's answers to the motivation questionnaire
             
     Returns:
@@ -99,9 +99,9 @@ def get_IM_scores(im_answers: str, answer_list : list[str]) -> dict[str, int]:
     """
     # im_answers -> string de frases ORDENADAS (un solo bloque IM)
     # answer_list: Lista fija de todas las frases posibles del bloque -> Cada posición representa una inteligencia específica
-    #Devuelve un diccionario {inteligencia: puntaje}
+    # Devuelve un diccionario {inteligencia: puntaje}
 
-   # Inicializamos el diccionario de resultados -> Cada inteligencia empieza con puntaje 0
+    # Inicializamos el diccionario de resultados -> Cada inteligencia empieza con puntaje 0
     scores = {intelligence: 0 for intelligence in INTELLIGENCE_BY_INDEX}
     
     #Convertimos el string im_answers en una lista ordenada: Convertimos el string "a;b;c" → ["a", "b", "c"]
@@ -114,7 +114,7 @@ def get_IM_scores(im_answers: str, answer_list : list[str]) -> dict[str, int]:
     # Número total de frases (9)
     n = len(im_answers)
     
-   # Recorremos las frases EN EL ORDEN QUE LAS PUSO EL ESTUDIANTE
+    # Recorremos las frases EN EL ORDEN QUE LAS PUSO EL ESTUDIANTE
     # enumerate nos da:
     #   position -> la posición (0 es la más importante)
     #   phrase   -> la frase en esa posición
@@ -173,6 +173,40 @@ def get_IM_scores_from_df(im_answers: pl.DataFrame) -> pl.DataFrame:
         result = result.with_columns(
             pl.col(intelligence).round(2) #Redondeamos el puntaje de esa inteligencia a 2 decimales 
         )
+    
+    # Crear RANKING por estudiante (1 = mayor puntaje)
+    """
+            Si tengo Visual 16.9, Musical: 14.5, Logica: 20.2
+            Se crea una estructura asi con el pl.Struct:
+            {
+                "Visual": 16.9, 
+                "Musical": 14.5, 
+                "Logica": 20.2
+            }
+    """
+    result = result.with_columns( #Creamos una columna temporal llamada "ranking_dict" que es una estructura con todas las inteligencias y sus puntajes para cada estudiante, para luego aplicar map_elements y obtener un diccionario con el ranking de cada inteligencia para ese estudiante
+        pl.struct(INTELLIGENCE_BY_INDEX) #toma las columnas de las inteligencias y las convierte en una estructura (similar a un diccionario) para cada fila del DataFrame
+        .map_elements(#Aplica una función a cada fila de esa estructura -> la función toma como argumento la struct de inteligencias y puntajes -> Para cada estudiante ejecuta el lambda row.
+            lambda row: {
+                k: 1 + len( #Para cada inteligencia k, el ranking es 1 + la cantidad de inteligencias distintas que tienen un puntaje mayor que esa inteligencia k
+                    {v for v in row.values() if v > row[k]} #set comprehension que crea un conjunto de los puntajes de las inteligencias que son mayores que el puntaje de la inteligencia k sin permitir repeticiones (porque si hay varias inteligencias con el mismo puntaje, todas deberían tener el mismo ranking)
+                )
+                for k in row
+            }
+        )
+        .alias("ranking_dict_IM")
+    )
+
+    # Extraer cada ranking como columna
+    for intelligence in INTELLIGENCE_BY_INDEX:
+        result = result.with_columns(
+            pl.col("ranking_dict_IM") #Toma la columna "ranking_dict_IM"
+            .map_elements(lambda d: d[intelligence]) #Aplica una función a cada fila de esa columna, donde d es el diccionario con el ranking de cada inteligencia para ese estudiante, y devuelve el ranking de la inteligencia específica que queremos extraer -> crea una nueva columna con el ranking de esa inteligencia
+            .alias(intelligence) #Le da a esa nueva columna el nombre de la inteligencia, para que al final tengamos una columna con el ranking de cada inteligencia para cada estudiante
+        )
+
+    # Dejar solo las columnas finales
+    result = result.select(INTELLIGENCE_BY_INDEX)
         
     return result  #Devolvemos el DataFrame con los puntajes finales de cada inteligencia
 
@@ -201,4 +235,28 @@ def get_VARK_scores(vark_answers: pl.DataFrame) -> pl.DataFrame:
         Kinesthetic = pl.col("Answers").list.set_intersection(KINESTHETIC_ANSWERS).list.len()/pl.col("Answers").list.len(),
     )
     
-    return vark_answers.select(["Visual", "Aural", "ReadWrite", "Kinesthetic"]) #Devuelve SOLO los puntajes VARK finales
+    VARK_COLUMNS = ["Visual", "Aural", "ReadWrite", "Kinesthetic"] #Lista con los nombres de las columnas de VARK para luego iterar sobre ellas y crear las columnas de ranking correspondientes
+    vark_answers = vark_answers.with_columns( 
+        pl.struct(VARK_COLUMNS) #Creamos una estructura con las columnas de VARK para cada fila del DataFrame
+        .map_elements( #Aplicamos una función a cada fila de esa estructura, donde la función toma como argumento la struct de VARK y puntajes, y devuelve un diccionario con el ranking de cada tipo de aprendizaje para ese estudiante
+            lambda row: {
+                k: 1 + len( #Para cada  k, el ranking es 1 + la cantidad de tipos de aprendizaje distintos que tienen un puntaje mayor que ese tipo k
+                    {v for v in row.values() if v > row[k]} #set comprehension que crea un conjunto de los puntajes de los tipos de aprendizaje que son mayores que el puntaje del tipo k sin permitir repeticiones (porque si hay varios tipos con el mismo puntaje, todas deberían tener el mismo ranking
+                )
+                for k in row
+            }
+        )
+        .alias("ranking_dict_VARK")          
+    )
+    
+    # Extraer cada ranking como columna
+    for vark_type in VARK_COLUMNS:
+        vark_answers = vark_answers.with_columns(
+            pl.col("ranking_dict_VARK") #Toma la columna "ranking_dict_VARK"
+            .map_elements(lambda d: d[vark_type]) #Aplica una función a cada fila de esa columna, donde d es el diccionario con el ranking de cada tipo de aprendizaje para ese estudiante, y devuelve el ranking del tipo de aprendizaje específico que queremos extraer -> crea una nueva columna con el ranking de ese tipo de aprendizaje
+            .alias(vark_type) #Le da a esa nueva columna el nombre del tipo de aprendizaje, para que al final tengamos una columna con el ranking de cada tipo de aprendizaje para cada estudiante
+        )
+    
+    vark_answers = vark_answers.select(VARK_COLUMNS) #Seleccionamos solo las columnas finales de VARK para devolver el resultado
+    
+    return vark_answers

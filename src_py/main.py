@@ -63,7 +63,7 @@ df = df.rename({"Trabajo mejor":"Cronotipo",
 
 df = grade_students(df) #aplicamos una función que procesa las notas/puntajes de los estudiantes
 #Imprimir DataFrame
-print(df.filter(pl.col("Id") <= 10)) #imprimir la fila del estudiante con Id 1 para verificar que se hayan agregado las columnas de VARK y motivación correctamente
+print(df.filter(pl.col("Id") == 22)) #imprimir la fila del estudiante con Id 1 para verificar que se hayan agregado las columnas de VARK y motivación correctamente
 
 #Obtener número de clases
 n = df.height #número de filas, o sea, número de estudiantes
@@ -111,4 +111,4 @@ for item in ['AM', 'RM', 'CM', 'BE', 'EE', 'CE']:#iterar sobre cada característ
         hypergraph.add_students_to_characteristic(students, caracteristicas[item], i+1);#agregar los estudiantes al hipergrafo, asignándoles la clase i+1 para la característica item (i+1 porque las clases empiezan en 1 y no en 0)
 
 
-hypergraph.print()
+#hypergraph.print()
