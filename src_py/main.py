@@ -95,6 +95,19 @@ caracteristicas = { #Diccionario para mapear el nombre de la característica a s
     'BE': PyCharacteristicType.BE,
     'EE': PyCharacteristicType.EE,
     'CE': PyCharacteristicType.CE,
+    'Kin': PyCharacteristicType.MIKin,
+    'Exis': PyCharacteristicType.MIExis,
+    'Inter': PyCharacteristicType.MIInter,
+    'Intra': PyCharacteristicType.MIIntra,
+    'Log': PyCharacteristicType.MILog,
+    'Mus': PyCharacteristicType.MIMus,
+    'Nat': PyCharacteristicType.MINat,
+    'Ver': PyCharacteristicType.MIVer,
+    'Vis': PyCharacteristicType.MIVis,
+    'Visual': PyCharacteristicType.VarkVisual,
+    'Aural': PyCharacteristicType.VarkAural,
+    'ReadWrite': PyCharacteristicType.VarkRW,
+    'Kinesthetic': PyCharacteristicType.VarkKinesthetic
 }
 
 #Crear hipergrafo
@@ -110,5 +123,20 @@ for item in ['AM', 'RM', 'CM', 'BE', 'EE', 'CE']:#iterar sobre cada característ
             )["Id"].to_list()
         hypergraph.add_students_to_characteristic(students, caracteristicas[item], i+1);#agregar los estudiantes al hipergrafo, asignándoles la clase i+1 para la característica item (i+1 porque las clases empiezan en 1 y no en 0)
 
+for item in INTELLIGENCE_BY_INDEX:
+    for i in range(1, 4):
+        #Filtrar los estudiantes que cuya i-esima inteligencia es igual a item
+        students = df.select("Id", item).filter(pl.col(item) == i)["Id"].to_list()
+        if len(students) > 0:
+            #Agregar los estudiantes al hipergrafo de acuerdo a su i-esima inteligencia
+            hypergraph.add_students_to_characteristic(students, caracteristicas[item], i)
 
-#hypergraph.print()
+for item in ["Visual", "Aural",  "ReadWrite", "Kinesthetic"]:
+    for i in range(1, 3):
+        #Filtrar los estudiantes que cuya i-esima inteligencia es igual a item
+        students = df.select("Id", item).filter(pl.col(item) == i)["Id"].to_list()
+        if len(students) > 0:
+            #Agregar los estudiantes al hipergrafo de acuerdo a su i-esima inteligencia
+            hypergraph.add_students_to_characteristic(students, caracteristicas[item], i)
+
+hypergraph.print()
