@@ -103,7 +103,7 @@ hypergraph = PyHypergraph()
 for item in ['AM', 'RM', 'CM', 'BE', 'EE', 'CE']:#iterar sobre cada característica para asignar a cada estudiante su clase correspondiente
     for i in range(clases):
         min_val = df[item].min() + i*anchos_clases[item] #calcular el valor mínimo de la clase i para la característica item
-        max_val = df[item].min() + (i+1)*anchos_clases[item] #calcular el valor máximo de la clase i para la característica item
+        max_val = df[item].min() + (i+1)*anchos_clases[item] + (i == clases-1) * 0.001 #calcular el valor máximo de la clase i para la característica item
         students  = df.select("Id", item).filter( #filtrar los estudiantes que pertenecen a la clase i para la característica item
             (pl.col(item) >= min_val) & 
             (pl.col(item) < max_val)
