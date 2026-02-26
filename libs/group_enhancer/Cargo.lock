@@ -921,6 +921,7 @@ dependencies = [
 name = "hypergraph"
 version = "0.1.0"
 dependencies = [
+ "numpy",
  "polars",
 ]
 

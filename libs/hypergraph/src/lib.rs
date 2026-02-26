@@ -1,134 +1,64 @@
-use std::collections::{HashSet, HashMap};
+use numpy::Ix1;
+use numpy::ndarray::Array;
 
 pub struct Hypergraph 
 {
-    nodes : HashMap<usize, Student>,
-    hyperedges : HashMap<String, HashSet<usize>>,
-}
-
-#[derive(Clone)]
-pub struct Student
-{
-    characteristics : Vec<CharacteristicType>
-}
-
-impl Student 
-{
-    pub fn new() -> Self 
-    {
-        Student 
-        {
-            characteristics : Vec::new()
-        }
-    }
-
-    pub fn add_characteristic (&mut self, characteristic : CharacteristicType) 
-    {
-        self.characteristics.push(characteristic);
-    }
-}
-
-#[derive(Clone)]
-pub enum CharacteristicType
-{
-    Chronotype(u8),
-    ADHD,
-    Autism,
-    Dislexia,
-    Disgrafia,
-    Discalculia,
-    MIKin(u8),
-    MIExis(u8),
-    MIInter(u8),
-    MIIntra(u8),
-    MILog(u8),
-    MIMus(u8),
-    MINat(u8),
-    MIVer(u8),
-    MIVis(u8),
-    VarkVisual(u8),
-    VarkAural(u8),
-    VarkRW(u8),
-    VarkKinesthetic(u8),
-    BE(u8),
-    EE(u8),
-    CE(u8),
-    AM(u8),
-    CM(u8),
-    RM(u8)
+    matrix : Array<u128, Ix1>,
+    hyperedges : Vec<String>,
 }
 
 
 impl Hypergraph 
 {
-    pub fn new() -> Self 
+    pub fn new(num_students : usize) -> Self 
     {
         //Create an empty hypergraph
         Hypergraph 
         {
-            nodes : HashMap::new(),
-            hyperedges : HashMap::new(),
+            matrix : Array::zeros(num_students),
+            hyperedges : Vec::new()
         }
     }
 
-    fn get_hyperedge_name(&mut self, characteristic : &CharacteristicType) -> String
+    fn get_hyperedge_index(&mut self, id : &String) -> usize
     {
-        return match characteristic 
+        //Get the index of the hyperedge corresponding to the characteristic, adding it if it doesn't exist
+        if let Some(index) = self.hyperedges.iter().position(|x| x == id) 
         {
-            CharacteristicType::Chronotype(value) => format!("Chronotype_{}", value),
-            CharacteristicType::Disgrafia => format!("Disgrafia"),
-            CharacteristicType::Discalculia =>format!("Discalculia"),
-            CharacteristicType::ADHD => format!("ADHD"),
-            CharacteristicType::Autism => format!("Autism"),
-            CharacteristicType::MIKin(value) => format!("MIKin_{}", value),
-            CharacteristicType::MIExis(value) => format!("MIExis_{}", value),
-            CharacteristicType::MIInter(value) => format!("MIInter_{}", value),
-            CharacteristicType::MIIntra(value) => format!("MIIntra_{}", value),
-            CharacteristicType::MILog(value) => format!("MILog_{}", value),
-            CharacteristicType::MIMus(value) => format!("MIMus_{}", value),
-            CharacteristicType::MINat(value) => format!("MINat_{}", value),
-            CharacteristicType::MIVer(value) => format!("MIVer_{}", value),
-            CharacteristicType::MIVis(value) => format!("MIVis_{}", value),
-            CharacteristicType::VarkVisual(value) => format!("VISUAL_{}", value),
-            CharacteristicType::VarkAural(value) => format!("AURAL_{}", value),     
-            CharacteristicType::VarkRW(value) => format!("RW_{}", value),
-            CharacteristicType::VarkKinesthetic(value) => format!("KINESTHETIC_{}", value),
-            CharacteristicType::BE(value) => format!("BE_{}", value),
-            CharacteristicType::EE(value) => format!("EE_{}", value),
-            CharacteristicType::CE(value) => format!("CE_{}", value),
-            CharacteristicType::AM(value) => format!("AM_{}", value),
-            CharacteristicType::CM(value) => format!("CM_{}", value),
-            CharacteristicType::RM(value) => format!("RM_{}", value),
-            _ => String::from("")
+            return index;
+        }
+        else 
+        {
+            self.hyperedges.push(id.clone());
+            return self.hyperedges.len() - 1;
         }
     }
 
-    pub fn add_student_to_characteristic(&mut self, characteristic : &CharacteristicType, student_id : usize)
+    fn get_hyperedge_name(&mut self, hyperedge_idx : usize) -> String
     {
-        if !self.nodes.contains_key(&student_id)
-        {
-            self.nodes.insert(student_id, Student::new());
-        }
-        let student = self.nodes.get_mut(&student_id).unwrap();
-        student.add_characteristic(characteristic.clone()); //Update the student's characteristics
+        return self.hyperedges[hyperedge_idx].clone();
+    }
 
-        let hyperedge_id = self.get_hyperedge_name(characteristic);
-        if !self.hyperedges.contains_key(&hyperedge_id)
-        {
-            self.hyperedges.insert(hyperedge_id.clone(), HashSet::new());
-        }
-        let nodes = self.hyperedges.get_mut(&hyperedge_id).unwrap();
-        nodes.insert(student_id); //Update the hyperedge's nodes
+    pub fn add_student_to_characteristic(&mut self, characteristic : &String, student_id : usize)
+    {
+        //Ensure the characteristic exists in the hypergraph
+        let hyperedge_idx = self.get_hyperedge_index(characteristic) ;
+        //Update the matrix to indicate the student has this characteristic
+        self.matrix[[student_id]] |= 1 << (hyperedge_idx + 1);
     }
 
     pub fn print(&self) 
     {
-        for (hyperedge_id, node_idxs) in self.hyperedges.iter() 
+        //Print the hypergraph in a readable format
+        for (i, hyperedge) in self.hyperedges.iter().enumerate() 
         {
-            println!("Hyperedge: {}", hyperedge_id);
-            for node in node_idxs.iter()
+            println!("Hyperedge {}: {}", i, hyperedge);
+            for (j, student) in self.matrix.iter().enumerate() 
             {
-                println!(" - Student ID: {}", node);
+                if student & (1 << (i + 1)) != 0 
+                {
+                    println!("  Student {}", j);
+                }
             }
         }
     }
