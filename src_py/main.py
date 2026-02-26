@@ -68,29 +68,6 @@ df = grade_students(df) #aplicamos una función que procesa las notas/puntajes d
 #Imprimir DataFrame
 print(df.filter(pl.col("Id") == 20)) #imprimir la fila del estudiante con Id 1 para verificar que se hayan agregado las columnas de VARK y motivación correctamente
 
-#Obtener número de clases
-n = df.height #número de filas, o sea, número de estudiantes
-clases = floor(1 + 3.3*log10(n)) #formula de Sturges para obtener número de clases
-anchos_clases = {} #diccionario para guardar el ancho de cada clase para cada característica, para luego asignar a cada estudiante su clase correspondiente
-
-#Clases de motivación
-rango_AM = (df['AM'].max() - df['AM'].min())
-rango_RM = (df['RM'].max() - df['RM'].min())
-rango_CM = (df['CM'].max() - df['CM'].min())
-
-anchos_clases['AM'] = rango_AM / clases
-anchos_clases['RM'] = rango_RM / clases
-anchos_clases['CM'] = rango_CM / clases
-
-#Clases de compromiso
-rango_BE = (df['BE'].max() - df['BE'].min())
-rango_EE = (df['EE'].max() - df['EE'].min())
-rango_CE = (df['CE'].max() - df['CE'].min())
-
-anchos_clases['BE'] = rango_BE / clases
-anchos_clases['EE'] = rango_EE / clases
-anchos_clases['CE'] = rango_CE / clases
-
 #Crear hipergrafo
 hypergraph = PyHypergraph(df.height)
 
