@@ -1,5 +1,4 @@
 import polars as pl
-from group_enhancer import PyStudent
 from consts import *
 
 def grade_students(students : pl.DataFrame) -> pl.DataFrame:
@@ -49,10 +48,7 @@ def grade_students(students : pl.DataFrame) -> pl.DataFrame:
     #Agregar IM al DataFrame de estudiantes
     students = students.hstack(IM_scores) #Agrega las columnas de IM_scores al DataFrame de estudiantes
     
-    return students #devuelve el DataFrame final
-    
-        
-        
+    return students #devuelve el DataFrame final             
             
 def get_NDD_bitmask(tnd_series : pl.Series) -> pl.Series: #tnd_series es una serie de texto con los diagnósticos de NDD de cada estudiante, separados por punto y coma ->  Devuelve: Serie de enteros (UInt8) donde cada bit representa la presencia o ausencia de un trastorno
     """
