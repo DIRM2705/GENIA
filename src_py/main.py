@@ -1,9 +1,8 @@
 import polars as pl 
 from xlsx2csv import Xlsx2csv #para convertir excel a csv
 from grading import grade_students
-from math import log10, floor
 from consts import *
-from group_enhancer import PyHypergraph
+from group_enhancer import CharacteristicHG
 
 #instalé: pip install polars xlsx2csv fastexcel
 #También instalé: pip install openpyxl   -> pero tengo DUDA
@@ -66,25 +65,4 @@ df = df.rename({"Trabajo mejor":"Cronotipo",
 
 df = grade_students(df) #aplicamos una función que procesa las notas/puntajes de los estudiantes
 #Imprimir DataFrame
-print(df.filter(pl.col("Id") == 20)) #imprimir la fila del estudiante con Id 1 para verificar que se hayan agregado las columnas de VARK y motivación correctamente
-
-#Crear hipergrafo
-hypergraph = PyHypergraph(df.height)
-
-for item in INTELLIGENCE_BY_INDEX:
-    for i in range(1, 4):
-        #Filtrar los estudiantes que cuya i-esima inteligencia es igual a item
-        students = df.select("Id", item).filter(pl.col(item) == i)["Id"].to_list()
-        if len(students) > 0:
-            #Agregar los estudiantes al hipergrafo de acuerdo a su i-esima inteligencia
-            hypergraph.add_students_to_characteristic(students, item + str(i))
-
-for item in ["Visual", "Aural",  "ReadWrite", "Kinesthetic"]:
-    for i in range(1, 3):
-        #Filtrar los estudiantes que cuya i-esima inteligencia es igual a item
-        students = df.select("Id", item).filter(pl.col(item) == i)["Id"].to_list()
-        if len(students) > 0:
-            #Agregar los estudiantes al hipergrafo de acuerdo a su i-esimo tipo de aprendizaje
-            hypergraph.add_students_to_characteristic(students, item + str(i))
-
-hypergraph.print()
+print(df) #imprimir la fila del estudiante con Id 1 para verificar que se hayan agregado las columnas de VARK y motivación correctamente

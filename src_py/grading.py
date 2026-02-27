@@ -107,8 +107,6 @@ def get_IM_scores(im_answers: str, answer_list : list[str]) -> dict[str, int]:
         for phrase in im_answers.split(";")
         if phrase.strip() != ""
     ]
-    # Número total de frases (9)
-    n = len(im_answers)
     
     # Recorremos las frases EN EL ORDEN QUE LAS PUSO EL ESTUDIANTE
     # enumerate nos da:
@@ -116,11 +114,9 @@ def get_IM_scores(im_answers: str, answer_list : list[str]) -> dict[str, int]:
     #   phrase   -> la frase en esa posición
     for position, phrase in enumerate(im_answers):
 
-        #Convertimos la posición en un peso -> La posición 0 tiene peso 9 (n), la posición 1 tiene peso n-1, ..., la posición n-1 tiene peso 1
-        weight = n - position
         phrase_index = answer_list.index(phrase) # Obtenemos el índice real de la frase
         intelligence = INTELLIGENCE_BY_INDEX[phrase_index] # Usamos ese índice para saber qué inteligencia es
-        scores[intelligence] += weight # Sumamos el peso a la inteligencia correspondiente
+        scores[intelligence] += position # Sumamos el peso a la inteligencia correspondiente
         
     return scores # Devolvemos el resultado del bloque
 
@@ -158,16 +154,12 @@ def get_IM_scores_from_df(im_answers: pl.DataFrame) -> pl.DataFrame:
             pl.Series( #El nombre de la columna es el nombre de la inteligencia, y su valor es la suma de los puntajes de esa inteligencia en los 3 bloques
                 intelligence,
                 [
-                    (((im_answers["IM1_scores"][i].get(intelligence, 0) + #se obtiene el puntaje de esa inteligencia en el bloque IM1 usando .get(intelligence, 0) para manejar el caso de que esa inteligencia no tenga puntaje en ese bloque (devuelve 0 en ese caso)
+                    (im_answers["IM1_scores"][i].get(intelligence, 0) + #se obtiene el puntaje de esa inteligencia en el bloque IM1 usando .get(intelligence, 0) para manejar el caso de que esa inteligencia no tenga puntaje en ese bloque (devuelve 0 en ese caso)
                      im_answers["IM2_scores"][i].get(intelligence, 0) +
-                     im_answers["IM3_scores"][i].get(intelligence, 0))*100)/135) #se suma el puntaje de esa inteligencia en los 3 bloques, se divide por el puntaje máximo posible (135) y se multiplica por 100 para obtener un porcentaje
+                     im_answers["IM3_scores"][i].get(intelligence, 0))#se suma el puntaje de esa inteligencia en los 3 bloques
                     for i in range(len(im_answers)) #iteramos sobre cada estudiante (cada fila del DataFrame im_answers) para calcular el puntaje total de esa inteligencia sumando los puntajes de los 3 bloques para ese estudiante
                 ]
             )
-        )
-        #convertimos cada resultado en un porcentaje de dos decimales
-        result = result.with_columns(
-            pl.col(intelligence).round(2) #Redondeamos el puntaje de esa inteligencia a 2 decimales 
         )
     
     # Crear RANKING por estudiante (1 = mayor puntaje)
@@ -184,9 +176,9 @@ def get_IM_scores_from_df(im_answers: pl.DataFrame) -> pl.DataFrame:
         pl.struct(INTELLIGENCE_BY_INDEX) #toma las columnas de las inteligencias y las convierte en una estructura (similar a un diccionario) para cada fila del DataFrame
         .map_elements(#Aplica una función a cada fila de esa estructura -> la función toma como argumento la struct de inteligencias y puntajes -> Para cada estudiante ejecuta el lambda row.
             lambda row: {
-                k: 1 + len( #Para cada inteligencia k, el ranking es 1 + la cantidad de inteligencias distintas que tienen un puntaje mayor que esa inteligencia k
-                    {v for v in row.values() if v > row[k]} #set comprehension que crea un conjunto de los puntajes de las inteligencias que son mayores que el puntaje de la inteligencia k sin permitir repeticiones (porque si hay varias inteligencias con el mismo puntaje, todas deberían tener el mismo ranking)
-                )
+                k: (8 - (len( #Para cada inteligencia k, el ranking es 8 menos la cantidad de inteligencias distintas que tienen un puntaje menor que esa inteligencia k
+                    {v for v in row.values() if v < row[k]} #set comprehension que crea un conjunto de los puntajes de las inteligencias que son mayores que el puntaje de la inteligencia k sin permitir repeticiones (porque si hay varias inteligencias con el mismo puntaje, todas deberían tener el mismo ranking)
+                )))/8#Se normaliza para ser una variable ordinal entre 0 y 1
                 for k in row
             }
         )
@@ -225,10 +217,10 @@ def get_VARK_scores(vark_answers: pl.DataFrame) -> pl.DataFrame:
     ).select("Answers") #Selecciona solo la columna "Answers" que contiene la lista de respuestas de cada estudiante, para luego calcular el puntaje de cada tipo de aprendizaje en base a la intersección de las respuestas del estudiante con las listas de respuestas correctas para cada tipo (VISUAL_ANSWERS, AURAL_ANSWERS, etc.)
     
     vark_answers = vark_answers.with_columns(
-        Visual = pl.col("Answers").list.set_intersection(VISUAL_ANSWERS).list.len()/pl.col("Answers").list.len(), #Calcula el puntaje de aprendizaje visual como la cantidad de respuestas correctas para visual (intersección entre las respuestas del estudiante y VISUAL_ANSWERS) dividido por la cantidad total de respuestas del estudiante (longitud de la lista de respuestas) -> Cuenta cuántas respuestas pertenecen al conjunto VISUAL y divide entre el total de respuestas
-        Aural = pl.col("Answers").list.set_intersection(AURAL_ANSWERS).list.len()/pl.col("Answers").list.len(),
-        ReadWrite = pl.col("Answers").list.set_intersection(READ_WRITE_ANSWERS).list.len()/pl.col("Answers").list.len(),
-        Kinesthetic = pl.col("Answers").list.set_intersection(KINESTHETIC_ANSWERS).list.len()/pl.col("Answers").list.len(),
+        Visual = pl.col("Answers").list.set_intersection(VISUAL_ANSWERS).list.len(), #Calcula el puntaje de aprendizaje visual como la cantidad de respuestas correctas para visual (intersección entre las respuestas del estudiante y VISUAL_ANSWERS) dividido por la cantidad total de respuestas del estudiante (longitud de la lista de respuestas) -> Cuenta cuántas respuestas pertenecen al conjunto VISUAL y divide entre el total de respuestas
+        Aural = pl.col("Answers").list.set_intersection(AURAL_ANSWERS).list.len(),
+        ReadWrite = pl.col("Answers").list.set_intersection(READ_WRITE_ANSWERS).list.len(),
+        Kinesthetic = pl.col("Answers").list.set_intersection(KINESTHETIC_ANSWERS).list.len(),
     )
     
     VARK_COLUMNS = ["Visual", "Aural", "ReadWrite", "Kinesthetic"] #Lista con los nombres de las columnas de VARK para luego iterar sobre ellas y crear las columnas de ranking correspondientes
@@ -236,14 +228,16 @@ def get_VARK_scores(vark_answers: pl.DataFrame) -> pl.DataFrame:
         pl.struct(VARK_COLUMNS) #Creamos una estructura con las columnas de VARK para cada fila del DataFrame
         .map_elements( #Aplicamos una función a cada fila de esa estructura, donde la función toma como argumento la struct de VARK y puntajes, y devuelve un diccionario con el ranking de cada tipo de aprendizaje para ese estudiante
             lambda row: {
-                k: 1 + len( #Para cada  k, el ranking es 1 + la cantidad de tipos de aprendizaje distintos que tienen un puntaje mayor que ese tipo k
+                k: (3 - len( #Para cada  k, el ranking es 1 + la cantidad de tipos de aprendizaje distintos que tienen un puntaje mayor que ese tipo k
                     {v for v in row.values() if v > row[k]} #set comprehension que crea un conjunto de los puntajes de los tipos de aprendizaje que son mayores que el puntaje del tipo k sin permitir repeticiones (porque si hay varios tipos con el mismo puntaje, todas deberían tener el mismo ranking
-                )
+                ))/3 #Se normaliza para ser una variable ordinal entre 0 y 1
                 for k in row
             }
         )
         .alias("ranking_dict_VARK")          
     )
+    
+    print(vark_answers)
     
     # Extraer cada ranking como columna
     for vark_type in VARK_COLUMNS:
