@@ -1,22 +1,21 @@
 #[pyo3::pymodule]
 mod group_enhancer {
     //use gower::calculate_gower_distance;
-    use hypergraph::{Hypergraph};
+    use hypergraph::Hypergraph;
     use pyo3::prelude::*;
-    use pyo3_polars::PyDataFrame;
-    use pyo3::exceptions::PyValueError;
     use symmetric_matrix::SymmetricMatrix;
     
     #[pyclass]
-    struct PyHypergraph {
-        inner: Hypergraph,
+    struct CharacteristicHG {
+        inner: Hypergraph<u32>,
     }
 
     #[pymethods]
-    impl PyHypergraph {
+    impl CharacteristicHG {
+
         #[new]
         fn new(num_students: usize) -> Self {
-            return PyHypergraph {
+            return CharacteristicHG {
                 inner: Hypergraph::new(num_students),
             };
         }
@@ -24,7 +23,7 @@ mod group_enhancer {
         fn add_students_to_characteristic(&mut self, student_ids: Vec<usize>, characteristic : &str) {
             for student_id in student_ids
             {
-                self.inner.add_student_to_characteristic(&characteristic.to_string(), student_id);
+                self.inner.add_id_to_hyperedge(student_id, &characteristic.to_string());
             }
         }
 
