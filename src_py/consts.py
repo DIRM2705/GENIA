@@ -102,15 +102,15 @@ ANSWER_LISTS = {
 }
 
 INTELLIGENCE_BY_INDEX = [
-        "Kin", #corporal-cinestésica
-        "Exis", #Existencial
-        "Inter", #interpersonal
-        "Intra", #intrapersonal
-        "Log", #logico-matemática
-        "Mus", #musical
-        "Nat", #naturalista
-        "Ver", #verbal
-        "Vis" #visual (Inteligencia múltiple)
+        "MIKin", #corporal-cinestésica
+        "MIExis", #Existencial
+        "MIInter", #interpersonal
+        "MIIntra", #intrapersonal
+        "MILog", #logico-matemática
+        "MIMus", #musical
+        "MINat", #naturalista
+        "MIVer", #verbal
+        "MIVis" #visual (Inteligencia múltiple)
     ]
 
 VARK_COLUMNS = ["Visual", "Aural", "ReadWrite", "Kinesthetic"]
