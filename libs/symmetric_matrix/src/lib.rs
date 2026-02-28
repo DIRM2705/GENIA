@@ -35,6 +35,17 @@ impl SymmetricMatrix {
         };
     }
 
+    pub fn set(&mut self, i1: usize, j1: usize, value: f64) {
+        assert!(i1 < self.size && j1 < self.size, "Index out of bounds");
+        if i1 == j1 {
+            return; //Distance to self is always zero, ignore any attempts to set it
+        }
+        //else
+        let (i, j) = if i1 < j1 { (i1, j1) } else { (j1, i1) }; //Ensure i < j for upper triangular access
+        let index = (self.row_starts[i] + j as i32) as usize; //Calculate the linear index
+        self.data[index] = value; //Set the value in the upper triangular part
+    }
+
     pub fn get_indices(&self, index: usize) -> (usize, usize) {
         /*
         Given a linear index in the 1D array representation of the upper triangular matrix,
