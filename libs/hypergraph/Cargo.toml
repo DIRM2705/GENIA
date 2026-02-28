@@ -5,4 +5,5 @@ edition = "2024"
 
 [dependencies]
 numpy = "0.26.0"
-polars = "0.52.0"
+polars-core = { version = "0.52.0", features = ["ndarray", "regex"] }
+polars-lazy =  { version = "0.52.0", features = ["log"] }
