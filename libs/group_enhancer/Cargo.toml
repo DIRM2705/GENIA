@@ -6,6 +6,7 @@ edition = "2024"
 [dependencies]
 ordered_f64 = {path = "../ordered_f64"}
 symmetric_matrix = {path = "../symmetric_matrix"}
+gower = {path = "../gower"}
 hypergraph = {path = "../hypergraph"}
 pyo3 = "0.26.0"
 pyo3-polars = "0.25.0"
