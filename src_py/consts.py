@@ -112,3 +112,5 @@ INTELLIGENCE_BY_INDEX = [
         "Ver", #verbal
         "Vis" #visual (Inteligencia múltiple)
     ]
+
+VARK_COLUMNS = ["Visual", "Aural", "ReadWrite", "Kinesthetic"]

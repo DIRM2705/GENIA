@@ -223,7 +223,6 @@ def get_VARK_scores(vark_answers: pl.DataFrame) -> pl.DataFrame:
         Kinesthetic = pl.col("Answers").list.set_intersection(KINESTHETIC_ANSWERS).list.len(),
     )
     
-    VARK_COLUMNS = ["Visual", "Aural", "ReadWrite", "Kinesthetic"] #Lista con los nombres de las columnas de VARK para luego iterar sobre ellas y crear las columnas de ranking correspondientes
     vark_answers = vark_answers.with_columns( 
         pl.struct(VARK_COLUMNS) #Creamos una estructura con las columnas de VARK para cada fila del DataFrame
         .map_elements( #Aplicamos una función a cada fila de esa estructura, donde la función toma como argumento la struct de VARK y puntajes, y devuelve un diccionario con el ranking de cada tipo de aprendizaje para ese estudiante
@@ -236,8 +235,6 @@ def get_VARK_scores(vark_answers: pl.DataFrame) -> pl.DataFrame:
         )
         .alias("ranking_dict_VARK")          
     )
-    
-    print(vark_answers)
     
     # Extraer cada ranking como columna
     for vark_type in VARK_COLUMNS:
