@@ -31,14 +31,14 @@ def grade_students(students : pl.DataFrame) -> pl.DataFrame:
     students = students.with_columns(
         TND = get_NDD_bitmask(students["TND"]),
         Cronotipo = (pl.col("Cronotipo") == "Entre las 7 am y las 3pm").cast(pl.UInt8), #Convertimos el cronotipo a 0 vespertino, 1 matutino
-        AM = ((pl.col("AM1") + pl.col("AM2") + pl.col("AM3"))/21).round(2), #Motivación de Autonomía -> de qué tan libres se sienten los estudiantes para expresar sus ideas y opiniones, y para elegir sus actividades académicas
-        RM = ((pl.col("RM1") + pl.col("RM2") + pl.col("RM3"))/21).round(2), #Motivación de Relación
-        CM = ((pl.col("CM1") + pl.col("CM2"))/14).round(2), #Motivación de Competencia -> de qué tan capaces se sienten los estudiantes respecto a sus actividades académicas
-        BE = ((pl.col("BE1") + pl.col("BE2") + pl.col("BE3") + pl.col("BE4")+pl.col("BE5"))/25).round(2), # Behavioural Engagement -> Compromiso Conductual
-        EE = ((pl.col("EE1") + pl.col("EE2") + pl.col("EE3") + pl.col("EE4")+pl.col("EE5"))/25).round(2), # Emotional Engagement -> Compromiso Emocional 
-        CE = ((pl.col("CE1") + pl.col("CE2") + pl.col("CE3") + pl.col("CE4")+pl.col("CE5"))/25).round(2) # Cognitive Engagement -> Compromiso Cognitivo
+        AMotiv = ((pl.col("AM1") + pl.col("AM2") + pl.col("AM3"))/21).round(2), #Motivación de Autonomía -> de qué tan libres se sienten los estudiantes para expresar sus ideas y opiniones, y para elegir sus actividades académicas
+        RMotiv = ((pl.col("RM1") + pl.col("RM2") + pl.col("RM3"))/21).round(2), #Motivación de Relación
+        CMotiv = ((pl.col("CM1") + pl.col("CM2"))/14).round(2), #Motivación de Competencia -> de qué tan capaces se sienten los estudiantes respecto a sus actividades académicas
+        BEngage = ((pl.col("BE1") + pl.col("BE2") + pl.col("BE3") + pl.col("BE4")+pl.col("BE5"))/25).round(2), # Behavioural Engagement -> Compromiso Conductual
+        EEngage = ((pl.col("EE1") + pl.col("EE2") + pl.col("EE3") + pl.col("EE4")+pl.col("EE5"))/25).round(2), # Emotional Engagement -> Compromiso Emocional 
+        CEngage = ((pl.col("CE1") + pl.col("CE2") + pl.col("CE3") + pl.col("CE4")+pl.col("CE5"))/25).round(2) # Cognitive Engagement -> Compromiso Cognitivo
     ).select([ #Seleccionar solo las columnas relevantes para el hipergrafo
-        "Id", "Cronotipo", "TND", "AM", "RM", "CM", "BE", "EE", "CE"
+        "Id", "Cronotipo", "TND", "AMotiv", "RMotiv", "CMotiv", "BEngage", "EEngage", "CEngage"
     ])
     
     
@@ -217,10 +217,10 @@ def get_VARK_scores(vark_answers: pl.DataFrame) -> pl.DataFrame:
     ).select("Answers") #Selecciona solo la columna "Answers" que contiene la lista de respuestas de cada estudiante, para luego calcular el puntaje de cada tipo de aprendizaje en base a la intersección de las respuestas del estudiante con las listas de respuestas correctas para cada tipo (VISUAL_ANSWERS, AURAL_ANSWERS, etc.)
     
     vark_answers = vark_answers.with_columns(
-        Visual = pl.col("Answers").list.set_intersection(VISUAL_ANSWERS).list.len(), #Calcula el puntaje de aprendizaje visual como la cantidad de respuestas correctas para visual (intersección entre las respuestas del estudiante y VISUAL_ANSWERS) dividido por la cantidad total de respuestas del estudiante (longitud de la lista de respuestas) -> Cuenta cuántas respuestas pertenecen al conjunto VISUAL y divide entre el total de respuestas
-        Aural = pl.col("Answers").list.set_intersection(AURAL_ANSWERS).list.len(),
-        ReadWrite = pl.col("Answers").list.set_intersection(READ_WRITE_ANSWERS).list.len(),
-        Kinesthetic = pl.col("Answers").list.set_intersection(KINESTHETIC_ANSWERS).list.len(),
+        VARKVisual = pl.col("Answers").list.set_intersection(VISUAL_ANSWERS).list.len(), #Calcula el puntaje de aprendizaje visual como la cantidad de respuestas correctas para visual (intersección entre las respuestas del estudiante y VISUAL_ANSWERS) dividido por la cantidad total de respuestas del estudiante (longitud de la lista de respuestas) -> Cuenta cuántas respuestas pertenecen al conjunto VISUAL y divide entre el total de respuestas
+        VARKAural = pl.col("Answers").list.set_intersection(AURAL_ANSWERS).list.len(),
+        VARKReadWrite = pl.col("Answers").list.set_intersection(READ_WRITE_ANSWERS).list.len(),
+        VARKKinesthetic = pl.col("Answers").list.set_intersection(KINESTHETIC_ANSWERS).list.len(),
     )
     
     vark_answers = vark_answers.with_columns( 

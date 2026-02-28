@@ -113,4 +113,8 @@ INTELLIGENCE_BY_INDEX = [
         "MIVis" #visual (Inteligencia múltiple)
     ]
 
-VARK_COLUMNS = ["Visual", "Aural", "ReadWrite", "Kinesthetic"]
+VARK_COLUMNS = [
+    "VARKVisual",
+    "VARKAural",
+    "VARKReadWrite",
+    "VARKKinesthetic"]
