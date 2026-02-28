@@ -176,9 +176,9 @@ def get_IM_scores_from_df(im_answers: pl.DataFrame) -> pl.DataFrame:
         pl.struct(INTELLIGENCE_BY_INDEX) #toma las columnas de las inteligencias y las convierte en una estructura (similar a un diccionario) para cada fila del DataFrame
         .map_elements(#Aplica una función a cada fila de esa estructura -> la función toma como argumento la struct de inteligencias y puntajes -> Para cada estudiante ejecuta el lambda row.
             lambda row: {
-                k: (8 - (len( #Para cada inteligencia k, el ranking es 8 menos la cantidad de inteligencias distintas que tienen un puntaje menor que esa inteligencia k
+                k: 1 + (len( #Para cada inteligencia k, el ranking es 8 menos la cantidad de inteligencias distintas que tienen un puntaje menor que esa inteligencia k
                     {v for v in row.values() if v < row[k]} #set comprehension que crea un conjunto de los puntajes de las inteligencias que son mayores que el puntaje de la inteligencia k sin permitir repeticiones (porque si hay varias inteligencias con el mismo puntaje, todas deberían tener el mismo ranking)
-                )))/8#Se normaliza para ser una variable ordinal entre 0 y 1
+                ))#Se normaliza para ser una variable ordinal entre 0 y 1
                 for k in row
             }
         )
@@ -227,9 +227,9 @@ def get_VARK_scores(vark_answers: pl.DataFrame) -> pl.DataFrame:
         pl.struct(VARK_COLUMNS) #Creamos una estructura con las columnas de VARK para cada fila del DataFrame
         .map_elements( #Aplicamos una función a cada fila de esa estructura, donde la función toma como argumento la struct de VARK y puntajes, y devuelve un diccionario con el ranking de cada tipo de aprendizaje para ese estudiante
             lambda row: {
-                k: (3 - len( #Para cada  k, el ranking es 1 + la cantidad de tipos de aprendizaje distintos que tienen un puntaje mayor que ese tipo k
+                k:  1 + len( #Para cada  k, el ranking es 1 + la cantidad de tipos de aprendizaje distintos que tienen un puntaje mayor que ese tipo k
                     {v for v in row.values() if v > row[k]} #set comprehension que crea un conjunto de los puntajes de los tipos de aprendizaje que son mayores que el puntaje del tipo k sin permitir repeticiones (porque si hay varios tipos con el mismo puntaje, todas deberían tener el mismo ranking
-                ))/3 #Se normaliza para ser una variable ordinal entre 0 y 1
+                )
                 for k in row
             }
         )
