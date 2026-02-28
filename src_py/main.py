@@ -2,7 +2,7 @@ import polars as pl
 from xlsx2csv import Xlsx2csv #para convertir excel a csv
 from grading import grade_students
 from consts import *
-from group_enhancer import CharacteristicHG
+from group_enhancer import GroupHG
 
 #instalé: pip install polars xlsx2csv fastexcel
 #También instalé: pip install openpyxl   -> pero tengo DUDA
@@ -64,5 +64,11 @@ df = df.rename({"Trabajo mejor":"Cronotipo",
             "He sido capaz de aprender nuevas habilidades interesantes últimamente":"CM2"}) 
 
 df = grade_students(df) #aplicamos una función que procesa las notas/puntajes de los estudiantes
-#Imprimir DataFrame
-print(df) #imprimir la fila del estudiante con Id 1 para verificar que se hayan agregado las columnas de VARK y motivación correctamente
+
+print(df)
+
+#Crear el hypergraph y agregar los estudiantes a los hyperedges correspondientes a sus características
+group_hg = GroupHG(15)
+temp = df.filter(pl.col("Id").is_in([0,1])) #solo para probar con los primeros 10 estudiantes
+group_hg.add_students_to_hyperedge(temp, "LM")
+    
