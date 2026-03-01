@@ -4,29 +4,27 @@ mod group_enhancer {
     use hypergraph::Hypergraph;
     use pyo3::prelude::*;
     use pyo3_polars::PyDataFrame;
+    use polars::prelude::{DataFrame, IntoLazy};
     use symmetric_matrix::SymmetricMatrix;
-    
+    use genetics::Individual;
+
     #[pyclass]
-    struct GroupHG {
-        inner: Hypergraph<u32>,
+    struct PyIndividual {
+        inner: Individual,
     }
 
     #[pymethods]
-    impl GroupHG {
-
+    impl PyIndividual {
         #[new]
-        fn new(num_students: usize) -> Self {
-            return GroupHG {
-                inner: Hypergraph::new(num_students),
+        fn new(students_id: Vec<Vec<u32>>, df: PyDataFrame) -> Self {
+            let df : DataFrame = df.into();
+            return PyIndividual {
+                inner: Individual::new(students_id, df.lazy()),
             };
         }
 
-        fn add_students_to_hyperedge(&mut self, students : PyDataFrame, characteristic : &str) {
-            self.inner.add_students_to_hyperedge(students.into(), &characteristic.to_string());
-        }
-
-        fn print(&self) {
-            self.inner.print();
+        fn fit(&mut self) {
+            self.inner.calculate_fitness();
         }
     }
 
