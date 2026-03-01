@@ -646,6 +646,7 @@ dependencies = [
  "rand",
  "rand_distr",
  "rayon",
+ "regex",
  "strum_macros",
  "uuid",
  "version_check",

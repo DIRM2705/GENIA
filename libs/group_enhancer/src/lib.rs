@@ -29,6 +29,46 @@ mod group_enhancer {
     }
 
     #[pyclass]
+    struct CharacteristicHG
+    {
+        hypergraph : Vec<u64>,
+        mi_matrix : SymmetricMatrix,
+        vark_matrix : SymmetricMatrix,
+        am_matrix : SymmetricMatrix,
+        rm_matrix : SymmetricMatrix,
+        cm_matrix : SymmetricMatrix,
+        be_matrix : SymmetricMatrix,
+        ee_matrix : SymmetricMatrix,
+        ce_matrix : SymmetricMatrix,
+    }
+
+    #[pymethods]
+    impl CharacteristicHG {
+        #[new]
+        fn new(students: usize) -> Self {
+            return CharacteristicHG {
+                hypergraph: Hypergraph::new(students),
+                mi_matrix: SymmetricMatrix::new(students),
+                vark_matrix: SymmetricMatrix::new(students),
+                am_matrix: SymmetricMatrix::new(students),
+                rm_matrix: SymmetricMatrix::new(students),
+                cm_matrix: SymmetricMatrix::new(students),
+                be_matrix: SymmetricMatrix::new(students),
+                ee_matrix: SymmetricMatrix::new(students),
+                ce_matrix: SymmetricMatrix::new(students),
+            };
+        }
+
+        fn add_to_hyperedge(&mut self, student_idx: usize, hyperedge_idx: usize) {
+            self.hypergraph.add_to_hyperedge(student_idx, hyperedge_idx);
+        }
+
+        fn print(&self) {
+            self.hypergraph.print();
+        }
+    }
+
+    #[pyclass]
     struct PySymmetricMatrix {
         inner: SymmetricMatrix,
     }
