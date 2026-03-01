@@ -118,3 +118,51 @@ VARK_COLUMNS = [
     "VARKAural",
     "VARKReadWrite",
     "VARKKinesthetic"]
+
+
+#Characteristic constants
+
+ID_IDX  = 0
+AM1_IDX  = 3
+AM2_IDX  = 4
+AM3_IDX  = 5
+AM4_IDX  = 6
+AM5_IDX  = 7
+RM1_IDX  = 8
+RM2_IDX  = 9
+RM3_IDX  = 10
+RM4_IDX  = 11
+RM5_IDX  = 12
+CM1_IDX  = 13
+CM2_IDX  = 14
+CM3_IDX  = 15
+CM4_IDX  = 16
+CM5_IDX  = 17
+BE1_IDX  = 18
+BE2_IDX  = 19
+BE3_IDX  = 20
+BE4_IDX  = 21
+BE5_IDX  = 22
+EE1_IDX  = 23
+EE2_IDX  = 24
+EE3_IDX  = 25
+EE4_IDX  = 26
+EE5_IDX  = 27
+CE1_IDX  = 28
+CE2_IDX  = 29
+CE3_IDX  = 30
+CE4_IDX  = 31
+CE5_IDX  = 32
+VARK_VIS_IDX  = 33
+VARK_AUR_IDX  = 34
+VARK_RW_IDX  = 35
+VARK_KIN_IDX  = 36
+MI_KIN_IDX  = 37
+MI_EXIST_IDX  = 38
+MI_INTER_IDX  = 39
+MI_INTRA_IDX  = 40
+MI_LOG_IDX  = 41
+MI_MUS_IDX  = 42
+MI_NAT_IDX  = 43
+MI_VER_IDX  = 44
+MI_VIS_IDX  = 45
