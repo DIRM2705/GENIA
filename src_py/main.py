@@ -2,7 +2,8 @@ import polars as pl
 from xlsx2csv import Xlsx2csv #para convertir excel a csv
 from grading import grade_students
 from consts import *
-from group_enhancer import GroupHG
+from hypergraph import add_to_continous, add_to_discrete
+from group_enhancer import CharacteristicHG
 
 #instalé: pip install polars xlsx2csv fastexcel
 #También instalé: pip install openpyxl   -> pero tengo DUDA
@@ -67,8 +68,19 @@ df = grade_students(df) #aplicamos una función que procesa las notas/puntajes d
 
 print(df)
 
-#Crear el hypergraph y agregar los estudiantes a los hyperedges correspondientes a sus características
-group_hg = GroupHG(15)
-temp = df.filter(pl.col("Id").is_in([0,1])) #solo para probar con los primeros 10 estudiantes
-group_hg.add_students_to_hyperedge(temp, "LM")
+#Añadir alumnos a los hipergrafos
+hg = CharacteristicHG(df.height)
+
+add_to_continous(df, hg, "AMotiv", AM_BASE_IDX) #Añadir a caracteristicas de motivación autónoma
+add_to_continous(df, hg, "RMotiv", RM_BASE_IDX) #Añadir a caracteristicas de motivación de relación
+add_to_continous(df, hg, "CMotiv", CM_BASE_IDX) #Añadir a caracteristicas de motivación de competencia
+add_to_continous(df, hg, "BEngage", BE_BASE_IDX) #Añadir a caracteristicas de compromiso conductual
+add_to_continous(df, hg, "EEngage", EE_BASE_IDX) #Añadir a caracteristicas de compromiso emocional
+add_to_continous(df, hg, "CEngage", CE_BASE_IDX) #Añadir a caracteristicas de compromiso cognitivo
+
+for i in range(len(VARK_COLUMNS)):
+    add_to_discrete(df, hg, VARK_COLUMNS[i], VARK_BASE_IDX + i) #Añadir a caracteristicas de estilo de aprendizaje 
     
+for i in range(len(INTELLIGENCE_BY_INDEX)):
+    add_to_discrete(df, hg, INTELLIGENCE_BY_INDEX[i], INTELLIGENCE_BASE_IDX + i) #Añadir a caracteristicas de inteligencia
+hg.print()
