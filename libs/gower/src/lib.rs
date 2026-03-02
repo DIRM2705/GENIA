@@ -1,74 +1,43 @@
-use hypergraph::Student;
+use polars_core::prelude::*;
+use polars_lazy::prelude::*;
+use numpy::ndarray::*;
+use symmetric_matrix::SymmetricMatrix;
 
-const TOTAL_ATTRIBUTES: f64 = 17.0; //Total number of attributes per student
-const NUMERICAL_ATTRIBUTES: usize = 10; //Number of numerical attributes
-const MI_ATTRIBUTES: usize = 2; //Number of multiple intelligences attributes
-const NDD_ATTRIBUTES: usize = 5; //Number of neurodevelopmental disorder attributes
-
-pub fn calculate_gower_distance(s1: &Student, s2: &Student, ranks: &Vec<f64>) -> f64 {
+pub fn calculate_gower_matrix(df: DataFrame) -> SymmetricMatrix {
     //Calculate Gower distance between two students
-    let mut distance = 0.0;
+    let student_count = df.height() as usize;
+    let lazy_df = df.clone().lazy();
 
-    //Numerical attributes
-    distance += calculate_distances_numerical(&s1, &s2, ranks);
+    let mut distance_matrix = SymmetricMatrix::new(student_count);
+    let ranks = lazy_df.clone()
+        .select(&[all().exclude_cols(["Id"]).as_expr()])
+        .select([col("*").max() - col("*").min()])
+        .collect().unwrap().to_ndarray::<Float64Type>(IndexOrder::C).unwrap();
 
-    //Categorical attributes
-    distance += calculate_distances_categorical(&s1, &s2);
+    for i in 0..student_count {
+        for j in i+1..student_count {
+            let students = lazy_df.clone()
+                .filter(col("Id").eq(i as u32).or(col("Id").eq(j as u32))).collect().unwrap();
 
-    return distance/TOTAL_ATTRIBUTES;
+            let distance = calculate_distance_numerical(&students, &ranks);
+            distance_matrix.set(i, j, distance);
+        }
+    }
+
+    return distance_matrix;
 }
 
-fn calculate_distances_numerical(s1 : &Student, s2: &Student, ranks: &Vec<f64>) -> f64 {
+fn calculate_distance_numerical(clean_frame : &DataFrame, ranks: &Array2<f64>) -> f64 {
     //Get gower similarity bewteen two numerical values
     let mut distance = 0.0;
-
-    let mut s1_row = vec![
-        s1.be,
-        s1.ee,
-        s1.ce,
-        s1.autonomous_motivation,
-        s1.competitive_motivation,
-        s1.relationship_motivation,
-    ];
-    s1_row.extend(s1.vark_scores.iter()); //Add VARK scores
-
-    let mut s2_row = vec![
-        s2.be,
-        s2.ee,
-        s2.ce,
-        s2.autonomous_motivation,
-        s2.competitive_motivation,
-        s2.relationship_motivation,
-    ];
-    s2_row.extend(s2.vark_scores.iter()); //Add VARK scores
-
-    for k in 0..NUMERICAL_ATTRIBUTES {
-        let diff : f64 = (s1_row[k] - s2_row[k]).abs();
-        distance += 1.0 - diff / ranks[k];
-    }
-    return distance;
-}
-
-fn calculate_distances_categorical(s1 : &Student, s2: &Student) -> f64 {
-    //Get gower similarity bewteen two categorical values
-    let mut distance = 0.0;
-    let s1_row = vec![
-        s1.mi_order[0],
-        s1.mi_order[1]
-    ];
-    let s2_row = vec![
-        s2.mi_order[0],
-        s2.mi_order[1],
-    ];
-
-    for k in 0..MI_ATTRIBUTES {
-        distance += (s1_row[k] == s2_row[k]) as u32 as f64;
-    }
-
-    for k in 0..NDD_ATTRIBUTES
+    let matrix = clean_frame.to_ndarray::<Float64Type>(IndexOrder::C).unwrap();
+    for col in 1.. matrix.ncols()
     {
-        //Compare ndd bit by bit (8 bits)
-        distance += (s1.ndd & s2.ndd & (1 << k)) as f64;
+        let s1_value = matrix[[0, col]];
+        let s2_value = matrix[[1, col]];
+        let rank = ranks[[0, col-1]]; // Assuming ranks is a 2D array with shape (n_cols, 1)
+        let diff : f64 = (s1_value - s2_value).abs();
+        distance += 1.0 - diff / rank;
     }
-    return distance;
+    return distance/clean_frame.width() as f64;
 }

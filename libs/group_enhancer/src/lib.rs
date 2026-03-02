@@ -10,7 +10,7 @@ mod group_enhancer {
 
     #[pyclass]
     struct PyIndividual {
-        inner: Individual,
+        inner: Individual
     }
 
     #[pymethods]
@@ -19,12 +19,13 @@ mod group_enhancer {
         fn new(students_id: Vec<Vec<u32>>, df: PyDataFrame) -> Self {
             let df : DataFrame = df.into();
             return PyIndividual {
-                inner: Individual::new(students_id, df.lazy()),
+                inner: Individual::new(students_id, df.lazy())
             };
         }
 
-        fn fit(&mut self) {
+        fn fit(&mut self) -> f32{
             self.inner.calculate_fitness();
+            return self.inner.get_fitness();
         }
     }
 
