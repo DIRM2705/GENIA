@@ -86,8 +86,8 @@ student_array = np.vstack([header, student_array]) #agregar los nombres de las c
 ga = GeneticAlgorithmConfig(
     population_size=6,
     generations=10,
-    mutation_rate=0.1,
-    crossover_rate=0.8,
+    mutation_rate=10,
+    crossover_rate=50,
     students_data= student_array,
     students_vark_data= vark_matrix,
     students_mi_data= mi_matrix
@@ -101,7 +101,6 @@ ind3 = PyIndividual(ga, 6)
 ind4 = PyIndividual(ga, 6)
 ind5 = PyIndividual(ga, 6)
 ind6 = PyIndividual(ga, 6)
-
 """
 population = [ind1, ind2, ind3, ind4, ind5, ind6] #población inicial de individuos
 fit_values = [ind.get_fitness() for ind in population] #calcular el valor fitness de cada individuo en la población -> #valor fitness del individuo = qué tan bueno es el agrupmiento

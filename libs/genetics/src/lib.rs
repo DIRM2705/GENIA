@@ -48,13 +48,12 @@ impl Individual {
         }
     }
 
-    pub fn calculate_fitness(&mut self, student_data: &StudentsData) -> f32 {
+    pub fn calculate_fitness(&mut self, student_data: &StudentsData)
+    {
         //Creates a scoped thread to calculate the fitness of each group in parallel
         return thread::scope(|t| {
             //Creates a vector to store the handles of the threads
             let mut handles = Vec::new();
-
-           
 
             //Spawns a thread for each group to calculate its discartability
             for group in &self.groups {
@@ -71,7 +70,7 @@ impl Individual {
             for handle in handles {
                 fitness += handle.join().unwrap();
             }
-            return fitness;
+            self.fitness = fitness;
         });
     }
 

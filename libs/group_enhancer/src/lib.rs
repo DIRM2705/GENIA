@@ -13,8 +13,8 @@ mod group_enhancer {
     {
         population_size: usize,
         generations: usize,
-        mutation_rate: f32,
-        crossover_rate: f32,
+        mutation_rate: u8,
+        crossover_rate: u8,
         pub data : StudentsData,
     }
 
@@ -24,8 +24,8 @@ mod group_enhancer {
         pub fn new(
             population_size: usize,
             generations: usize,
-            mutation_rate: f32,
-            crossover_rate: f32,
+            mutation_rate: u8,
+            crossover_rate: u8,
             students_data: Py<PyArray2<f64>>,
             students_vark_data: Py<PyList>,
             students_mi_data: Py<PyList>
@@ -50,6 +50,15 @@ mod group_enhancer {
         #[new]
         fn new(config : &GeneticAlgorithmConfig, group_amount: usize) -> Self {
             return PyIndividual { inner: Individual::new(&config.data, group_amount) };
+        }
+
+        pub fn crossover(&mut self, other: &mut PyIndividual, config: &GeneticAlgorithmConfig) -> (PyIndividual, PyIndividual) {
+            println!("Crossover entre individuos con fitness {} y {}", self.inner.get_fitness(), other.inner.get_fitness());
+            let (mut child1, mut child2) = self.inner.crossover(&mut other.inner, config.crossover_rate);
+            child1.calculate_fitness(&config.data);
+            child2.calculate_fitness(&config.data);
+            println!("Fitness de los hijos después del crossover: {} y {}", child1.get_fitness(), child2.get_fitness());
+            return (PyIndividual { inner: child1 }, PyIndividual { inner: child2 });
         }
 
         pub fn get_fitness(&self) -> f32 {
