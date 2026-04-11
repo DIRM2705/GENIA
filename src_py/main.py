@@ -3,7 +3,7 @@ from xlsx2csv import Xlsx2csv #para convertir excel a csv
 from grading import grade_students
 from consts import *
 from genetics import roulette_wheel
-from group_enhancer import PyIndividual, GeneticAlgorithmConfig
+from group_enhancer import GeneticAlgorithm
 import numpy as np
 
 #instalé: pip install polars xlsx2csv fastexcel
@@ -83,8 +83,8 @@ header = [
 
 student_array = np.vstack([header, student_array]) #agregar los nombres de las columnas como la primera fila del array
 
-ga = GeneticAlgorithmConfig(
-    population_size=6,
+ga = GeneticAlgorithm(
+    population_size=15,
     generations=10,
     mutation_rate=10,
     crossover_rate=50,
@@ -94,15 +94,7 @@ ga = GeneticAlgorithmConfig(
 ) #crear una instancia de GeneticAlgorithmConfig con los parámetros del algoritmo genético, para facilitar
 
 
-#Algoritmo genético
-ind1 = PyIndividual(ga, 6)
-ind2 = PyIndividual(ga, 6)
-ind3 = PyIndividual(ga, 6)
-ind4 = PyIndividual(ga, 6)
-ind5 = PyIndividual(ga, 6)
-ind6 = PyIndividual(ga, 6)
-"""
-population = [ind1, ind2, ind3, ind4, ind5, ind6] #población inicial de individuos
+population = ga.initialize_population(num_groups = 6) #inicializar la población de individuos (agrupamientos) usando la función de inicialización del algoritmo genético, que crea agrupamientos aleatorios de estudiantes
 fit_values = [ind.get_fitness() for ind in population] #calcular el valor fitness de cada individuo en la población -> #valor fitness del individuo = qué tan bueno es el agrupmiento
 print() 
 
@@ -114,4 +106,6 @@ print()
 selected_individual_2, idx2 = roulette_wheel(population, fit_values)
 print("Selected individual 2: ", idx2+1)
 print("Fitness of selected individual 2: ", fit_values[idx2])
-"""
+
+#Realizar el crossover entre los dos individuos seleccionados usando la función de crossover del algoritmo genético
+ga.crossover(selected_individual_1, selected_individual_2) 

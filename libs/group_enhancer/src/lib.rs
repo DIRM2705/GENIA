@@ -9,7 +9,7 @@ mod group_enhancer {
     use genetics::student_data::StudentsData;
 
     #[pyclass]
-    pub struct GeneticAlgorithmConfig
+    pub struct GeneticAlgorithm
     {
         population_size: usize,
         generations: usize,
@@ -19,7 +19,7 @@ mod group_enhancer {
     }
 
     #[pymethods]
-    impl GeneticAlgorithmConfig {
+    impl GeneticAlgorithm {
         #[new]
         pub fn new(
             population_size: usize,
@@ -30,7 +30,7 @@ mod group_enhancer {
             students_vark_data: Py<PyList>,
             students_mi_data: Py<PyList>
         ) -> Self {
-            return GeneticAlgorithmConfig {
+            return GeneticAlgorithm {
                 population_size,
                 generations,
                 mutation_rate,
@@ -38,27 +38,35 @@ mod group_enhancer {
                 data: StudentsData::new(students_data, students_vark_data, students_mi_data),
             };
         }
+
+        pub fn initialize_population(&self, num_groups: usize) -> Vec<PyIndividual> {
+            let mut population = Vec::new();
+            for _ in 0..self.population_size {
+                population.push(PyIndividual { inner: Individual::new(&self.data, num_groups) });
+            }
+            return population;
+        }
+
+        pub fn crossover(&self, ind1: &mut PyIndividual, ind2: &mut PyIndividual) -> (PyIndividual, PyIndividual) {
+            println!("Crossover entre individuos con fitness {} y {}", ind1.inner.get_fitness(), ind2.inner.get_fitness());
+            let (mut child1, mut child2) = ind1.inner.crossover(&mut ind2.inner, self.crossover_rate);
+            child1.calculate_fitness(&self.data);
+            child2.calculate_fitness(&self.data);
+            println!("Fitness de los hijos después del crossover: {} y {}", child1.get_fitness(), child2.get_fitness());
+            return (PyIndividual { inner: child1 }, PyIndividual { inner: child2 });
+        }
     }
 
     #[pyclass]
     pub struct PyIndividual {
-        inner: Individual,
+        inner: Individual
     }
 
     #[pymethods]
     impl PyIndividual {
         #[new]
-        fn new(config : &GeneticAlgorithmConfig, group_amount: usize) -> Self {
+        fn new(config : &GeneticAlgorithm, group_amount: usize) -> Self {
             return PyIndividual { inner: Individual::new(&config.data, group_amount) };
-        }
-
-        pub fn crossover(&mut self, other: &mut PyIndividual, config: &GeneticAlgorithmConfig) -> (PyIndividual, PyIndividual) {
-            println!("Crossover entre individuos con fitness {} y {}", self.inner.get_fitness(), other.inner.get_fitness());
-            let (mut child1, mut child2) = self.inner.crossover(&mut other.inner, config.crossover_rate);
-            child1.calculate_fitness(&config.data);
-            child2.calculate_fitness(&config.data);
-            println!("Fitness de los hijos después del crossover: {} y {}", child1.get_fitness(), child2.get_fitness());
-            return (PyIndividual { inner: child1 }, PyIndividual { inner: child2 });
         }
 
         pub fn get_fitness(&self) -> f32 {
