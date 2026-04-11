@@ -4,4 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+numpy = "0.26.0"
 polars = { version = "0.52.0", features = ["lazy", "is_in", "ndarray", "regex", "dtype-u8", "timezones"]}
+pyo3 = "0.26.0"
+rand = "0.10.0"

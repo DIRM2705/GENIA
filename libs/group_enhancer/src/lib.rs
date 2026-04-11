@@ -1,46 +1,73 @@
 #[pyo3::pymodule]
 mod group_enhancer {
-    use gower::calculate_gower_matrix;
     use hypergraph::Hypergraph;
     use pyo3::prelude::*;
-    use pyo3_polars::PyDataFrame;
-    use polars::prelude::{DataFrame, IntoLazy};
+    use pyo3::types::PyList;
+    use numpy::PyArray2;
     use symmetric_matrix::SymmetricMatrix;
     use genetics::Individual;
+    use genetics::student_data::StudentsData;
 
     #[pyclass]
-    struct PyIndividual {
-        inner: Individual
+    pub struct GeneticAlgorithmConfig
+    {
+        population_size: usize,
+        generations: usize,
+        mutation_rate: f32,
+        crossover_rate: f32,
+        pub data : StudentsData,
+    }
+
+    #[pymethods]
+    impl GeneticAlgorithmConfig {
+        #[new]
+        pub fn new(
+            population_size: usize,
+            generations: usize,
+            mutation_rate: f32,
+            crossover_rate: f32,
+            students_data: Py<PyArray2<f64>>,
+            students_vark_data: Py<PyList>,
+            students_mi_data: Py<PyList>
+        ) -> Self {
+            return GeneticAlgorithmConfig {
+                population_size,
+                generations,
+                mutation_rate,
+                crossover_rate,
+                data: StudentsData::new(students_data, students_vark_data, students_mi_data),
+            };
+        }
+    }
+
+    #[pyclass]
+    pub struct PyIndividual {
+        inner: Individual,
     }
 
     #[pymethods]
     impl PyIndividual {
         #[new]
-        fn new(students_id: Vec<Vec<u32>>, df: PyDataFrame) -> Self {
-            let df : DataFrame = df.into();
-            return PyIndividual {
-                inner: Individual::new(students_id, df.lazy())
-            };
+        fn new(config : &GeneticAlgorithmConfig, group_amount: usize) -> Self {
+            return PyIndividual { inner: Individual::new(&config.data, group_amount) };
         }
 
-        fn fit(&mut self) -> f32{
-            self.inner.calculate_fitness();
+        pub fn get_fitness(&self) -> f32 {
             return self.inner.get_fitness();
         }
     }
 
     #[pyclass]
-    struct CharacteristicHG
-    {
-        hypergraph : Vec<u64>,
-        mi_matrix : SymmetricMatrix,
-        vark_matrix : SymmetricMatrix,
-        am_matrix : SymmetricMatrix,
-        rm_matrix : SymmetricMatrix,
-        cm_matrix : SymmetricMatrix,
-        be_matrix : SymmetricMatrix,
-        ee_matrix : SymmetricMatrix,
-        ce_matrix : SymmetricMatrix,
+    struct CharacteristicHG {
+        hypergraph: Vec<u64>,
+        mi_matrix: SymmetricMatrix,
+        vark_matrix: SymmetricMatrix,
+        am_matrix: SymmetricMatrix,
+        rm_matrix: SymmetricMatrix,
+        cm_matrix: SymmetricMatrix,
+        be_matrix: SymmetricMatrix,
+        ee_matrix: SymmetricMatrix,
+        ce_matrix: SymmetricMatrix,
     }
 
     #[pymethods]

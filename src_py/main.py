@@ -2,10 +2,9 @@ import polars as pl
 from xlsx2csv import Xlsx2csv #para convertir excel a csv
 from grading import grade_students
 from consts import *
-from hypergraph import create_hypergraph
-from group_enhancer import PyIndividual
+from genetics import roulette_wheel
+from group_enhancer import PyIndividual, GeneticAlgorithmConfig
 import numpy as np
-import random
 
 #instalé: pip install polars xlsx2csv fastexcel
 #También instalé: pip install openpyxl   -> pero tengo DUDA
@@ -67,44 +66,47 @@ df = df.rename({"Trabajo mejor":"Cronotipo",
             "He sido capaz de aprender nuevas habilidades interesantes últimamente":"CM2"}) 
 
 df = grade_students(df) #aplicamos una función que procesa las notas/puntajes de los estudiantes
+student_array = df.select("Cronotipo", "^.*Motiv$", "^.*Engage$").to_numpy() #convertir el DataFrame a un array de numpy para facilitar su manipulación en el algoritmo genético
+vark_matrix = [arr[0] for arr in df.select("VARK2").to_numpy().tolist()] #obtener la columna de VARK2 como un array de numpy
+mi_matrix = [arr[0] for arr in df.select("MI1").to_numpy().tolist()] #obtener la columna de MI1 como un array de numpy
+del df
 
-print(df)
+#Añadir una fila al principio del array con los nombres de las columnas, para facilitar la identificación de cada columna en el algoritmo genético
+header = [ 
+    2, #Cronotipo
+    0, #AMotiv
+    0, #CMotiv
+    0, #RMotiv
+    0, #BEngage
+    0, #EEngage
+    0] #CEngage
 
-#Añadir alumnos a los hipergrafos
-hg = create_hypergraph(df)
+student_array = np.vstack([header, student_array]) #agregar los nombres de las columnas como la primera fila del array
+
+ga = GeneticAlgorithmConfig(
+    population_size=6,
+    generations=10,
+    mutation_rate=0.1,
+    crossover_rate=0.8,
+    students_data= student_array,
+    students_vark_data= vark_matrix,
+    students_mi_data= mi_matrix
+) #crear una instancia de GeneticAlgorithmConfig con los parámetros del algoritmo genético, para facilitar
+
 
 #Algoritmo genético
-group1 = [[0,1,2,3,4], [5,6,7,8,9], [10,11,12,13,14,15], [16,17,18,19,20], [21,22,23,24,25], [26,27,28,29]]
-group2 = [[0,6,12,18,28], [1,7,13,19,29], [2,8,14,20,24,27], [3,9,15,21,25], [4,10,16,22,26], [5,11,17,23]]
-group3 = [[0,7,14,21,28], [1,8,15,22,29], [2,9,16,23,24,27], [3,10,17,24,25], [4,11,18,25,26], [5,12,19,26]]
-group4 = [[0,8,16,24,28], [1,9,17,25,29], [2,10,18,26,27], [3,11,19,27,25], [4,12,20,22,26], [5,13,21,23]]
-group5 = [[0,9,18,27,28], [1,10,19,26,29], [2,11,20,27,24,25], [3,12,21,28,25], [4,13,22,23,26], [5,14,23,24]]
-group6 = [[0,10,24,27,28], [1,11,25,26,29], [2,12,21,22,24,25], [3,13,23,24,25], [4,14,20,21,26], [5,15,22,23,26]]
-ind1 = PyIndividual(group1, df) #un individuo es una posible forma de agrupar a todos los estudiantes -> 6 grupos
-ind2 = PyIndividual(group2, df)
-ind3 = PyIndividual(group3, df)
-ind4 = PyIndividual(group4, df)
-ind5 = PyIndividual(group5, df)
-ind6 = PyIndividual(group6, df)
+ind1 = PyIndividual(ga, 6)
+ind2 = PyIndividual(ga, 6)
+ind3 = PyIndividual(ga, 6)
+ind4 = PyIndividual(ga, 6)
+ind5 = PyIndividual(ga, 6)
+ind6 = PyIndividual(ga, 6)
 
+"""
 population = [ind1, ind2, ind3, ind4, ind5, ind6] #población inicial de individuos
-fit_values = [ind.fit() for ind in population] #calcular el valor fitness de cada individuo en la población -> #valor fitness del individuo = qué tan bueno es el agrupmiento
+fit_values = [ind.get_fitness() for ind in population] #calcular el valor fitness de cada individuo en la población -> #valor fitness del individuo = qué tan bueno es el agrupmiento
 print() 
 
-def roulette_wheel(population, fit_values):
-    
-    total_fitness = sum(fit_values) #Sumar los valores fitness para calcular las probabilidades de selección
-    probabilities = [fit / total_fitness for fit in fit_values] #Calcular las probabilidades de selección para cada individuo
-    print("Selection probabilities: ", probabilities)
-    
-    cumulative_probabilities = np.cumsum(probabilities) #Calcular las probabilidades acumuladas para la selección por ruleta
-    print("Cumulative probabilities: ", cumulative_probabilities)
-    
-    r = random.uniform(0, 1) #Generar un número aleatorio uniforme entre 0 y 1 para seleccionar un individuo
-    for i, cumulative_probability in enumerate(cumulative_probabilities):
-        if r < cumulative_probability: #Seleccionar el primer individuo cuya probabilidad acumulada sea mayor que el número aleatorio generado
-            return population[i], i #Seleccionar el individuo correspondiente a la probabilidad acumulada
-        
 selected_individual_1, idx1 = roulette_wheel(population, fit_values) #Seleccionar un individuo de la población usando la selección por ruleta -> parent (padre)
 #Imprimir qué agrupamiento fue seleccionado
 print("Selected individual 1: ", idx1+1)
@@ -113,3 +115,4 @@ print()
 selected_individual_2, idx2 = roulette_wheel(population, fit_values)
 print("Selected individual 2: ", idx2+1)
 print("Fitness of selected individual 2: ", fit_values[idx2])
+"""

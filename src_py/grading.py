@@ -30,7 +30,7 @@ def grade_students(students : pl.DataFrame) -> pl.DataFrame:
     #PROCESAR TND, MOTIVACIONES y COMPROMISO
     students = students.with_columns(
         TND = get_NDD_bitmask(students["TND"]),
-        Cronotipo = (pl.col("Cronotipo") == "Entre las 7 am y las 3pm").cast(pl.UInt8), #Convertimos el cronotipo a 0 vespertino, 1 matutino
+        Cronotipo = (pl.col("Cronotipo") == "Entre las 7 am y las 3pm").cast(pl.UInt8) + 1, #Convertimos el cronotipo a 0 vespertino, 1 matutino
         AMotiv = ((pl.col("AM1") + pl.col("AM2") + pl.col("AM3"))/21).round(2), #Motivación de Autonomía -> de qué tan libres se sienten los estudiantes para expresar sus ideas y opiniones, y para elegir sus actividades académicas
         RMotiv = ((pl.col("RM1") + pl.col("RM2") + pl.col("RM3"))/21).round(2), #Motivación de Relación
         CMotiv = ((pl.col("CM1") + pl.col("CM2"))/14).round(2), #Motivación de Competencia -> de qué tan capaces se sienten los estudiantes respecto a sus actividades académicas
@@ -176,7 +176,7 @@ def get_IM_scores_from_df(im_answers: pl.DataFrame) -> pl.DataFrame:
         pl.struct(INTELLIGENCE_BY_INDEX) #toma las columnas de las inteligencias y las convierte en una estructura (similar a un diccionario) para cada fila del DataFrame
         .map_elements(#Aplica una función a cada fila de esa estructura -> la función toma como argumento la struct de inteligencias y puntajes -> Para cada estudiante ejecuta el lambda row.
             lambda row: {
-                k: 1 + (len( #Para cada inteligencia k, el ranking es 8 menos la cantidad de inteligencias distintas que tienen un puntaje menor que esa inteligencia k
+                k: (len( #Para cada inteligencia k, el ranking es 8 menos la cantidad de inteligencias distintas que tienen un puntaje menor que esa inteligencia k
                     {v for v in row.values() if v < row[k]} #set comprehension que crea un conjunto de los puntajes de las inteligencias que son mayores que el puntaje de la inteligencia k sin permitir repeticiones (porque si hay varias inteligencias con el mismo puntaje, todas deberían tener el mismo ranking)
                 ))#Se normaliza para ser una variable ordinal entre 0 y 1
                 for k in row
@@ -184,17 +184,31 @@ def get_IM_scores_from_df(im_answers: pl.DataFrame) -> pl.DataFrame:
         )
         .alias("ranking_dict_IM")
     )
-
-    # Extraer cada ranking como columna
-    for intelligence in INTELLIGENCE_BY_INDEX:
-        result = result.with_columns(
-            pl.col("ranking_dict_IM") #Toma la columna "ranking_dict_IM"
-            .map_elements(lambda d: d[intelligence]) #Aplica una función a cada fila de esa columna, donde d es el diccionario con el ranking de cada inteligencia para ese estudiante, y devuelve el ranking de la inteligencia específica que queremos extraer -> crea una nueva columna con el ranking de esa inteligencia
-            .alias(intelligence) #Le da a esa nueva columna el nombre de la inteligencia, para que al final tengamos una columna con el ranking de cada inteligencia para cada estudiante
+    
+    result = result.with_columns( #Creamos una columna para cada tipo de inteligencia con su ranking correspondiente, usando map_elements para extraer el ranking de cada inteligencia del diccionario "ranking_dict_IM"
+        MI1 = pl.col("ranking_dict_IM") #Toma la columna "ranking_dict_IM" que contiene el diccionario con el ranking de cada inteligencia para cada estudiante
+        .map_elements(
+            lambda element:
+                [
+                    INTELLIGENCE_BY_INDEX.index(k) for k, v in element.items() if v == 0 #Si el ranking es 0, significa que esa inteligencia tiene el puntaje más alto para ese estudiante, por lo que se asigna un valor de 1 a esa variable y 0 a las demás
+                ],
+                pl.List(pl.UInt8)
         )
-
+        .cast(pl.List(pl.UInt8)), #Convertimos la lista de rankings a una lista de UInt8 para facilitar su manipulación en el algoritmo genético
+        
+        MI2 = pl.col("ranking_dict_IM")
+        .map_elements(
+            lambda element:
+                [
+                    INTELLIGENCE_BY_INDEX.index(k) for k, v in element.items() if v == 1
+                ],
+                pl.List(pl.UInt8)
+        )
+        .cast(pl.List(pl.UInt8)),
+    )
+    
     # Dejar solo las columnas finales
-    result = result.select(INTELLIGENCE_BY_INDEX)
+    result = result.select("MI1", "MI2") #Seleccionamos solo las columnas finales de MI para devolver el resultado
         
     return result  #Devolvemos el DataFrame con los puntajes finales de cada inteligencia
 
@@ -227,7 +241,7 @@ def get_VARK_scores(vark_answers: pl.DataFrame) -> pl.DataFrame:
         pl.struct(VARK_COLUMNS) #Creamos una estructura con las columnas de VARK para cada fila del DataFrame
         .map_elements( #Aplicamos una función a cada fila de esa estructura, donde la función toma como argumento la struct de VARK y puntajes, y devuelve un diccionario con el ranking de cada tipo de aprendizaje para ese estudiante
             lambda row: {
-                k:  1 + len( #Para cada  k, el ranking es 1 + la cantidad de tipos de aprendizaje distintos que tienen un puntaje mayor que ese tipo k
+                k: len( #Para cada  k, el ranking es 1 + la cantidad de tipos de aprendizaje distintos que tienen un puntaje mayor que ese tipo k
                     {v for v in row.values() if v > row[k]} #set comprehension que crea un conjunto de los puntajes de los tipos de aprendizaje que son mayores que el puntaje del tipo k sin permitir repeticiones (porque si hay varios tipos con el mismo puntaje, todas deberían tener el mismo ranking
                 )
                 for k in row
@@ -236,14 +250,28 @@ def get_VARK_scores(vark_answers: pl.DataFrame) -> pl.DataFrame:
         .alias("ranking_dict_VARK")          
     )
     
-    # Extraer cada ranking como columna
-    for vark_type in VARK_COLUMNS:
-        vark_answers = vark_answers.with_columns(
-            pl.col("ranking_dict_VARK") #Toma la columna "ranking_dict_VARK"
-            .map_elements(lambda d: d[vark_type]) #Aplica una función a cada fila de esa columna, donde d es el diccionario con el ranking de cada tipo de aprendizaje para ese estudiante, y devuelve el ranking del tipo de aprendizaje específico que queremos extraer -> crea una nueva columna con el ranking de ese tipo de aprendizaje
-            .alias(vark_type) #Le da a esa nueva columna el nombre del tipo de aprendizaje, para que al final tengamos una columna con el ranking de cada tipo de aprendizaje para cada estudiante
+    vark_answers = vark_answers.with_columns(
+        VARK1 = pl.col("ranking_dict_VARK") #Toma la columna "ranking_dict_VARK"
+        .map_elements(
+            lambda element:
+                [
+                    VARK_COLUMNS.index(k) for k, v in element.items() if v == 0 #Si el ranking es 0, significa que ese tipo de aprendizaje tiene el puntaje más alto para ese estudiante, por lo que se asigna un valor de 1 a esa variable y 0 a las demás
+                ],
+                pl.List(pl.UInt8)
         )
+        .cast(pl.List(pl.UInt8)), #Convertimos la lista de rankings a una lista de UInt8 para facilitar su manipulación en el algoritmo genético
+        
+        VARK2 = pl.col("ranking_dict_VARK")
+        .map_elements(
+            lambda element:
+                [
+                    VARK_COLUMNS.index(k) for k, v in element.items() if v == 1
+                ],
+                pl.List(pl.UInt8)
+        )
+        .cast(pl.List(pl.UInt8))
+    )
     
-    vark_answers = vark_answers.select(VARK_COLUMNS) #Seleccionamos solo las columnas finales de VARK para devolver el resultado
+    vark_answers = vark_answers.select("VARK1", "VARK2") #Seleccionamos solo las columnas finales de VARK para devolver el resultado
     
     return vark_answers
