@@ -66,6 +66,7 @@ df = df.rename({"Trabajo mejor":"Cronotipo",
             "He sido capaz de aprender nuevas habilidades interesantes últimamente":"CM2"}) 
 
 df = grade_students(df) #aplicamos una función que procesa las notas/puntajes de los estudiantes
+print(df) #imprimir el DataFrame para verificar que se haya procesado correctamente
 student_array = df.select("Cronotipo", "^.*Motiv$", "^.*Engage$").to_numpy() #convertir el DataFrame a un array de numpy para facilitar su manipulación en el algoritmo genético
 vark_matrix = [arr[0] for arr in df.select("VARK2").to_numpy().tolist()] #obtener la columna de VARK2 como un array de numpy
 mi_matrix = [arr[0] for arr in df.select("MI1").to_numpy().tolist()] #obtener la columna de MI1 como un array de numpy
@@ -91,7 +92,7 @@ ga = GeneticAlgorithm(
     students_data= student_array,
     students_vark_data= vark_matrix,
     students_mi_data= mi_matrix
-) #crear una instancia de GeneticAlgorithmConfig con los parámetros del algoritmo genético, para facilitar
+) #crear una instancia de GeneticAlgorithm con los parámetros del algoritmo genético, para facilitar
 
 
 population = ga.initialize_population(num_groups = 6) #inicializar la población de individuos (agrupamientos) usando la función de inicialización del algoritmo genético, que crea agrupamientos aleatorios de estudiantes

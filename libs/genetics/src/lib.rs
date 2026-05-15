@@ -10,7 +10,7 @@ use std::thread;
 
 pub struct Individual {
     groups: Vec<Group>,
-    fitness: f32,
+    fitness: f64,
 }
 
 impl Individual {
@@ -26,13 +26,13 @@ impl Individual {
         return individual;
     }
 
-    pub fn get_fitness(&self) -> f32 {
+    pub fn get_fitness(&self) -> f64 {
         return self.fitness;
     }
 
     fn generate_random_groups(&mut self, student_total: u32, group_amount: usize){
         let queue = get_random_permutation(student_total);
-        let max_students_per_group = (student_total as f32 / group_amount as f32).ceil() as usize;
+        let max_students_per_group = (student_total as f64 / group_amount as f64).ceil() as usize;
         let mut i: usize = 0;
         let mut group = Vec::new();
         while i < queue.len() {
@@ -57,18 +57,26 @@ impl Individual {
 
             //Spawns a thread for each group to calculate its discartability
             for group in &self.groups {
-                let data = student_data.get_mi_rows(group.get_students());
+                let group_data = student_data.get_group_data(group.get_students());
+                let mi_data = student_data.get_mi_rows(group.get_students());
                 let vark_data = student_data.get_vark_rows(group.get_students());
                 let inner_handle = t.spawn(move || {
-                    return group.calculate_discartability(data, vark_data);
+                    return group.calculate_discartability(group_data, mi_data, vark_data);
                 });
                 handles.push(inner_handle);
+                break;
             }
 
             //Waits for all threads to finish and sums the discartability of each group to calculate the fitness of the individual
-            let mut fitness = 0.0f32;
+            let mut fitness = 0.0f64;
             for handle in handles {
-                fitness += handle.join().unwrap();
+                if let Ok(discartability) = handle.join() {
+                    fitness += discartability;
+                }
+                else {
+                    println!("Error calculating discartability");
+                    fitness = 0.0;
+                }
             }
             self.fitness = fitness;
         });

@@ -759,7 +759,6 @@ name = "genetics"
 version = "0.1.0"
 dependencies = [
  "numpy",
- "polars",
  "pyo3",
  "rand 0.10.0",
 ]

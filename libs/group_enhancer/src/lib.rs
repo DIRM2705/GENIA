@@ -69,7 +69,7 @@ mod group_enhancer {
             return PyIndividual { inner: Individual::new(&config.data, group_amount) };
         }
 
-        pub fn get_fitness(&self) -> f32 {
+        pub fn get_fitness(&self) -> f64 {
             return self.inner.get_fitness();
         }
     }
