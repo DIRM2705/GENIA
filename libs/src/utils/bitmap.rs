@@ -10,13 +10,11 @@
     Se utiliza un arreglo de bytes por si se necesitaran bitmaps de tamaño superior
  */
 
-use std::io::{Result, Error};
-
-#[typetag::serde(tag = "BitmapLen")]
-pub trait BitmapLen {
+#[typetag::serde(tag = "bitmap")]
+pub trait BitmapLen: Send + Sync {
     fn get_size_bits(&self) -> usize;
     fn set_bit(&mut self, index: usize) -> Result<(), String>; // Method to set a specific bit in the bitmap
-    fn get_bit(&self, index: usize) -> Result<bool>; // Method to get the value of a specific bit in the bitmap
+    fn get_bit(&self, index: usize) -> Result<bool, String>; // Method to get the value of a specific bit in the bitmap
 }
 
 #[typetag::serde]
@@ -34,7 +32,7 @@ impl BitmapLen for u8 {
         Ok(())
     }
 
-    fn get_bit(&self, index: usize) -> Result<bool> {
+    fn get_bit(&self, index: usize) -> Result<bool, String> {
         if index >= 8 {
             return Err("Index out of bounds for u8 bitmap".into());
         }
@@ -58,7 +56,7 @@ impl BitmapLen for u16 {
         Ok(())
     }
 
-    fn get_bit(&self, index: usize) -> Result<bool> {
+    fn get_bit(&self, index: usize) -> Result<bool, String> {
         if index >= 16 {
             return Err("Index out of bounds for u16 bitmap".into());
         }
@@ -82,7 +80,7 @@ impl BitmapLen for u32 {
         Ok(())
     }
 
-    fn get_bit(&self, index: usize) -> Result<bool> {
+    fn get_bit(&self, index: usize) -> Result<bool, String> {
         if index >= 32 {
             return Err("Index out of bounds for u32 bitmap".into());
         }
@@ -106,7 +104,7 @@ impl BitmapLen for u64 {
         Ok(())
     }
 
-    fn get_bit(&self, index: usize) -> Result<bool> {
+    fn get_bit(&self, index: usize) -> Result<bool, String> {
         if index >= 64 {
             return Err("Index out of bounds for u64 bitmap".into());
         }
@@ -129,7 +127,7 @@ impl BitmapLen for u128 {
         Ok(())
     }
 
-    fn get_bit(&self, index: usize) -> Result<bool> {
+    fn get_bit(&self, index: usize) -> Result<bool, String> {
         if index >= 128 {
             return Err("Index out of bounds for u128 bitmap".into());
         }
@@ -156,7 +154,7 @@ impl BitmapLen for Box<[u8]> {
         Ok(())
     }
 
-    fn get_bit(&self, index: usize) -> Result<bool> {
+    fn get_bit(&self, index: usize) -> Result<bool, String> {
         if index >= self.get_size_bits() {
             return Err("Index out of bounds for Box<[u8]> bitmap".into());
         }
@@ -183,7 +181,7 @@ pub fn make_bitmap_of_len(size_bits: usize) -> Box<dyn BitmapLen> {
 //Cambiar el tamaño del bitmap, copiando los bits del bitmap original al nuevo bitmap
 pub fn resize_bitmap(bitmap: &Box<dyn BitmapLen>, new_size_bits: usize) -> Result<Box<dyn BitmapLen>, String> {
     if new_size_bits < bitmap.get_size_bits() {
-        return Ok(*bitmap); // Si el nuevo tamaño es menor, no se hace nada y se devuelve el bitmap original
+        return Err("New size must be greater than or equal to the current size".into());
     }
 
     let mut target  = make_bitmap_of_len(new_size_bits);

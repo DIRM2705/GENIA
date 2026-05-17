@@ -1,15 +1,13 @@
-mod bitmap;
+use crate::utils::bitmap;
 
 use std::collections::HashMap;
 use bitmap::{BitmapLen, make_bitmap_of_len, resize_bitmap};
 use serde::{Serialize, Deserialize};
 use std::fs::File;
-use std::io::{Result, Read, Write};
-use bincode::{serialize, deserialize};
+use std::io::{Read, Write};
 
 #[derive(Serialize, Deserialize)]
 pub struct Hyperedge {
-    #[serde(with = "BitmapLen")]
     bitmap: Box<dyn BitmapLen>, // Bitmap representing the students in the hyperedge
 }
 
@@ -74,19 +72,19 @@ impl Hypergraph {
     }
 
     // Obtiene una referencia a una hiperarista por su nombre, permitiendo leerla
-    pub fn save_to_file(&self, filename: &str) -> Result<()> {
-        let encoded: Vec<u8> = serialize(self).unwrap();
-        let mut file = File::create(filename)?;
-        file.write_all(&encoded)?;
+    pub fn save_to_file(&self, filename: &str) -> Result<(), String> {
+        let encoded = postcard::to_allocvec(self).map_err(|e| format!("Error serializing hypergraph: {}", e))?;
+        let mut file = File::create(filename).map_err(|e| format!("Error creating file: {}", e))?;
+        file.write_all(&encoded).map_err(|e| format!("Error writing to file: {}", e))?;
         Ok(())
     }
 
     // Carga un hipergrafo desde un archivo, deserializando su contenido
-    pub fn load_from_file(filename: &str) -> Result<Self> {
-        let mut file = File::open(filename)?;
+    pub fn load_from_file(filename: &str) -> Result<Self, String> {
+        let mut file = File::open(filename).map_err(|e| format!("Error opening file: {}", e))?;
         let mut buffer = Vec::new();
-        file.read_to_end(&mut buffer)?;
-        let hypergraph: Hypergraph = deserialize(&buffer).unwrap();
+        file.read_to_end(&mut buffer).map_err(|e| format!("Error reading file: {}", e))?;
+        let hypergraph: Hypergraph = postcard::from_bytes(&buffer).map_err(|e| format!("Error deserializing hypergraph: {}", e))?;
         Ok(hypergraph)
     }
 }

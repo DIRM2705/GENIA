@@ -1,12 +1,15 @@
+mod data;
+mod ml;
+mod utils;
+
 #[pyo3::pymodule]
-mod group_enhancer {
-    use hypergraph::Hypergraph;
+mod py_optimizer {
     use pyo3::prelude::*;
+    use crate::data::hypergraph::Hypergraph;
+    use crate::ml::student_data::StudentsData;
+    use crate::ml::genetics::Individual;
     use pyo3::types::PyList;
     use numpy::PyArray2;
-    use symmetric_matrix::SymmetricMatrix;
-    use genetics::Individual;
-    use genetics::student_data::StudentsData;
 
     #[pyclass]
     pub struct GeneticAlgorithm
@@ -75,57 +78,42 @@ mod group_enhancer {
     }
 
     #[pyclass]
-    struct CharacteristicHG {
-        hypergraph: Vec<u64>,
-        mi_matrix: SymmetricMatrix,
-        vark_matrix: SymmetricMatrix,
-        am_matrix: SymmetricMatrix,
-        rm_matrix: SymmetricMatrix,
-        cm_matrix: SymmetricMatrix,
-        be_matrix: SymmetricMatrix,
-        ee_matrix: SymmetricMatrix,
-        ce_matrix: SymmetricMatrix,
+    struct PyHypergraph {
+        inner: Hypergraph
     }
 
     #[pymethods]
-    impl CharacteristicHG {
+    impl PyHypergraph {
         #[new]
         fn new(students: usize) -> Self {
-            return CharacteristicHG {
-                hypergraph: Hypergraph::new(students),
-                mi_matrix: SymmetricMatrix::new(students),
-                vark_matrix: SymmetricMatrix::new(students),
-                am_matrix: SymmetricMatrix::new(students),
-                rm_matrix: SymmetricMatrix::new(students),
-                cm_matrix: SymmetricMatrix::new(students),
-                be_matrix: SymmetricMatrix::new(students),
-                ee_matrix: SymmetricMatrix::new(students),
-                ce_matrix: SymmetricMatrix::new(students),
+            return PyHypergraph {
+                inner: Hypergraph::new(students),
             };
         }
 
-        fn add_to_hyperedge(&mut self, student_idx: usize, hyperedge_idx: usize) {
-            self.hypergraph.add_to_hyperedge(student_idx, hyperedge_idx);
+        fn load_from_file(&mut self, path: String) -> PyResult<()> {
+            if let Ok(hypergraph) = Hypergraph::load_from_file(&path) {
+                self.inner = hypergraph;
+                Ok(())
+            } else {
+                Err(PyErr::new::<pyo3::exceptions::PyIOError, _>("Failed to load hypergraph from file"))
+            }
         }
 
-        fn print(&self) {
-            self.hypergraph.print();
-        }
-    }
-
-    #[pyclass]
-    struct PySymmetricMatrix {
-        inner: SymmetricMatrix,
-    }
-
-    #[pymethods]
-    impl PySymmetricMatrix {
-        fn __len__(&self) -> PyResult<usize> {
-            return Ok(self.inner.size);
+        fn add_hyperedge(&mut self, id : String, students_idx: Vec<usize>) -> PyResult<()> {
+            if let Ok(_) = self.inner.add_hyperedge(id, students_idx) {
+                Ok(())
+            } else {
+                Err(PyErr::new::<pyo3::exceptions::PyValueError, _>("Failed to add hyperedge"))
+            }
         }
 
-        fn get(&self, i: usize, j: usize) -> PyResult<f64> {
-            return Ok(self.inner.get(i, j));
+        fn add_student(&mut self) -> PyResult<()> {
+            if let Ok(_) = self.inner.add_student() {
+                Ok(())
+            } else {
+                Err(PyErr::new::<pyo3::exceptions::PyValueError, _>("Failed to add student"))
+            }
         }
     }
 }

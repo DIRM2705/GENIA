@@ -1,8 +1,5 @@
-mod group;
-pub mod student_data;
-
-use group::Group;
-use student_data::StudentsData;
+use super::group::Group;
+use super::student_data::StudentsData;
 use rand::rng;
 use rand::seq::SliceRandom;
 use rand::distr::{Distribution, Uniform};

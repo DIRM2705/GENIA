@@ -1,9 +1,0 @@
-[package]
-name = "genetics"
-version = "0.1.0"
-edition = "2024"
-
-[dependencies]
-numpy = "0.26.0"
-pyo3 = "0.26.0"
-rand = "0.10.0"
