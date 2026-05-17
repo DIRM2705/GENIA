@@ -1,9 +1,8 @@
 use super::group::Group;
-use super::student_data::StudentsData;
+use crate::data::hypergraph::Hypergraph;
+use rand::distr::{Distribution, Uniform};
 use rand::rng;
 use rand::seq::SliceRandom;
-use rand::distr::{Distribution, Uniform};
-use std::thread;
 
 pub struct Individual {
     groups: Vec<Group>,
@@ -11,15 +10,14 @@ pub struct Individual {
 }
 
 impl Individual {
-    pub fn new(student_data: &StudentsData, group_amount: usize) -> Self
-    {
+    pub fn new(group_amount: usize, hypergraph: &Hypergraph) -> Self {
         let mut individual = Individual {
             groups: Vec::new(),
             fitness: 0.0,
         };
 
-        individual.generate_random_groups(student_data.get_student_count() as u32, group_amount);
-        individual.calculate_fitness(&student_data);
+        individual.generate_random_groups(hypergraph, group_amount);
+        individual.calculate_fitness();
         return individual;
     }
 
@@ -27,15 +25,17 @@ impl Individual {
         return self.fitness;
     }
 
-    fn generate_random_groups(&mut self, student_total: u32, group_amount: usize){
+    fn generate_random_groups(&mut self, hypergraph: &Hypergraph, group_amount: usize) {
+        let student_total = hypergraph.get_student_count() as u32;
         let queue = get_random_permutation(student_total);
         let max_students_per_group = (student_total as f64 / group_amount as f64).ceil() as usize;
         let mut i: usize = 0;
         let mut group = Vec::new();
+
         while i < queue.len() {
             //The group is full
             if group.len() > max_students_per_group {
-                self.groups.push(Group::new(group));
+                self.groups.push(Group::new(group, &hypergraph));
                 group = Vec::new();
             }
 
@@ -45,41 +45,18 @@ impl Individual {
         }
     }
 
-    pub fn calculate_fitness(&mut self, student_data: &StudentsData)
-    {
+    pub fn calculate_fitness(&mut self) {
         //Creates a scoped thread to calculate the fitness of each group in parallel
-        return thread::scope(|t| {
-            //Creates a vector to store the handles of the threads
-            let mut handles = Vec::new();
-
-            //Spawns a thread for each group to calculate its discartability
-            for group in &self.groups {
-                let group_data = student_data.get_group_data(group.get_students());
-                let mi_data = student_data.get_mi_rows(group.get_students());
-                let vark_data = student_data.get_vark_rows(group.get_students());
-                let inner_handle = t.spawn(move || {
-                    return group.calculate_discartability(group_data, mi_data, vark_data);
-                });
-                handles.push(inner_handle);
-                break;
-            }
-
-            //Waits for all threads to finish and sums the discartability of each group to calculate the fitness of the individual
-            let mut fitness = 0.0f64;
-            for handle in handles {
-                if let Ok(discartability) = handle.join() {
-                    fitness += discartability;
-                }
-                else {
-                    println!("Error calculating discartability");
-                    fitness = 0.0;
-                }
-            }
-            self.fitness = fitness;
-        });
+        for group in &self.groups {
+            self.fitness += group.get_discartability();
+        }
     }
 
-    pub fn crossover(&mut self, other: &mut Individual, crossover_rate: u8) -> (Individual, Individual) {
+    pub fn crossover(
+        &mut self,
+        other: &mut Individual,
+        crossover_rate: u8,
+    ) -> (Individual, Individual) {
         //Creates a new individual by crossing over the groups of the two parents
         let generator = Uniform::new_inclusive(0, 100).unwrap();
         let mut child1 = Vec::new();
@@ -100,20 +77,27 @@ impl Individual {
                     //This student is swapped between the two children
                     new_group1.push(student2);
                     new_group2.push(student1);
-                }
-                else
-                {
+                } else {
                     //This student is not swapped between the two children
                     new_group1.push(student1);
                     new_group2.push(student2);
                 }
             }
 
-            child1.push(Group::new(new_group1));
-            child2.push(Group::new(new_group2));
+            //child1.push(Group::new(new_group1));
+            //child2.push(Group::new(new_group2));
         }
 
-        return (Individual { groups: child1, fitness: 0.0 }, Individual { groups: child2, fitness: 0.0 });
+        return (
+            Individual {
+                groups: child1,
+                fitness: 0.0,
+            },
+            Individual {
+                groups: child2,
+                fitness: 0.0,
+            },
+        );
     }
 
     /*pub fn select_student(&self) -> u32 {

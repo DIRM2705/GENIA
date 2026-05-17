@@ -6,7 +6,6 @@ mod utils;
 mod py_optimizer {
     use pyo3::prelude::*;
     use crate::data::hypergraph::Hypergraph;
-    use crate::ml::student_data::StudentsData;
     use crate::ml::genetics::Individual;
     use pyo3::types::PyList;
     use numpy::PyArray2;

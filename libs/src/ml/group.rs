@@ -1,26 +1,34 @@
-use numpy::ndarray::{ArrayViewMut1, Array2};
+use crate::data::hypergraph::{Hyperedge, Hypergraph};
+use crate::utils::math::{balance_metric, homogeneity_metric};
 
-const CHRONOTYPE_IDX: usize = 0;
-const AM_IDX: usize = 1;
-const CM_IDX: usize = 2;
-const RM_IDX: usize = 3;
-const BE_IDX: usize = 4;
-const EE_IDX: usize = 5;
-const CE_IDX: usize = 6;
-
-const DELTA_CALCULATIONS: [usize; 3] = [RM_IDX, CE_IDX, EE_IDX];
-const EPSILON_CALCULATIONS: [usize; 3] = [AM_IDX, CM_IDX, BE_IDX];
+const DELTA_CALCULATIONS: [&'static str; 6] = ["CE", "BE", "EE", "AM", "RM", "Cronotype"];
+const EPSILON_CALCULATIONS: [&'static str; 1] = ["CM"];
+const REPLACEMENT_CALCULATIONS: [&'static str; 4] = ["MI1", "MI2", "VARK1", "VARK2"];
 pub struct Group {
     students: Vec<usize>,
+    discartability: f64,
 }
 
 impl Group {
-    pub fn new(students: Vec<usize>) -> Self {
-        return Group { students };
+    pub fn new(students: Vec<usize>, hypergraph: &Hypergraph) -> Self {
+        let mut discartability = 0.0;
+
+        discartability += calculate_delta_discartability(&students, hypergraph);
+        discartability += calculate_epsilon_discartability(&students, hypergraph);
+        discartability += calculate_replacement_discartability(&students, hypergraph);
+
+        return Group {
+            students,
+            discartability,
+        };
     }
 
     pub fn len(&self) -> usize {
         return self.students.len();
+    }
+
+    pub fn get_discartability(&self) -> f64 {
+        return self.discartability;
     }
 
     pub fn get_students(&self) -> &Vec<usize> {
@@ -30,112 +38,105 @@ impl Group {
     pub fn get_students_mut(&mut self) -> &mut Vec<usize> {
         return &mut self.students;
     }
+}
 
-    pub fn calculate_discartability(
-        &self,
-        mut student_data: Vec<Vec<f64>>,
-        mi_data: Vec<Vec<u8>>,
-        vark_data: Vec<Vec<u8>>,
-    ) -> f64 {
-        let mut discartability = self.calculate_mi_weight(mi_data);
-        discartability += self.calculate_vark_weight(vark_data);
+fn calculate_delta_discartability(students: &Vec<usize>, hypergraph: &Hypergraph) -> f64 {
+    let mut probabilities = Vec::new();
+    let mut discartability = 0.0;
 
-        for i in 0..DELTA_CALCULATIONS.len() {
-            let idx = DELTA_CALCULATIONS[i];
-            let col = &mut student_data[idx];
-            col.sort_by(|a, b| a.partial_cmp(b).unwrap());
-            discartability += calculate_gini(&col);
-        }
+    //Calcular la homogeneidad de cada grupo con respecto a las características delta
+    for id in DELTA_CALCULATIONS.iter() {
+        if let Ok(subhypergraph) = hypergraph.get_subhypergraph_by_prefix(id) {
+            // Cuantos estudiantes del grupo cumplen con el valor x de la característica
+            for hyperedge in subhypergraph {
+                let incident_students = calculate_incident_students(students, hyperedge);
 
-        for i in 0..EPSILON_CALCULATIONS.len() {
-            let idx = EPSILON_CALCULATIONS[i];
-            let col = &mut student_data[idx];
-            col.sort_by(|a, b| a.partial_cmp(b).unwrap());
-            discartability += (0.5 - calculate_gini(&col)).abs();
-        }
-
-        return discartability;
-    }
-
-    fn calculate_mi_weight(&self, students_data: Vec<Vec<u8>>) -> f64 {
-        let mut frecuencies = vec![0.0; 9 as usize];
-        for student in students_data {
-            for i in 0..student.len() {
-                let class = student[i];
-                frecuencies[class as usize] += 1.0;
+                // La probabilidad de que un estudiante del grupo cumpla con el valor x de la característica
+                probabilities.push(incident_students / students.len() as f64);
             }
-            drop(student);
+        } else {
+            println!("No se encontró el subhipergrafo con prefijo '{}'", id);
         }
 
-        //Calculates the distance from 0.5 which represents an equilibritated distribution of characteristics
-        let epsilon_value = (0.5 - calculate_entropy(&frecuencies)).abs();
-        return epsilon_value; // Return the calculated MI weight
+        discartability += homogeneity_metric(&probabilities);
+        probabilities.clear();
     }
 
-    fn calculate_vark_weight(&self, students_data: Vec<Vec<u8>>) -> f64 {
-        let mut frecuencies = vec![0.0; 4 as usize];
-        for student in students_data {
-            for i in 0..student.len() {
-                let class = student[i];
-                frecuencies[class as usize] += 1.0;
+    return discartability;
+}
+
+fn calculate_epsilon_discartability(students: &Vec<usize>, hypergraph: &Hypergraph) -> f64 {
+    let mut probabilities = Vec::new();
+    let mut discartability = 0.0;
+
+    //Calcular el balance de cada grupo con respecto a las características epsilon
+    for id in EPSILON_CALCULATIONS.iter() {
+        if let Ok(subhypergraph) = hypergraph.get_subhypergraph_by_prefix(id) {
+            // Cuantos estudiantes del grupo cumplen con el valor x de la característica
+            for hyperedge in subhypergraph {
+                let incident_students = calculate_incident_students(students, hyperedge);
+
+                // La probabilidad de que un estudiante del grupo cumpla con el valor x de la característica
+                probabilities.push(incident_students / students.len() as f64);
             }
-            drop(student);
+        } else {
+            println!("No se encontró el subhipergrafo con prefijo '{}'", id);
         }
-        //Calculates the distance from 0.5 which represents an equilibritated distribution of characteristics
-        let epsilon_value = (0.5 - calculate_entropy(&frecuencies)).abs();
-        return epsilon_value; // Return the calculated VARK weight
+
+        discartability += balance_metric(&probabilities, probabilities.len() as f64);
+        probabilities.clear();
     }
+
+    return discartability;
 }
 
-fn calculate_entropy(frecuencies: &Vec<f64>) -> f64 {
-    let total: f64 = frecuencies.iter().sum();
+fn calculate_replacement_discartability(students: &Vec<usize>, hypergraph: &Hypergraph) -> f64 {
+    let mut probabilities = Vec::new();
+    let mut discartability = 0.0;
 
-    let mut entropy = 0.0;
+    //Calcular el balance de cada grupo con respecto a las características epsilon
+    for id in REPLACEMENT_CALCULATIONS.iter() {
+        let mut total_incidences = 0.0;
+        if let Ok(subhypergraph) = hypergraph.get_subhypergraph_by_prefix(id) {
+            // Cuantos estudiantes del grupo cumplen con el valor x de la característica
+            for hyperedge in subhypergraph {
+                let incident_students = calculate_incident_students(students, hyperedge);
+                total_incidences += incident_students;
 
-    for i in 0..frecuencies.len() {
-        let p_i: f64 = frecuencies[i] / total; // Calculate the probability for the i-th characteristic
+                // Por ahora, solo guardar la cantidad de estudiantes que cumplen con el valor x de la característica,
+                // para luego calcular la probabilidad de que un estudiante del grupo cumpla con el valor x de la característica
+                probabilities.push(incident_students);
+            }
+        } else {
+            println!("No se encontró el subhipergrafo con prefijo '{}'", id);
+        }
 
-        if p_i > 0.0 {
-            entropy -= p_i * p_i.log2();
+        for p in probabilities.iter_mut() {
+            // La probabilidad de que un estudiante del grupo cumpla con el valor x de la característica
+            *p /= total_incidences;
+        }
+
+        //Todas las caracteristicas de reemplazo son epsilon
+        discartability += balance_metric(&probabilities, probabilities.len() as f64);
+        probabilities.clear();
+    }
+
+    return discartability;
+}
+
+fn calculate_incident_students(students: &Vec<usize>, hyperedge: &Hyperedge) -> f64 {
+    let mut count = 0.0; // Cuantos estudiantes del grupo cumplen con el valor x de la característica
+
+    // Por cada estudiante del grupo, se verifica si cumple con el valor x de la característica
+    // (si pertenece a la hiperarista)
+    for student in students {
+        if let Ok(incidence) = hyperedge.get_student_incidence(*student) {
+            if incidence {
+                count += 1.0;
+            }
+        } else {
+            println!("No se encontró el estudiante con ID: {}", student);
         }
     }
-
-    return entropy / (total.log2() as f64); // Normalize the entropy to be between 0 and 1
-}
-
-fn calculate_gini(data: &Vec<f64>) -> f64 {
-    const COEFICIENTS: [f64; 9] = [
-        1642.0,
-        1396.0,
-        1462.0,
-        1444.0,
-        1450.0,
-        1444.0,
-        1462.0,
-        1396.0,
-        1642.0
-    ];
-
-    let mut sum: f64 = -6669.0;
-    let n = data.len() as f64;
-
-    for i in 1..10 {
-        let mut decil = interpolate_decil(data, n, (i + 1) as f64);
-        print!("{}, ", decil);
-        decil *= COEFICIENTS[i - 1];
-        sum += decil;
-    }
-
-    println!();
-
-    println!("GINI: {}", -(sum / 7240.0));
-
-    return -(sum / 7240.0);
-}
-
-fn interpolate_decil(data: &Vec<f64>, n: f64, decil: f64) -> f64 {
-    let idx_down = (decil * (n-1.0) / 10.0).floor() as usize;
-    let idx_up = (decil * (n-1.0) / 10.0).ceil() as usize;
-
-    return data[idx_down] + (data[idx_up] - data[idx_down]) * (data[idx_up] - data[idx_down]);
+    return count;
 }
