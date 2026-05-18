@@ -2205,6 +2205,7 @@ dependencies = [
  "pyo3",
  "pyo3-polars",
  "rand 0.10.1",
+ "rayon",
  "serde",
  "typetag",
 ]
