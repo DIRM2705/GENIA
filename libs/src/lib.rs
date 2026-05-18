@@ -3,21 +3,29 @@ mod ml;
 mod utils;
 
 #[pyo3::pymodule]
-mod py_optimizer {
+mod transformations
+{
+    use numpy::PyArray2;
     use pyo3::prelude::*;
+
+}
+
+#[pyo3::pymodule]
+mod ml_genetics {
     use crate::data::hypergraph::Hypergraph;
     use crate::ml::genetics::Individual;
-    use pyo3::types::PyList;
-    use numpy::PyArray2;
+    use pyo3::prelude::*;
+    use std::path::Path;
+    use rayon::prelude::*;
+    use rand::distr::{Distribution, Uniform};
 
     #[pyclass]
-    pub struct GeneticAlgorithm
-    {
+    pub struct GeneticAlgorithm {
         population_size: usize,
         generations: usize,
+        spins: usize,
         mutation_rate: u8,
         crossover_rate: u8,
-        pub data : StudentsData,
     }
 
     #[pymethods]
@@ -26,93 +34,131 @@ mod py_optimizer {
         pub fn new(
             population_size: usize,
             generations: usize,
+            spins: usize,
             mutation_rate: u8,
             crossover_rate: u8,
-            students_data: Py<PyArray2<f64>>,
-            students_vark_data: Py<PyList>,
-            students_mi_data: Py<PyList>
         ) -> Self {
             return GeneticAlgorithm {
                 population_size,
+                spins,
                 generations,
                 mutation_rate,
                 crossover_rate,
-                data: StudentsData::new(students_data, students_vark_data, students_mi_data),
             };
         }
 
-        pub fn initialize_population(&self, num_groups: usize) -> Vec<PyIndividual> {
-            let mut population = Vec::new();
-            for _ in 0..self.population_size {
-                population.push(PyIndividual { inner: Individual::new(&self.data, num_groups) });
-            }
-            return population;
-        }
+        pub fn run(&self, num_groups: usize) {
+            let hypergraph = load_hypergraph_from_file();
 
-        pub fn crossover(&self, ind1: &mut PyIndividual, ind2: &mut PyIndividual) -> (PyIndividual, PyIndividual) {
-            println!("Crossover entre individuos con fitness {} y {}", ind1.inner.get_fitness(), ind2.inner.get_fitness());
-            let (mut child1, mut child2) = ind1.inner.crossover(&mut ind2.inner, self.crossover_rate);
-            child1.calculate_fitness(&self.data);
-            child2.calculate_fitness(&self.data);
-            println!("Fitness de los hijos después del crossover: {} y {}", child1.get_fitness(), child2.get_fitness());
-            return (PyIndividual { inner: child1 }, PyIndividual { inner: child2 });
+            // Genera la población inicial de individuos
+            let mut population =
+                create_initial_population(self.population_size, num_groups, &hypergraph);
+
+            for _ in 0..self.generations {
+                //En paralelo realiza la selección, crossover y mutación para generar la nueva población
+                population =
+                    create_new_population(self, &population, &hypergraph);
+            }
         }
     }
 
-    #[pyclass]
-    pub struct PyIndividual {
-        inner: Individual
-    }
+    fn load_hypergraph_from_file() -> Hypergraph {
 
-    #[pymethods]
-    impl PyIndividual {
-        #[new]
-        fn new(config : &GeneticAlgorithm, group_amount: usize) -> Self {
-            return PyIndividual { inner: Individual::new(&config.data, group_amount) };
+        if !Path::new("characteristics.hg").exists() {
+            panic!("El archivo characteristics.hg no existe");
         }
 
-        pub fn get_fitness(&self) -> f64 {
-            return self.inner.get_fitness();
+        if let Ok(hypergraph) = Hypergraph::load_from_file("characteristics.hg") {
+            return hypergraph;
+        }
+        else {
+            panic!("Error al cargar el hypergraph desde el archivo characteristics.hg");
         }
     }
 
-    #[pyclass]
-    struct PyHypergraph {
-        inner: Hypergraph
+    fn make_probabilities(population: &Vec<Individual>) -> Vec<f64> {
+        // Calcula la suma total de los fitness de todos los individuos en la población
+        let total_fitness: f64 = population.iter().map(|ind| ind.get_fitness()).sum();
+
+        // Calcula la probabilidad acumulada para cada individuo en la población
+        let mut probabilities = vec![population[0].get_fitness() / total_fitness];
+
+        let cumulative_prob = (1..population.len()).into_par_iter().map(|i| {
+            (population[i].get_fitness() / total_fitness) + probabilities[i - 1]
+        }).collect::<Vec<f64>>();
+
+        probabilities.extend(cumulative_prob);
+        
+        return probabilities;
     }
 
-    #[pymethods]
-    impl PyHypergraph {
-        #[new]
-        fn new(students: usize) -> Self {
-            return PyHypergraph {
-                inner: Hypergraph::new(students),
-            };
-        }
+    fn roulette_wheel_selection(probabilities: &Vec<f64>) -> usize {
+        if let Ok(rng) = Uniform::new(0.0, 1.0){
+            let mut index = 0;
 
-        fn load_from_file(&mut self, path: String) -> PyResult<()> {
-            if let Ok(hypergraph) = Hypergraph::load_from_file(&path) {
-                self.inner = hypergraph;
-                Ok(())
-            } else {
-                Err(PyErr::new::<pyo3::exceptions::PyIOError, _>("Failed to load hypergraph from file"))
-            }
-        }
+            // Genera un número aleatorio entre 0 y 1 uniformemente distribuido
+            let random_value = rng.sample(&mut rand::rng());
 
-        fn add_hyperedge(&mut self, id : String, students_idx: Vec<usize>) -> PyResult<()> {
-            if let Ok(_) = self.inner.add_hyperedge(id, students_idx) {
-                Ok(())
-            } else {
-                Err(PyErr::new::<pyo3::exceptions::PyValueError, _>("Failed to add hyperedge"))
+            // Busca al primer individuo cuya probabilidad acumulada sea mayor que el número aleatorio generado
+            while index < probabilities.len() && random_value > probabilities[index] {
+                index += 1;
             }
+            return index;
         }
+        else {
+            return 0;
+        }
+    }
 
-        fn add_student(&mut self) -> PyResult<()> {
-            if let Ok(_) = self.inner.add_student() {
-                Ok(())
-            } else {
-                Err(PyErr::new::<pyo3::exceptions::PyValueError, _>("Failed to add student"))
-            }
-        }
+    fn create_new_population(
+        config: &GeneticAlgorithm,
+        population: &Vec<Individual>,
+        hypergraph: &Hypergraph,
+    ) -> Vec<Individual> {
+        let probabilities = make_probabilities(population);
+
+        /*
+            Esta función corre en paralelo por cada spin de la ruleta. Cada spin genera 4 nuevos individuos 
+            a partir de 2 padres seleccionados por la ruleta, 
+            realizando crossover y mutación en paralelo para cada grupo de los individuos.
+         */
+        return (0..config.spins)
+            .into_par_iter()
+            .flat_map(|_| {
+                // Selecciona dos individuos utilizando la selección por ruleta
+                let parent1_idx = roulette_wheel_selection(&probabilities);
+                let parent2_idx = roulette_wheel_selection(&probabilities);
+
+                let parent1 = &population[parent1_idx];
+                let parent2 = &population[parent2_idx];
+
+                // Realiza el crossover entre los dos padres para generar un nuevo individuo
+                let (mut child1, mut child2) = parent1.crossover(parent2, config.crossover_rate);
+
+                // Forza el cumplimiento de las restricciones en los nuevos individuos
+                child1.check_constraints();
+                child2.check_constraints();
+
+                //Calcula fitness de los nuevos individuos
+                child1.calculate_fitness(hypergraph);
+                child2.calculate_fitness(hypergraph);
+
+                // Aplica mutación y crea 2 individuos más
+                let child3 = child1.mutate(config.mutation_rate);
+                let child4 = child2.mutate(config.mutation_rate);
+
+                return vec![child1, child2, child3, child4];
+            })
+            .collect::<Vec<Individual>>();
+    }
+
+    fn create_initial_population(
+        population_size: usize,
+        num_groups: usize,
+        hypergraph: &Hypergraph,
+    ) -> Vec<Individual> {
+        return (0..population_size)
+            .map(|_| Individual::new(num_groups, hypergraph))
+            .collect::<Vec<Individual>>();
     }
 }

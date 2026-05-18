@@ -72,7 +72,7 @@ impl Individual {
             .sum();
     }
 
-    pub fn crossover(&mut self, other: &mut Individual, crossover_rate: u8) -> Vec<Individual> {
+    pub fn crossover(&self, other: &Individual, crossover_rate: u8) -> (Individual, Individual) {
         /*
         Crea dos hijos a partir de dos individuos padres,
         intercambiando estudiantes entre grupos según una tasa de crossover
@@ -81,7 +81,7 @@ impl Individual {
 
         if crossover_rate < 1 || crossover_rate > 100 {
             println!("La tasa de crossover debe estar entre 1 y 100");
-            return vec![];
+            return (self.clone(), other.clone());
         }
 
         let results = (0..self.groups.len())
@@ -114,7 +114,7 @@ impl Individual {
 
         let (child1_groups, child2_groups): (Vec<Group>, Vec<Group>) = results.into_iter().unzip();
 
-        let childs = vec![
+        let childs = (
             Individual {
                 groups: child1_groups,
                 student_total: self.student_total,
@@ -125,7 +125,7 @@ impl Individual {
                 student_total: self.student_total,
                 fitness: 0.0,
             },
-        ];
+        );
         return childs;
     }
 
