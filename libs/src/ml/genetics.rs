@@ -20,7 +20,7 @@ impl Individual {
             student_total: hypergraph.get_student_count(),
             fitness: 0.0,
         };
-
+        
         individual.generate_random_groups(group_amount);
         individual.calculate_fitness(hypergraph);
         return individual;
@@ -38,12 +38,13 @@ impl Individual {
         let mut group = Vec::new();
 
         while i < queue.len() {
-            //The group is full
+            //El grupo está lleno
             if group.len() > max_students_per_group {
                 let mut group_bitmap = BitmapLen::new(self.student_total as usize);
 
+                //Establece los bits del grupo a partir de los estudiantes asignados al grupo
                 if let Ok(_) = group_bitmap.set_bits(&group) {
-                    self.groups.push(Group::new(group_bitmap));
+                    self.groups.push(Group::new(group_bitmap)); //Agrega el grupo al individuo
                 } else {
                     println!(
                         "Error al establecer los bits del grupo: {}",
@@ -54,14 +55,16 @@ impl Individual {
                 group = Vec::new();
             }
 
-            //Adds the student to the group
+            //Agrega el estudiante al grupo
             group.push(queue[i]);
             i += 1;
         }
     }
 
     pub fn calculate_fitness(&mut self, hypergraph: &Hypergraph) {
-        //Creates a scoped thread to calculate the fitness of each group in parallel
+        //Calcula la fitness del individuo como la suma de las descartabilidades de cada grupo,
+        //donde la descartabilidad de un grupo se calcula a partir del hipergrafo
+        //Esta función es en paralelo para cada grupo
         self.fitness = self
             .groups
             .par_iter()
@@ -77,7 +80,7 @@ impl Individual {
         */
 
         if crossover_rate < 1 || crossover_rate > 100 {
-            println!("Crossover rate must be between 1 and 100");
+            println!("La tasa de crossover debe estar entre 1 y 100");
             return vec![];
         }
 
@@ -123,15 +126,7 @@ impl Individual {
                 fitness: 0.0,
             },
         ];
-
-        return childs
-            .clone()
-            .into_par_iter()
-            .map(|mut child| {
-                child.check_constraints();
-                return child;
-            })
-            .collect::<Vec<Individual>>();
+        return childs;
     }
 
     pub fn check_constraints(&mut self) {
@@ -144,12 +139,12 @@ impl Individual {
         //Si alguna de las restricciones no se cumple se mueven estudiantes arbitrariamente para cumplirlas
     }
 
-    pub fn mutate(&mut self, mutation_rate: u8) -> Individual {
+    pub fn mutate(&self, mutation_rate: u8) -> Individual {
         //Mutar el individuo cambiando la asignación de estudiantes a grupos según una tasa de mutación
         //Esta función es en paralelo para cada grupo
 
         if mutation_rate < 1 || mutation_rate > 100 {
-            println!("Mutation rate must be between 1 and 100");
+            println!("La tasa de mutación debe estar entre 1 y 100");
             return self.clone();
         }
 
@@ -185,6 +180,7 @@ impl Individual {
     }
 }
 
+//Genera una permutación aleatoria de los números del 0 al n-1
 fn get_random_permutation(n: usize) -> Vec<usize> {
     let mut perm: Vec<usize> = (0..n).collect();
     perm.shuffle(&mut rng());
