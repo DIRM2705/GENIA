@@ -3,21 +3,75 @@ mod ml;
 mod utils;
 
 #[pyo3::pymodule]
-mod transformations
-{
-    use numpy::PyArray2;
-    use pyo3::prelude::*;
-
-}
-
-#[pyo3::pymodule]
-mod ml_genetics {
+mod genia_libs {
     use crate::data::hypergraph::Hypergraph;
     use crate::ml::genetics::Individual;
+    use numpy::{PyArray2, ndarray::Data};
+    use polars::{docs::lazy, frame::{DataFrame, column}, prelude::*};
     use pyo3::prelude::*;
-    use std::path::Path;
-    use rayon::prelude::*;
+    use pyo3::PyErr;
+    use pyo3::exceptions::PyTypeError;
+    use pyo3_polars::PyDataFrame;
     use rand::distr::{Distribution, Uniform};
+    use rayon::prelude::*;
+    use std::{error::Error, path::Path};
+
+    #[pyfunction]
+    fn hypergraph_from_dataframe(py_df: PyDataFrame) -> PyResult<()> {
+        // Convierte el DataFrame de Polars a un dataframe de Rust
+        let df: DataFrame = py_df.into();
+        let mut hypergraph = Hypergraph::new(df.height());
+
+        for column in df.get_columns() {
+            let name = column.name().to_string();
+
+            match column.dtype() {
+                DataType::UInt8 => 
+                {
+                    for (student_id, value) in column.u8().unwrap().into_iter().enumerate() {
+                        if let Some(value) = value {
+                            let hyperedge_name = format!("{}_{}", name, value);
+                            hypergraph.add_student_to_hyperedge(&hyperedge_name, student_id).map_err(|e| {
+                                PyErr::new::<PyTypeError, _>(format!(
+                                    "Error al agregar el estudiante a la hiperarista '{}': {}",
+                                    hyperedge_name, e
+                                ))
+                            })?;
+                        }
+                    }
+                },
+                DataType::List(list_type) => 
+                {
+                    if **list_type != DataType::UInt8 {
+                        return Err(PyErr::new::<PyTypeError, _>(format!(
+                            "Error al procesar la columna '{}': se esperaba una lista de UInt8",
+                            name
+                        )));
+                    }
+                    for (student_id, value) in column.list().unwrap().into_iter().enumerate() {
+                        if let Some(value) = value {
+                            for item in value.u8().unwrap().into_no_null_iter() {
+                                let hyperedge_name = format!("{}_{}", name, item);
+                                hypergraph.add_student_to_hyperedge(&hyperedge_name, student_id).map_err(|e| {
+                                    PyErr::new::<PyTypeError, _>(format!(
+                                        "Error al agregar el estudiante a la hiperarista '{}': {}",
+                                        hyperedge_name, e
+                                    ))
+                                })?;
+                            }
+                        }
+                    }
+                },
+                _ => return Err(PyErr::new::<PyTypeError, _>(format!("Error al procesar la columna {}", name))),
+            }
+        }
+
+        hypergraph.save_to_file("characteristics.hg").map_err(|e| {
+            PyErr::new::<PyTypeError, _>(format!("Error al guardar el hypergraph en el archivo: {}", e))
+        })?;
+
+        return Ok(());
+    }
 
     #[pyclass]
     pub struct GeneticAlgorithm {
@@ -56,22 +110,19 @@ mod ml_genetics {
 
             for _ in 0..self.generations {
                 //En paralelo realiza la selección, crossover y mutación para generar la nueva población
-                population =
-                    create_new_population(self, &population, &hypergraph);
+                population = create_new_population(self, &population, &hypergraph);
             }
         }
     }
 
     fn load_hypergraph_from_file() -> Hypergraph {
-
         if !Path::new("characteristics.hg").exists() {
             panic!("El archivo characteristics.hg no existe");
         }
 
         if let Ok(hypergraph) = Hypergraph::load_from_file("characteristics.hg") {
             return hypergraph;
-        }
-        else {
+        } else {
             panic!("Error al cargar el hypergraph desde el archivo characteristics.hg");
         }
     }
@@ -83,17 +134,18 @@ mod ml_genetics {
         // Calcula la probabilidad acumulada para cada individuo en la población
         let mut probabilities = vec![population[0].get_fitness() / total_fitness];
 
-        let cumulative_prob = (1..population.len()).into_par_iter().map(|i| {
-            (population[i].get_fitness() / total_fitness) + probabilities[i - 1]
-        }).collect::<Vec<f64>>();
+        let cumulative_prob = (1..population.len())
+            .into_par_iter()
+            .map(|i| (population[i].get_fitness() / total_fitness) + probabilities[i - 1])
+            .collect::<Vec<f64>>();
 
         probabilities.extend(cumulative_prob);
-        
+
         return probabilities;
     }
 
     fn roulette_wheel_selection(probabilities: &Vec<f64>) -> usize {
-        if let Ok(rng) = Uniform::new(0.0, 1.0){
+        if let Ok(rng) = Uniform::new(0.0, 1.0) {
             let mut index = 0;
 
             // Genera un número aleatorio entre 0 y 1 uniformemente distribuido
@@ -104,8 +156,7 @@ mod ml_genetics {
                 index += 1;
             }
             return index;
-        }
-        else {
+        } else {
             return 0;
         }
     }
@@ -118,10 +169,10 @@ mod ml_genetics {
         let probabilities = make_probabilities(population);
 
         /*
-            Esta función corre en paralelo por cada spin de la ruleta. Cada spin genera 4 nuevos individuos 
-            a partir de 2 padres seleccionados por la ruleta, 
-            realizando crossover y mutación en paralelo para cada grupo de los individuos.
-         */
+           Esta función corre en paralelo por cada spin de la ruleta. Cada spin genera 4 nuevos individuos
+           a partir de 2 padres seleccionados por la ruleta,
+           realizando crossover y mutación en paralelo para cada grupo de los individuos.
+        */
         return (0..config.spins)
             .into_par_iter()
             .flat_map(|_| {
