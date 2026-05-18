@@ -1,21 +1,21 @@
 use crate::utils::bitmap;
 
 use std::collections::HashMap;
-use bitmap::{BitmapLen, make_bitmap_of_len, resize_bitmap};
+use bitmap::BitmapLen;
 use serde::{Serialize, Deserialize};
 use std::fs::File;
 use std::io::{Read, Write};
 
 #[derive(Serialize, Deserialize)]
 pub struct Hyperedge {
-    bitmap: Box<dyn BitmapLen>, // Bitmap representing the students in the hyperedge
+    bitmap: BitmapLen, // Bitmap representing the students in the hyperedge
     id : String, // Identifier for the hyperedge
 }
 
 impl Hyperedge {
     // Crea una nueva hiperarista con un bitmap del tamaño adecuado para el número de estudiantes
     pub fn new(size_bits: usize, id: String) -> Self {
-        let bitmap = make_bitmap_of_len(size_bits);
+        let bitmap = BitmapLen::new(size_bits);
         Hyperedge {
             bitmap,
             id
@@ -29,7 +29,7 @@ impl Hyperedge {
 
     // Cambia el tamaño del bitmap de la hiperarista, ajustándolo al nuevo número de estudiantes
     pub fn resize(&mut self, new_size_bits: usize) -> Result<(), String> {
-        self.bitmap = resize_bitmap(&mut self.bitmap, new_size_bits)?;
+        self.bitmap.resize(new_size_bits)?;
         Ok(())
     }
 
@@ -38,10 +38,8 @@ impl Hyperedge {
         return self.bitmap.set_bit(student_id);
     }
 
-    // Obtiene el valor del bit correspondiente a un estudiante en el bitmap,
-    // indicando si el estudiante pertenece a la hiperarista
-    pub fn get_student_incidence(&self, student_id: usize) -> Result<bool, String> {
-        return self.bitmap.get_bit(student_id);
+    pub fn apply_mask(&self, mask : &BitmapLen) -> BitmapLen{
+        return self.bitmap.clone() & mask.clone();
     }
 }
 
