@@ -1,11 +1,15 @@
 use super::group::Group;
 use crate::data::hypergraph::Hypergraph;
+use crate::utils::bitmap::BitmapLen;
 use rand::distr::{Distribution, Uniform};
 use rand::rng;
 use rand::seq::SliceRandom;
+use rayon::prelude::*;
 
+#[derive(Clone)]
 pub struct Individual {
     groups: Vec<Group>,
+    student_total: usize,
     fitness: f64,
 }
 
@@ -13,11 +17,12 @@ impl Individual {
     pub fn new(group_amount: usize, hypergraph: &Hypergraph) -> Self {
         let mut individual = Individual {
             groups: Vec::new(),
+            student_total: hypergraph.get_student_count(),
             fitness: 0.0,
         };
 
-        individual.generate_random_groups(hypergraph, group_amount);
-        individual.calculate_fitness();
+        individual.generate_random_groups(group_amount);
+        individual.calculate_fitness(hypergraph);
         return individual;
     }
 
@@ -25,92 +30,163 @@ impl Individual {
         return self.fitness;
     }
 
-    fn generate_random_groups(&mut self, hypergraph: &Hypergraph, group_amount: usize) {
-        let student_total = hypergraph.get_student_count() as u32;
-        let queue = get_random_permutation(student_total);
-        let max_students_per_group = (student_total as f64 / group_amount as f64).ceil() as usize;
+    fn generate_random_groups(&mut self, group_amount: usize) {
+        let queue = get_random_permutation(self.student_total);
+        let max_students_per_group =
+            (self.student_total as f64 / group_amount as f64).ceil() as usize;
         let mut i: usize = 0;
         let mut group = Vec::new();
 
         while i < queue.len() {
             //The group is full
             if group.len() > max_students_per_group {
-                self.groups.push(Group::new(group, &hypergraph));
+                let mut group_bitmap = BitmapLen::new(self.student_total as usize);
+
+                if let Ok(_) = group_bitmap.set_bits(&group) {
+                    self.groups.push(Group::new(group_bitmap));
+                } else {
+                    println!(
+                        "Error al establecer los bits del grupo: {}",
+                        self.groups.len() + 1
+                    );
+                }
+
                 group = Vec::new();
             }
 
             //Adds the student to the group
-            group.push(queue[i] as usize);
+            group.push(queue[i]);
             i += 1;
         }
     }
 
-    pub fn calculate_fitness(&mut self) {
+    pub fn calculate_fitness(&mut self, hypergraph: &Hypergraph) {
         //Creates a scoped thread to calculate the fitness of each group in parallel
-        for group in &self.groups {
-            self.fitness += group.get_discartability();
-        }
+        self.fitness = self
+            .groups
+            .par_iter()
+            .map(|group| group.calculate_discartability(hypergraph))
+            .sum();
     }
 
-    pub fn crossover(
-        &mut self,
-        other: &mut Individual,
-        crossover_rate: u8,
-    ) -> (Individual, Individual) {
-        //Creates a new individual by crossing over the groups of the two parents
-        let generator = Uniform::new_inclusive(0, 100).unwrap();
-        let mut child1 = Vec::new();
-        let mut child2 = Vec::new();
+    pub fn crossover(&mut self, other: &mut Individual, crossover_rate: u8) -> Vec<Individual> {
+        /*
+        Crea dos hijos a partir de dos individuos padres,
+        intercambiando estudiantes entre grupos según una tasa de crossover
+        esta función es en paralelo para cada grupo
+        */
 
-        for group_idx in 0..self.groups.len() {
-            let mut new_group1 = Vec::new();
-            let mut new_group2 = Vec::new();
+        if crossover_rate < 1 || crossover_rate > 100 {
+            println!("Crossover rate must be between 1 and 100");
+            return vec![];
+        }
 
-            let group1 = self.groups[group_idx].get_students();
-            let group2 = other.groups[group_idx].get_students();
+        let results = (0..self.groups.len())
+            .into_par_iter()
+            .map(|group_idx| {
+                let generator = Uniform::new_inclusive(0, 100).unwrap();
+                let mut positive_mask = BitmapLen::new(self.student_total);
+                let mut negative_mask = positive_mask.clone();
 
-            for student_idx in 0..group1.len() {
-                let student1 = group1[student_idx];
-                let student2 = group2[student_idx];
+                //Generar las máscaras de crossover para el grupo actual,
+                //indicando qué estudiantes serán intercambiados entre los hijos
+                for student_idx in 0..self.student_total {
+                    if generator.sample(&mut rand::rng()) <= crossover_rate {
+                        positive_mask.set_bit(student_idx).unwrap();
+                    } else {
+                        negative_mask.set_bit(student_idx).unwrap();
+                    }
+                }
 
-                if generator.sample(&mut rand::rng()) <= crossover_rate {
-                    //This student is swapped between the two children
-                    new_group1.push(student2);
-                    new_group2.push(student1);
-                } else {
-                    //This student is not swapped between the two children
-                    new_group1.push(student1);
-                    new_group2.push(student2);
+                //Crea los grupos a partir de las máscaras de crossover,
+                //intercambiando los estudiantes entre los padres según las máscaras
+                let new_group1 = (self.groups[group_idx].get_students() & positive_mask.clone())
+                    | (other.groups[group_idx].get_students() & negative_mask.clone());
+                let new_group2 = (self.groups[group_idx].get_students() & negative_mask.clone())
+                    | (other.groups[group_idx].get_students() & positive_mask.clone());
+
+                (Group::new(new_group1), Group::new(new_group2))
+            })
+            .collect::<Vec<(Group, Group)>>();
+
+        let (child1_groups, child2_groups): (Vec<Group>, Vec<Group>) = results.into_iter().unzip();
+
+        let childs = vec![
+            Individual {
+                groups: child1_groups,
+                student_total: self.student_total,
+                fitness: 0.0,
+            },
+            Individual {
+                groups: child2_groups,
+                student_total: self.student_total,
+                fitness: 0.0,
+            },
+        ];
+
+        return childs
+            .clone()
+            .into_par_iter()
+            .map(|mut child| {
+                child.check_constraints();
+                return child;
+            })
+            .collect::<Vec<Individual>>();
+    }
+
+    pub fn check_constraints(&mut self) {
+        // Verifica si el individuo cumple con las restricciones:
+        // - Cada estudiante debe pertenecer a exactamente un grupo
+        // - No debe haber grupos vacíos
+        // - Todos los grupos deben tener un número de estudiantes dentro de un rango permitido
+        // - Todos los estudiantes deben ser asignados a un grupo
+
+        //Si alguna de las restricciones no se cumple se mueven estudiantes arbitrariamente para cumplirlas
+    }
+
+    pub fn mutate(&mut self, mutation_rate: u8) -> Individual {
+        //Mutar el individuo cambiando la asignación de estudiantes a grupos según una tasa de mutación
+        //Esta función es en paralelo para cada grupo
+
+        if mutation_rate < 1 || mutation_rate > 100 {
+            println!("Mutation rate must be between 1 and 100");
+            return self.clone();
+        }
+
+        let random_students = get_random_permutation(self.student_total);
+
+        // Divide entre 200 porque solo tomamos la mitad de estudiantes pues, son intercambios por pareja
+        let changes =
+            ((self.student_total as f32) * (mutation_rate as f32 / 200.0)).floor() as usize;
+
+        // Crea un nuevo individuo a partir del actual
+        let mut new_individual = self.clone();
+
+        //Intercambia estudiantes entre grupos según la tasa de mutación,
+        //tomando estudiantes aleatorios del grupo actuald
+        for i in (0..changes).step_by(2) {
+            for group in new_individual.groups.iter_mut() {
+                if let Ok(true) = group.get_students().get_bit(random_students[i]) {
+                    group.get_students().set_bit(random_students[i]).unwrap();
+                    group
+                        .get_students()
+                        .clear_bit(random_students[i + 1])
+                        .unwrap();
+                } else if let Ok(true) = group.get_students().get_bit(random_students[i + 1]) {
+                    group
+                        .get_students()
+                        .set_bit(random_students[i + 1])
+                        .unwrap();
+                    group.get_students().clear_bit(random_students[i]).unwrap();
                 }
             }
-
-            //child1.push(Group::new(new_group1));
-            //child2.push(Group::new(new_group2));
         }
-
-        return (
-            Individual {
-                groups: child1,
-                fitness: 0.0,
-            },
-            Individual {
-                groups: child2,
-                fitness: 0.0,
-            },
-        );
+        return new_individual;
     }
-
-    /*pub fn select_student(&self) -> u32 {
-        //Selects a student randomly from the individual
-        let mut rng = rand::thread_rng();
-        let group_idx = rng.gen_range(0..self.groups.len());
-        let student_idx = rng.gen_range(0..self.groups[group_idx].students.len());
-        return self.groups[group_idx].students[student_idx];
-    }*/
 }
 
-fn get_random_permutation(n: u32) -> Vec<u32> {
-    let mut perm: Vec<u32> = (0..n).collect();
+fn get_random_permutation(n: usize) -> Vec<usize> {
+    let mut perm: Vec<usize> = (0..n).collect();
     perm.shuffle(&mut rng());
     return perm;
 }
