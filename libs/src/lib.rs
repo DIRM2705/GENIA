@@ -134,12 +134,9 @@ mod genia_libs {
         // Calcula la probabilidad acumulada para cada individuo en la población
         let mut probabilities = vec![population[0].get_fitness() / total_fitness];
 
-        let cumulative_prob = (1..population.len())
-            .into_par_iter()
-            .map(|i| (population[i].get_fitness() / total_fitness) + probabilities[i - 1])
-            .collect::<Vec<f64>>();
-
-        probabilities.extend(cumulative_prob);
+        for i in 1..population.len() {
+            probabilities.push(probabilities[i - 1] + population[i].get_fitness() / total_fitness);
+        }
 
         return probabilities;
     }
