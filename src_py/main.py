@@ -1,8 +1,6 @@
 import polars as pl 
 from core.preprocess import load_from_csv
-from src_py.core.consts import *
-from genetics import roulette_wheel
-from group_enhancer import GeneticAlgorithm
+from core.consts import *
 import numpy as np
 
 # [DEBUG] Configuración para visualizar el DataFrame completo 

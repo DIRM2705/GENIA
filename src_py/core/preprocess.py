@@ -247,7 +247,7 @@ def _get_IM_scores_from_df(im_answers: pl.DataFrame) -> pl.DataFrame:
     )
     
     result = result.with_columns( #Creamos una columna para cada tipo de inteligencia con su ranking correspondiente, usando map_elements para extraer el ranking de cada inteligencia del diccionario "ranking_dict_IM"
-        MI1 = pl.col("ranking_dict_IM") #Toma la columna "ranking_dict_IM" que contiene el diccionario con el ranking de cada inteligencia para cada estudiante
+        MI_1 = pl.col("ranking_dict_IM") #Toma la columna "ranking_dict_IM" que contiene el diccionario con el ranking de cada inteligencia para cada estudiante
         .map_elements(
             lambda element:
                 [
@@ -257,7 +257,7 @@ def _get_IM_scores_from_df(im_answers: pl.DataFrame) -> pl.DataFrame:
         )
         .cast(pl.List(pl.UInt8)), #Convertimos la lista de rankings a una lista de UInt8 para facilitar su manipulación en el algoritmo genético
         
-        MI2 = pl.col("ranking_dict_IM")
+        MI_2 = pl.col("ranking_dict_IM")
         .map_elements(
             lambda element:
                 [
@@ -269,7 +269,7 @@ def _get_IM_scores_from_df(im_answers: pl.DataFrame) -> pl.DataFrame:
     )
     
     # Dejar solo las columnas finales
-    result = result.select("MI1", "MI2") #Seleccionamos solo las columnas finales de MI para devolver el resultado
+    result = result.select("MI_1", "MI_2") #Seleccionamos solo las columnas finales de MI para devolver el resultado
         
     return result  #Devolvemos el DataFrame con los puntajes finales de cada inteligencia
 
@@ -310,7 +310,7 @@ def _get_VARK_scores(vark_answers: pl.DataFrame) -> pl.DataFrame:
     )
     
     vark_answers = vark_answers.with_columns(
-        VARK1 = pl.col("ranking_dict_VARK") #Toma la columna "ranking_dict_VARK"
+        VARK_1 = pl.col("ranking_dict_VARK") #Toma la columna "ranking_dict_VARK"
         .map_elements(
             lambda element:
                 [
@@ -320,7 +320,7 @@ def _get_VARK_scores(vark_answers: pl.DataFrame) -> pl.DataFrame:
         )
         .cast(pl.List(pl.UInt8)), #Convertimos la lista de rankings a una lista de UInt8 para facilitar su manipulación en el algoritmo genético
         
-        VARK2 = pl.col("ranking_dict_VARK")
+        VARK_2 = pl.col("ranking_dict_VARK")
         .map_elements(
             lambda element:
                 [
@@ -331,6 +331,6 @@ def _get_VARK_scores(vark_answers: pl.DataFrame) -> pl.DataFrame:
         .cast(pl.List(pl.UInt8))
     )
     
-    vark_answers = vark_answers.select("VARK1", "VARK2") #Seleccionamos solo las columnas finales de VARK para devolver el resultado
+    vark_answers = vark_answers.select("VARK_1", "VARK_2") #Seleccionamos solo las columnas finales de VARK para devolver el resultado
     
     return vark_answers
