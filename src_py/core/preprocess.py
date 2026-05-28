@@ -1,4 +1,5 @@
 import polars as pl
+from sklearn.preprocessing import KBinsDiscretizer
 from core.consts import *
 
 def load_from_csv(file_path: str) -> pl.DataFrame:
@@ -95,24 +96,58 @@ def _grade_students(students : pl.DataFrame) -> pl.DataFrame:
     students = students.with_columns(
         TND = _get_NDD_bitmask(students["TND"]),
         Cronotipo = (pl.col("Cronotipo") == "Entre las 7 am y las 3pm").cast(pl.UInt8) + 1, #Convertimos el cronotipo a 0 vespertino, 1 matutino
-        AMotiv = ((pl.col("AM1") + pl.col("AM2") + pl.col("AM3"))/21).round(2), #Motivación de Autonomía -> de qué tan libres se sienten los estudiantes para expresar sus ideas y opiniones, y para elegir sus actividades académicas
-        RMotiv = ((pl.col("RM1") + pl.col("RM2") + pl.col("RM3"))/21).round(2), #Motivación de Relación
-        CMotiv = ((pl.col("CM1") + pl.col("CM2"))/14).round(2), #Motivación de Competencia -> de qué tan capaces se sienten los estudiantes respecto a sus actividades académicas
-        BEngage = ((pl.col("BE1") + pl.col("BE2") + pl.col("BE3") + pl.col("BE4")+pl.col("BE5"))/25).round(2), # Behavioural Engagement -> Compromiso Conductual
-        EEngage = ((pl.col("EE1") + pl.col("EE2") + pl.col("EE3") + pl.col("EE4")+pl.col("EE5"))/25).round(2), # Emotional Engagement -> Compromiso Emocional 
-        CEngage = ((pl.col("CE1") + pl.col("CE2") + pl.col("CE3") + pl.col("CE4")+pl.col("CE5"))/25).round(2) # Cognitive Engagement -> Compromiso Cognitivo
+        AM = ((pl.col("AM1") + pl.col("AM2") + pl.col("AM3"))/21).round(2), #Motivación de Autonomía -> de qué tan libres se sienten los estudiantes para expresar sus ideas y opiniones, y para elegir sus actividades académicas
+        RM = ((pl.col("RM1") + pl.col("RM2") + pl.col("RM3"))/21).round(2), #Motivación de Relación
+        CM = ((pl.col("CM1") + pl.col("CM2"))/14).round(2), #Motivación de Competencia -> de qué tan capaces se sienten los estudiantes respecto a sus actividades académicas
+        BE = ((pl.col("BE1") + pl.col("BE2") + pl.col("BE3") + pl.col("BE4")+pl.col("BE5"))/25).round(2), # Behavioural Engagement -> Compromiso Conductual
+        EE = ((pl.col("EE1") + pl.col("EE2") + pl.col("EE3") + pl.col("EE4")+pl.col("EE5"))/25).round(2), # Emotional Engagement -> Compromiso Emocional 
+        CE = ((pl.col("CE1") + pl.col("CE2") + pl.col("CE3") + pl.col("CE4")+pl.col("CE5"))/25).round(2) # Cognitive Engagement -> Compromiso Cognitivo
     ).select([ #Seleccionar solo las columnas relevantes para el hipergrafo
-        "Id", "Cronotipo", "TND", "AMotiv", "RMotiv", "CMotiv", "BEngage", "EEngage", "CEngage"
+        "Id", "Cronotipo", "TND", "AM", "RM", "CM", "BE", "EE", "CE"
     ])
     
-    
+    #Discretizar AM,RM, CM, BE, EE y CE en 5 bins
+    students = students.with_columns(
+        AM = _discretize_column(students["AM"], 5),
+        RM = _discretize_column(students["RM"], 5),
+        CM = _discretize_column(students["CM"], 5),
+        BE = _discretize_column(students["BE"], 5),
+        EE = _discretize_column(students["EE"], 5),
+        CE = _discretize_column(students["CE"], 5)
+    )
+
     #Agregar VARK al DataFrame de estudiantes
     students = students.hstack(VARK_scores) #hstack=horizontal stack -> Agrega columnas lado a lado -> agregar las columnas de VARK_scores al DataFrame de estudiantes
     
     #Agregar IM al DataFrame de estudiantes
     students = students.hstack(IM_scores) #Agrega las columnas de IM_scores al DataFrame de estudiantes
     
-    return students #devuelve el DataFrame final             
+    return students #devuelve el DataFrame final   
+
+def _discretize_column(column: pl.Series, n_bins: int) -> pl.Series:
+    """
+    Discretize a continuous column into n_bins using KBinsDiscretizer from sklearn.
+
+    Args:
+        column (pl.Series): The continuous column to be discretized.
+        n_bins (int): The number of bins to discretize into.
+
+    Returns:
+        pl.Series: A new Polars Series with the discretized values.
+    """
+    # Convertir la columna de Polars a un array de numpy para usar con KBinsDiscretizer
+    column_np = column.to_numpy().reshape(-1, 1) #reshape para convertirlo en una matriz de una sola columna, que es lo que espera KBinsDiscretizer
+    
+    # Crear el discretizador con n_bins y estrategia de cuantiles para que cada bin tenga aproximadamente la misma cantidad de muestras
+    discretizer = KBinsDiscretizer(n_bins=n_bins, encode='ordinal', strategy='quantile')
+    
+    # Ajustar el discretizador a los datos y transformarlos
+    discretized_np = discretizer.fit_transform(column_np).astype(int).flatten() #fit_transform para ajustar el modelo y transformar los datos, astype(int) para convertir los valores a enteros, flatten() para convertir la matriz resultante en un array unidimensional
+    
+    # Convertir el array de numpy resultante de nuevo a una Serie de Polars
+    discretized_series = pl.Series(discretized_np, dtype=pl.UInt8) #Convertimos a UInt8 para ahorrar espacio, ya que el número de bins es pequeño
+    
+    return discretized_series          
             
 def _get_NDD_bitmask(tnd_series : pl.Series) -> pl.Series: #tnd_series es una serie de texto con los diagnósticos de NDD de cada estudiante, separados por punto y coma ->  Devuelve: Serie de enteros (UInt8) donde cada bit representa la presencia o ausencia de un trastorno
     """

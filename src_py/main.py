@@ -12,7 +12,7 @@ hypergraph_path = Path("characteristics.hg")
 if not hypergraph_path.exists():
     df = load_from_csv("Pruebas1.csv") #cargar el archivo csv con los datos de los estudiantes usando la función de carga de datos, que devuelve un DataFrame de Polars
     print(df) #imprimir el DataFrame para verificar que se haya procesado correctamente
-    hypergraph_from_dataframe(df.select(pl.exclude("Id", "TND", "^.*Motiv$", "^.*Engage$"))) #crear un hipergráfico a partir del DataFrame usando la función de creación de hipergráficos, que toma el DataFrame y la ruta donde se guardará el hipergráfico como argumentos
+    hypergraph_from_dataframe(df.select(pl.exclude("Id", "TND"))) #crear un hipergráfico a partir del DataFrame usando la función de creación de hipergráficos, que toma el DataFrame y la ruta donde se guardará el hipergráfico como argumentos
 
 # Configuración del algoritmo genético:
 # - Población
