@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 use std::cmp::min;
 use std::ops;
 
-#[derive(Serialize, Deserialize, Clone)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct BitmapLen {
     bitmap: Box<[u8]>,
 }
