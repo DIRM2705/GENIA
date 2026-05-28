@@ -77,6 +77,7 @@ mod genia_libs {
         population_size: usize,
         generations: usize,
         spins: usize,
+        elites: usize,
         mutation_rate: u8,
         crossover_rate: u8,
     }
@@ -88,12 +89,14 @@ mod genia_libs {
             population_size: usize,
             generations: usize,
             spins: usize,
+            elites: usize,
             mutation_rate: u8,
             crossover_rate: u8,
         ) -> Self {
             return GeneticAlgorithm {
                 population_size,
                 spins,
+                elites,
                 generations,
                 mutation_rate,
                 crossover_rate,
@@ -171,6 +174,12 @@ mod genia_libs {
         }
     }
 
+    fn elitism(population: &Vec<Individual>, num_elites: usize) -> Vec<Individual> {
+        let mut elites = population.clone();
+        elites.sort_by(|a, b| b.get_fitness().partial_cmp(&a.get_fitness()).unwrap());
+        return elites.into_iter().take(num_elites).collect();
+    }
+
     fn create_new_population(
         config: &GeneticAlgorithm,
         num_groups: usize,
@@ -209,7 +218,10 @@ mod genia_libs {
                 let child3 = child1.mutate(config.mutation_rate);
                 let child4 = child2.mutate(config.mutation_rate);
 
-                return vec![child1, child2, child3, child4];
+                let mut children = vec![child1, child2, child3, child4];
+                children.extend(elitism(population, config.elites));
+
+                return children;
             })
             .collect::<Vec<Individual>>();
     }
