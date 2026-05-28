@@ -19,15 +19,18 @@ py -m venv .venv
 .venv/Scripts/activate
 ```
 
-Then, install the requirements for Python
+Python requires some self-made libraries to run the code, you can either download the pre-compiled versions [here](https://github.com/DIRM2705/GENIA/releases/tag/GENIA-lib) or compile them yourself using maturin.
+
+### Installing using pre-compiled versions (download the wheel files first)
 ```bash
 pip install -r requirements.txt
+pip install pip install path_to_lib/genia_libs-0.1.0-cp313-cp313-win_amd64.whl  
 ```
 
-Move to each library with the change directory command, and execute maturin. For example
+## Installing using maturin (compile the libraries yourself)
 ```bash
-cd gower
-maturin develop
-cd ..
+pip install -r requirements.txt
+pip install maturin
+cd libs
+maturin develop -r
 ```
-This will install all the libraries created exclusively for this project
