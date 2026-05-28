@@ -1,11 +1,13 @@
-# Cohertia
+# GENIA
+
+## Overview
 
 ## Working with the code
 
 First, download the main branch of this repository or clone the repo through git using:
 
 ```bash
-git clone git@github.com/DIRM2705/Cohertia
+git clone git@github.com/DIRM2705/GENIA.git
 ```
 
 You'll need Python 3.13 and Rust 1.90.0 to compile and execute all the contents of this repo
