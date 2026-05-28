@@ -9,8 +9,6 @@ from genia_libs import hypergraph_from_dataframe, GeneticAlgorithm
 pl.Config.set_tbl_cols(-1)
 pl.Config.set_tbl_rows(-1)
 
-
-
 hypergraph_path = Path("characteristics.hg")
 if not hypergraph_path.exists():
     df = load_from_csv("Pruebas1.csv") #cargar el archivo csv con los datos de los estudiantes usando la función de carga de datos, que devuelve un DataFrame de Polars
@@ -18,11 +16,12 @@ if not hypergraph_path.exists():
     hypergraph_from_dataframe(df.select(pl.exclude("Id", "TND", "^.*Motiv$", "^.*Engage$"))) #crear un hipergráfico a partir del DataFrame usando la función de creación de hipergráficos, que toma el DataFrame y la ruta donde se guardará el hipergráfico como argumentos
 
 # Configuración del algoritmo genético:
-# - Población: 500 individuos
-# - Spins por generación: 125
-# - Número de generaciones: 10
-# - Mutación: 10%
-# - Cruzamiento: 50%
+# - Población
+# - Número de generaciones
+# - Spins por generación
+# - Elitismo
+# - Mutación
+# - Cruzamiento
 
-ga = GeneticAlgorithm(500, 125, 10, 10, 50)
+ga = GeneticAlgorithm(20, 10, 5, 2, 10, 50)
 ga.run(5) # 5 grupos a formar
