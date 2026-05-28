@@ -1,7 +1,6 @@
 import polars as pl 
 from core.preprocess import load_from_csv
 from core.consts import *
-import numpy as np
 from pathlib import Path
 from genia_libs import hypergraph_from_dataframe, GeneticAlgorithm
 
