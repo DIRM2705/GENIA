@@ -5,6 +5,8 @@ use rand::distr::{Distribution, Uniform};
 use rand::rng;
 use rand::seq::SliceRandom;
 use rayon::prelude::*;
+use std::collections::HashSet;
+use std::sync::Mutex;
 
 #[derive(Clone)]
 pub struct Individual {
@@ -20,7 +22,7 @@ impl Individual {
             student_total: hypergraph.get_student_count(),
             fitness: 0.0,
         };
-        
+
         individual.generate_random_groups(group_amount);
         individual.calculate_fitness(hypergraph);
         return individual;
@@ -65,11 +67,15 @@ impl Individual {
         //Calcula la fitness del individuo como la suma de las descartabilidades de cada grupo,
         //donde la descartabilidad de un grupo se calcula a partir del hipergrafo
         //Esta función es en paralelo para cada grupo
-        self.fitness = self
+        let fitness_sum : f64 = self
             .groups
             .par_iter()
             .map(|group| group.calculate_discartability(hypergraph))
             .sum();
+
+        //Mayores sumas de fitness indican mayor descartabilidad
+        //para maximizar fitness se toma el inverso de la suma de las descartabilidades
+        self.fitness = 1.0/(fitness_sum + 1e-10);
     }
 
     pub fn crossover(&self, other: &Individual, crossover_rate: u8) -> (Individual, Individual) {
@@ -129,14 +135,90 @@ impl Individual {
         return childs;
     }
 
-    pub fn check_constraints(&mut self) {
-        // Verifica si el individuo cumple con las restricciones:
-        // - Cada estudiante debe pertenecer a exactamente un grupo
-        // - No debe haber grupos vacíos
-        // - Todos los grupos deben tener un número de estudiantes dentro de un rango permitido
-        // - Todos los estudiantes deben ser asignados a un grupo
+    pub fn check_constraints(&mut self, group_amount: usize) {
+        /*
+        Verifica si el individuo cumple con las restricciones:
+        - Cada estudiante debe pertenecer a exactamente un grupo
+        - No debe haber grupos vacíos
+        - Todos los grupos deben tener un número de estudiantes dentro de un rango permitido
+        - Todos los estudiantes deben ser asignados a un grupo
+        Si alguna de las restricciones no se cumple se mueven estudiantes arbitrariamente para cumplirlas
+        */
 
-        //Si alguna de las restricciones no se cumple se mueven estudiantes arbitrariamente para cumplirlas
+        let max_students_per_group =
+            (self.student_total as f64 / group_amount as f64).ceil() as usize;
+
+        let assigned_students = HashSet::new();
+        let freed_students = HashSet::new();
+        let assigned_mtx = Mutex::new(assigned_students);
+        let freed_mtx = Mutex::new(freed_students);
+        let fixed_groups = self.groups.clone();
+
+        let updated_groups = fixed_groups
+            .into_par_iter()
+            .map(|group| {
+                let mut student_count = 0;
+
+                for student_idx in 0..self.student_total {
+                    if let Ok(true) = group.get_students().get_bit(student_idx) {
+                        //Verificar tamaño del grupo
+                        if student_count >= max_students_per_group {
+                            //Si el grupo ya tiene el número máximo de estudiantes,
+                            //se elimina el estudiante del grupo
+                            group.get_students().clear_bit(student_idx).unwrap();
+                            let lock_res = freed_mtx.lock();
+                            if lock_res.is_err() {
+                                println!(
+                                    "Error al adquirir el lock del mutex de estudiantes liberados"
+                                );
+                                continue;
+                            }
+                            let mut freed = lock_res.unwrap();
+                            freed.insert(student_idx); //Agrega el estudiante al conjunto de estudiantes liberados
+                            drop(freed); //Libera el lock del mutex de estudiantes liberados
+                            continue; //Pasa al siguiente estudiante
+                        }
+
+                        //Validar que el estudiante no haya sido asignado a otro grupo
+                        let lock_res = assigned_mtx.lock();
+                        if lock_res.is_err() {
+                            println!(
+                                "Error al adquirir el lock del mutex de estudiantes asignados"
+                            );
+                            return group;
+                        }
+
+                        //Verificar si el estudiante ya ha sido asignado a un grupo
+                        let mut students = lock_res.unwrap();
+                        if students.contains(&student_idx) {
+                            //Si el estudiante ya ha sido asignado a un grupo, se elimina del grupo actual
+                            let result = group.get_students().clear_bit(student_idx);
+                            if result.is_err() {
+                                println!("Error al eliminar al estudiante del grupo");
+                            }
+                        } else {
+                            //Si el estudiante no ha sido asignado a un grupo,
+                            //se agrega al conjunto de estudiantes asignados
+                            students.insert(student_idx);
+                            student_count += 1; //Hay un estudiante válido más en el grupo
+                        }
+                        drop(students); //Libera el lock del mutex de estudiantes asignados
+                    }
+                }
+
+                //Si el grupo tiene espacio y hay estudiantes liberados, se asignan estudiantes liberados al grupo
+                while student_count < max_students_per_group && let Ok(mut freed) = freed_mtx.lock() && freed.len() > 0 {
+                    let student_idx = *freed.iter().next().unwrap(); //Toma un estudiante del conjunto de estudiantes liberados
+                    group.get_students().set_bit(student_idx).unwrap(); //Agrega el estudiante al grupo
+                    freed.remove(&student_idx); //Elimina el estudiante del conjunto de estudiantes liberados
+                    student_count += 1; //Hay un estudiante válido más en el grupo
+                }
+
+                return group;
+            })
+            .collect::<Vec<Group>>();
+
+        self.groups = updated_groups;
     }
 
     pub fn mutate(&self, mutation_rate: u8) -> Individual {
