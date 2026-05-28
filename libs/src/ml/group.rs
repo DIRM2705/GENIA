@@ -137,8 +137,4 @@ impl Group {
 
         return discartability;
     }
-
-    pub fn len(&self) -> usize {
-        return self.student_count;
-    }
 }

@@ -27,20 +27,6 @@ impl BitmapLen {
         }
     }
 
-    pub fn resize(&mut self, new_size_bits: usize) -> Result<(), String> {
-        if new_size_bits < self.get_size_bits() {
-            return Err("New size must be greater than or equal to the current size".into());
-        }
-
-        let new_size_bytes = (new_size_bits + 7) / 8;
-        let mut new_bitmap = vec![0u8; new_size_bytes];
-        for i in 0..self.bitmap.len() {
-            new_bitmap[i] = self.bitmap[i];
-        }
-        self.bitmap = new_bitmap.into_boxed_slice();
-        Ok(())
-    }
-
     pub fn count_ones(&self) -> u32 {
        return self.bitmap.iter().map(|byte| byte.count_ones()).sum();
     }

@@ -24,12 +24,6 @@ impl Hyperedge {
         return &self.id;
     }
 
-    // Cambia el tamaño del bitmap de la hiperarista, ajustándolo al nuevo número de estudiantes
-    pub fn resize(&mut self, new_size_bits: usize) -> Result<(), String> {
-        self.bitmap.resize(new_size_bits)?;
-        Ok(())
-    }
-
     // Agrega un estudiante a la hiperarista, estableciendo el bit correspondiente en el bitmap
     pub fn add_student(&mut self, student_id: usize) -> Result<(), String> {
         return self.bitmap.set_bit(student_id);
@@ -108,17 +102,6 @@ impl Hypergraph {
             "El nombre de la hiperarista debe contener un prefijo seguido de un guion bajo"
                 .to_string(),
         );
-    }
-
-    // Agrega un nuevo estudiante al hipergrafo, ajustando los bitmaps de las hiperaristas existentes
-    pub fn add_student(&mut self) -> Result<(), String> {
-        self.student_count += 1;
-        for hyperedge_set in self.hyperedges.values_mut() {
-            for hyperedge in hyperedge_set {
-                hyperedge.resize(self.student_count)?;
-            }
-        }
-        Ok(())
     }
 
     pub fn get_subhypergraph_by_prefix(&self, prefix: &str) -> Result<&Vec<Hyperedge>, String> {
