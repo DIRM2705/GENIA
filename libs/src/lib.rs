@@ -103,7 +103,7 @@ mod genia_libs {
             };
         }
 
-        pub fn run(&self, num_groups: usize) {
+        pub fn run(&self, num_groups: usize) ->  Vec<Vec<usize>> {
             let hypergraph = load_hypergraph_from_file();
 
             // Genera la población inicial de individuos
@@ -128,6 +128,10 @@ mod genia_libs {
                     println!("Mejor fitness en esta generación: {}", best_individual.get_fitness());
                 }
             }
+            
+            // Devuelve la mejor solución encontrada después de todas las generaciones
+            let best_individual = population.iter().max_by(|a, b| a.get_fitness().partial_cmp(&b.get_fitness()).unwrap()).unwrap();
+            return best_individual.get_solution();
         }
     }
 
@@ -213,6 +217,11 @@ mod genia_libs {
                 //Calcula fitness de los nuevos individuos
                 child1.calculate_fitness(hypergraph);
                 child2.calculate_fitness(hypergraph);
+
+                if cfg!(debug_assertions) {
+                    println!("Child1 solution: {:?}, fitness: {}", child1.get_solution(), child1.get_fitness());
+                    println!("Child2 solution: {:?}, fitness: {}", child2.get_solution(), child2.get_fitness());
+                }
 
                 // Aplica mutación y crea 2 individuos más
                 let child3 = child1.mutate(config.mutation_rate);

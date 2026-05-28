@@ -28,6 +28,29 @@ impl Individual {
         return individual;
     }
 
+    pub fn get_solution(&self) -> Vec<Vec<usize>> {
+        //Devuelve la solución del individuo como un vector de grupos, donde cada grupo es un vector de índices de estudiantes
+        let groups_bitmaps = self
+            .groups
+            .iter()
+            .map(|group| group.get_students())
+            .collect::<Vec<BitmapLen>>();
+        let solution = groups_bitmaps
+            .into_par_iter()
+            .map(|group_bitmap| {
+                let mut students_in_group = Vec::new();
+                for student_idx in 0..self.student_total {
+                    if let Ok(true) = group_bitmap.get_bit(student_idx) {
+                        students_in_group.push(student_idx);
+                    }
+                }
+                return students_in_group;
+            })
+            .collect::<Vec<Vec<usize>>>();
+
+        return solution;
+    }
+
     pub fn get_fitness(&self) -> f64 {
         return self.fitness;
     }
@@ -41,7 +64,7 @@ impl Individual {
 
         while i < queue.len() {
             //El grupo está lleno
-            if group.len() > max_students_per_group {
+            if group.len() == max_students_per_group {
                 let mut group_bitmap = BitmapLen::new(self.student_total as usize);
 
                 //Establece los bits del grupo a partir de los estudiantes asignados al grupo
@@ -53,7 +76,6 @@ impl Individual {
                         self.groups.len() + 1
                     );
                 }
-
                 group = Vec::new();
             }
 
@@ -61,13 +83,25 @@ impl Individual {
             group.push(queue[i]);
             i += 1;
         }
+
+        let mut group_bitmap = BitmapLen::new(self.student_total as usize);
+
+        //Establece los bits del grupo a partir de los estudiantes asignados al grupo
+        if let Ok(_) = group_bitmap.set_bits(&group) {
+            self.groups.push(Group::new(group_bitmap)); //Agrega el grupo al individuo
+        } else {
+            println!(
+                "Error al establecer los bits del grupo: {}",
+                self.groups.len() + 1
+            );
+        }
     }
 
     pub fn calculate_fitness(&mut self, hypergraph: &Hypergraph) {
         //Calcula la fitness del individuo como la suma de las descartabilidades de cada grupo,
         //donde la descartabilidad de un grupo se calcula a partir del hipergrafo
         //Esta función es en paralelo para cada grupo
-        let fitness_sum : f64 = self
+        let fitness_sum: f64 = self
             .groups
             .par_iter()
             .map(|group| group.calculate_discartability(hypergraph))
@@ -75,7 +109,7 @@ impl Individual {
 
         //Mayores sumas de fitness indican mayor descartabilidad
         //para maximizar fitness se toma el inverso de la suma de las descartabilidades
-        self.fitness = 1.0/(fitness_sum + 1e-10);
+        self.fitness = 1.0 / (fitness_sum + 1e-10);
     }
 
     pub fn crossover(&self, other: &Individual, crossover_rate: u8) -> (Individual, Individual) {
@@ -148,77 +182,88 @@ impl Individual {
         let max_students_per_group =
             (self.student_total as f64 / group_amount as f64).ceil() as usize;
 
-        let assigned_students = HashSet::new();
-        let freed_students = HashSet::new();
-        let assigned_mtx = Mutex::new(assigned_students);
-        let freed_mtx = Mutex::new(freed_students);
-        let fixed_groups = self.groups.clone();
+        // Bitmaps de los grupos
+        let mut group_bitmaps = self
+            .groups
+            .iter()
+            .map(|group| group.get_students())
+            .collect::<Vec<BitmapLen>>();
+        
+        // Mutex para cada bitmap de grupo para evitar condiciones de carrera al modificar los grupos en paralelo
+        let bitmaps_locks = group_bitmaps
+            .iter_mut()
+            .map(|bitmap| Mutex::new(bitmap))
+            .collect::<Vec<Mutex<&mut BitmapLen>>>();
+        //Lista de estudiantes libres
+        let mut freed_students = HashSet::new();
+        let freed_mtx = Mutex::new(&mut freed_students);
 
-        let updated_groups = fixed_groups
-            .into_par_iter()
-            .map(|group| {
-                let mut student_count = 0;
+        // Por cada estudiante en paralelo
+        
+        (0..self.student_total).into_par_iter()
+        .for_each(|student_idx|
+        {
+            // Asumir que no se le asignó a un grupo
+            let mut assigned = false;
 
-                for student_idx in 0..self.student_total {
-                    if let Ok(true) = group.get_students().get_bit(student_idx) {
-                        //Verificar tamaño del grupo
-                        if student_count >= max_students_per_group {
-                            //Si el grupo ya tiene el número máximo de estudiantes,
-                            //se elimina el estudiante del grupo
-                            group.get_students().clear_bit(student_idx).unwrap();
-                            let lock_res = freed_mtx.lock();
-                            if lock_res.is_err() {
-                                println!(
-                                    "Error al adquirir el lock del mutex de estudiantes liberados"
-                                );
-                                continue;
-                            }
-                            let mut freed = lock_res.unwrap();
-                            freed.insert(student_idx); //Agrega el estudiante al conjunto de estudiantes liberados
-                            drop(freed); //Libera el lock del mutex de estudiantes liberados
-                            continue; //Pasa al siguiente estudiante
+            // Verificar grupo a grupo si el estudiante pertenece a ese grupo
+            for i in 0..bitmaps_locks.len() {
+                let mut lock_res = bitmaps_locks[i].lock();
+
+                //Si el estudiante pertenece al grupo, se marca como asignado, si ya estaba asignado a otro grupo, se elimina del grupo actual
+                if let Ok(ref mut bitmap) = lock_res && let Ok(true) = bitmap.get_bit(student_idx) {
+                    if bitmap.count_ones() as usize > max_students_per_group {
+                        //El grupo tiene más estudiantes de los permitidos, se elimina el estudiante del grupo
+                        bitmap.clear_bit(student_idx).unwrap();
+                        if cfg!(debug_assertions) {
+                            println!("Grupo {} tiene más estudiantes de los permitidos, eliminando estudiante {}...", i, student_idx);
+                            println!("Bitmap del grupo {} después de eliminar: {:?}", i, bitmap);
                         }
-
-                        //Validar que el estudiante no haya sido asignado a otro grupo
-                        let lock_res = assigned_mtx.lock();
-                        if lock_res.is_err() {
-                            println!(
-                                "Error al adquirir el lock del mutex de estudiantes asignados"
-                            );
-                            return group;
+                    } 
+                    else if assigned {
+                        if cfg!(debug_assertions) {
+                            println!("Estudiante {} asignado grupo {}, corrigiendo...", student_idx, i);
                         }
-
-                        //Verificar si el estudiante ya ha sido asignado a un grupo
-                        let mut students = lock_res.unwrap();
-                        if students.contains(&student_idx) {
-                            //Si el estudiante ya ha sido asignado a un grupo, se elimina del grupo actual
-                            let result = group.get_students().clear_bit(student_idx);
-                            if result.is_err() {
-                                println!("Error al eliminar al estudiante del grupo");
-                            }
-                        } else {
-                            //Si el estudiante no ha sido asignado a un grupo,
-                            //se agrega al conjunto de estudiantes asignados
-                            students.insert(student_idx);
-                            student_count += 1; //Hay un estudiante válido más en el grupo
-                        }
-                        drop(students); //Libera el lock del mutex de estudiantes asignados
+                        //El estudiante ha sido asignado a más de un grupo, se elimina del grupo actual
+                        bitmap.clear_bit(student_idx).unwrap();
+                    } else {
+                        assigned = true; //El estudiante ha sido asignado a un grupo
                     }
                 }
+            }
 
-                //Si el grupo tiene espacio y hay estudiantes liberados, se asignan estudiantes liberados al grupo
-                while student_count < max_students_per_group && let Ok(mut freed) = freed_mtx.lock() && freed.len() > 0 {
-                    let student_idx = *freed.iter().next().unwrap(); //Toma un estudiante del conjunto de estudiantes liberados
-                    group.get_students().set_bit(student_idx).unwrap(); //Agrega el estudiante al grupo
-                    freed.remove(&student_idx); //Elimina el estudiante del conjunto de estudiantes liberados
-                    student_count += 1; //Hay un estudiante válido más en el grupo
+            //Si el estudiante no fue asignado agregar a lista
+            if !assigned {
+                let lock_res = freed_mtx.lock();
+                if lock_res.is_err() {
+                    println!("Error al adquirir el lock del mutex de estudiantes liberados");
+                    return;
                 }
+                let mut freed = lock_res.unwrap();
+                freed.insert(student_idx); //Agrega el estudiante al conjunto de estudiantes liberados
+            }
+        });
 
-                return group;
-            })
-            .collect::<Vec<Group>>();
+        //Limpiar los grupos del individuo para luego reconstruirlos con los bitmaps corregidos
+        self.groups.clear(); 
 
-        self.groups = updated_groups;
+        for group in group_bitmaps.iter_mut()
+        {
+            let mut student_count = group.count_ones() as usize;
+            while student_count < max_students_per_group && freed_students.len() > 0
+            {
+                let index = *freed_students.iter().next().unwrap(); //Toma un estudiante libre
+                freed_students.remove(&index); //Lo elimina de la lista de estudiantes libres
+                group.set_bit(index).unwrap();
+                student_count += 1;
+            }
+            self.groups.push(Group::new(group.clone())); //Actualiza el grupo del individuo con el bitmap corregido
+        }
+
+        if cfg!(debug_assertions) {
+            println!("Individuo después de verificar restricciones: {:?}", self.get_solution());
+        }
+
     }
 
     pub fn mutate(&self, mutation_rate: u8) -> Individual {
