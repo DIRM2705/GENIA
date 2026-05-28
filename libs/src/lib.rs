@@ -6,15 +6,14 @@ mod utils;
 mod genia_libs {
     use crate::data::hypergraph::Hypergraph;
     use crate::ml::genetics::Individual;
-    use numpy::{PyArray2, ndarray::Data};
-    use polars::{docs::lazy, frame::{DataFrame, column}, prelude::*};
+    use polars::{frame::DataFrame, prelude::*};
     use pyo3::prelude::*;
     use pyo3::PyErr;
     use pyo3::exceptions::PyTypeError;
     use pyo3_polars::PyDataFrame;
     use rand::distr::{Distribution, Uniform};
     use rayon::prelude::*;
-    use std::{error::Error, path::Path};
+    use std::path::Path;
 
     #[pyfunction]
     fn hypergraph_from_dataframe(py_df: PyDataFrame) -> PyResult<()> {
@@ -108,9 +107,23 @@ mod genia_libs {
             let mut population =
                 create_initial_population(self.population_size, num_groups, &hypergraph);
 
-            for _ in 0..self.generations {
+            for generation in 0..self.generations {
                 //En paralelo realiza la selección, crossover y mutación para generar la nueva población
-                population = create_new_population(self, &population, &hypergraph);
+                population = create_new_population(self, num_groups, &population, &hypergraph);
+
+                if cfg!(debug_assertions) {
+                    //Imprime datos de la generación actual para debuggear
+                    let mut best_individual = &population[0];
+                    println!("Generación {}", generation);
+                    for (i, individual) in population.iter().enumerate() {
+                        println!("Individuo {}: Fitness = {}", i, individual.get_fitness());
+                        if individual.get_fitness() > best_individual.get_fitness() {
+                            best_individual = individual;
+                        }
+                    }
+                    // Imprime el fitness del mejor individuo de la población en cada generación
+                    println!("Mejor fitness en esta generación: {}", best_individual.get_fitness());
+                }
             }
         }
     }
@@ -160,6 +173,7 @@ mod genia_libs {
 
     fn create_new_population(
         config: &GeneticAlgorithm,
+        num_groups: usize,
         population: &Vec<Individual>,
         hypergraph: &Hypergraph,
     ) -> Vec<Individual> {
@@ -184,8 +198,8 @@ mod genia_libs {
                 let (mut child1, mut child2) = parent1.crossover(parent2, config.crossover_rate);
 
                 // Forza el cumplimiento de las restricciones en los nuevos individuos
-                child1.check_constraints();
-                child2.check_constraints();
+                child1.check_constraints(num_groups);
+                child2.check_constraints(num_groups);
 
                 //Calcula fitness de los nuevos individuos
                 child1.calculate_fitness(hypergraph);
