@@ -21,6 +21,9 @@ if not hypergraph_path.exists():
 # - Elitismo
 # - Mutación
 # - Cruzamiento
+ga = GeneticAlgorithm(100, 500, 25, 2, 10, 50)
+best_groups = ga.run(5) # 5 grupos a formar
 
-ga = GeneticAlgorithm(20, 10, 5, 2, 10, 50)
-ga.run(5) # 5 grupos a formar
+for i, group in enumerate(best_groups):
+    for student in group:
+        print(f"Grupo {i+1}: {student}")
