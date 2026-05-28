@@ -6,10 +6,8 @@ edition = "2024"
 [dependencies]
 pyo3 = "0.26.0"
 pyo3-polars = {version = "0.25.0"}
-polars = {version = "0.52.0", features = ["lazy", "timezones", "dtype-u8"]}
-numpy = "0.26.0"
+polars = {version = "0.52.0", features = ["timezones", "dtype-u8"]}
 postcard = {version = "1.1.3", features = ["alloc"]}
 serde = "1.0.228"
-typetag = "0.2.21"
 rand = {version = "0.10.0"}
 rayon = "1.12.0"
