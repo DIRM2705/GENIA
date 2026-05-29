@@ -19,7 +19,7 @@ py -m venv .venv
 .venv/Scripts/activate
 ```
 
-Python requires some self-made libraries to run the code, you can either download the pre-compiled versions [here](https://github.com/DIRM2705/GENIA/releases/tag/GENIA-lib) or compile them yourself using maturin.
+Python requires some self-made libraries to run the code, you can either download the pre-compiled versions [here](https://github.com/DIRM2705/GENIA/releases/tag/GENIA-lib-fix-0.1.0) or compile them yourself using maturin.
 
 ### Installing using pre-compiled versions (download the wheel files first)
 ```bash
