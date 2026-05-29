@@ -105,16 +105,6 @@ def _grade_students(students : pl.DataFrame) -> pl.DataFrame:
     ).select([ #Seleccionar solo las columnas relevantes para el hipergrafo
         "Id", "Cronotipo", "TND", "AM", "RM", "CM", "BE", "EE", "CE"
     ])
-    
-    #Discretizar AM,RM, CM, BE, EE y CE en 5 bins
-    students = students.with_columns(
-        AM = _discretize_column(students["AM"], 5),
-        RM = _discretize_column(students["RM"], 5),
-        CM = _discretize_column(students["CM"], 5),
-        BE = _discretize_column(students["BE"], 5),
-        EE = _discretize_column(students["EE"], 5),
-        CE = _discretize_column(students["CE"], 5)
-    )
 
     #Agregar VARK al DataFrame de estudiantes
     students = students.hstack(VARK_scores) #hstack=horizontal stack -> Agrega columnas lado a lado -> agregar las columnas de VARK_scores al DataFrame de estudiantes
@@ -124,7 +114,7 @@ def _grade_students(students : pl.DataFrame) -> pl.DataFrame:
     
     return students #devuelve el DataFrame final   
 
-def _discretize_column(column: pl.Series, n_bins: int) -> pl.Series:
+def discretize_column(column: pl.Series, n_bins: int) -> pl.Series:
     """
     Discretize a continuous column into n_bins using KBinsDiscretizer from sklearn.
 
@@ -139,7 +129,7 @@ def _discretize_column(column: pl.Series, n_bins: int) -> pl.Series:
     column_np = column.to_numpy().reshape(-1, 1) #reshape para convertirlo en una matriz de una sola columna, que es lo que espera KBinsDiscretizer
     
     # Crear el discretizador con n_bins y estrategia de cuantiles para que cada bin tenga aproximadamente la misma cantidad de muestras
-    discretizer = KBinsDiscretizer(n_bins=n_bins, encode='ordinal', strategy='quantile')
+    discretizer = KBinsDiscretizer(n_bins=n_bins, encode='ordinal', strategy='kmeans')
     
     # Ajustar el discretizador a los datos y transformarlos
     discretized_np = discretizer.fit_transform(column_np).astype(int).flatten() #fit_transform para ajustar el modelo y transformar los datos, astype(int) para convertir los valores a enteros, flatten() para convertir la matriz resultante en un array unidimensional

@@ -1,6 +1,5 @@
-import polars as pl 
-from core.preprocess import load_from_csv
-from core.consts import *
+import polars as pl
+from preprocessing.dataframe import discretize_column, load_from_csv
 from pathlib import Path
 from genia_libs import hypergraph_from_dataframe, GeneticAlgorithm
 
@@ -10,10 +9,25 @@ pl.Config.set_tbl_rows(-1)
 
 hypergraph_path = Path("characteristics.hg")
 if not hypergraph_path.exists():
-    df = load_from_csv("Pruebas1.csv") #cargar el archivo csv con los datos de los estudiantes usando la función de carga de datos, que devuelve un DataFrame de Polars
+    parquet_path = Path("characteristics.parquet")
+    if parquet_path.exists():
+        df = pl.read_parquet(parquet_path) #cargar el DataFrame desde el archivo parquet si existe, para evitar tener que procesar el CSV cada vez
+    else:
+        df = load_from_csv("Pruebas1.csv") #cargar el archivo csv con los datos de los estudiantes usando la función de carga de datos, que devuelve un DataFrame de Polars
+    
+    df.write_parquet("characteristics.parquet") #guardar el DataFrame procesado en un archivo parquet para su uso posterior
+    df = df.with_columns(
+        AM = discretize_column(df["AM"], 5),
+        RM = discretize_column(df["RM"], 5),
+        CM = discretize_column(df["CM"], 5),
+        BE = discretize_column(df["BE"], 5),
+        EE = discretize_column(df["EE"], 5),
+        CE = discretize_column(df["CE"], 5)
+    ) #discretizar las columnas AM, RM, CM, BE, EE y CE en 5 bins usando la función de discretización definida anteriormente
     print(df) #imprimir el DataFrame para verificar que se haya procesado correctamente
-    hypergraph_from_dataframe(df.select(pl.exclude("Id", "TND"))) #crear un hipergráfico a partir del DataFrame usando la función de creación de hipergráficos, que toma el DataFrame y la ruta donde se guardará el hipergráfico como argumentos
-
+    hypergraph_from_dataframe(df.select(pl.exclude("Id", "TND"))) #crear el hipergrafo de características a partir del dataframe
+    
+    
 # Configuración del algoritmo genético:
 # - Población
 # - Número de generaciones
