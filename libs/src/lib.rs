@@ -227,6 +227,11 @@ mod genia_libs {
                 let child3 = child1.mutate(config.mutation_rate);
                 let child4 = child2.mutate(config.mutation_rate);
 
+                if cfg!(debug_assertions) {
+                    println!("Child3 solution: {:?}, fitness: {}", child3.get_solution(), child3.get_fitness());
+                    println!("Child4 solution: {:?}, fitness: {}", child4.get_solution(), child4.get_fitness());
+                }
+
                 let mut children = vec![child1, child2, child3, child4];
                 children.extend(elitism(population, config.elites));
 
