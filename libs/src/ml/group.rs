@@ -5,7 +5,7 @@ use rayon::prelude::*;
 
 const DELTA_CALCULATIONS: [&'static str; 6] = ["CE", "BE", "EE", "AM", "RM", "Cronotipo"];
 const EPSILON_CALCULATIONS: [&'static str; 1] = ["CM"];
-const REPLACEMENT_CALCULATIONS: [&'static str; 4] = ["MI1", "MI2", "VARK1", "VARK2"];
+const REPLACEMENT_CALCULATIONS: [&'static str; 2] = ["MI", "VARK"];
 
 #[derive(Clone)]
 pub struct Group {
