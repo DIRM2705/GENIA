@@ -287,7 +287,7 @@ impl Individual {
         //Intercambia estudiantes entre grupos según la tasa de mutación,
         //tomando estudiantes aleatorios del grupo actuald
         for i in (0..changes).step_by(2) {
-            for group in new_individual.groups.iter_mut() {
+            for ref mut group in new_individual.groups.iter_mut() {
                 if let Ok(true) = group.get_students().get_bit(random_students[i]) {
                     group.get_students().set_bit(random_students[i]).unwrap();
                     group
