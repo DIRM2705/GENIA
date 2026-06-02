@@ -68,6 +68,8 @@ impl Group {
                 }
             } else {
                 println!("No se encontró el subhipergrafo con prefijo '{}'", id);
+                discartability += 1.0; //Si no se encontró la característica se considera que el grupo es completamente descartable
+                continue;
             }
 
             discartability += homogeneity_metric(&probabilities);
@@ -94,6 +96,8 @@ impl Group {
                 }
             } else {
                 println!("No se encontró el subhipergrafo con prefijo '{}'", id);
+                discartability += 1.0; //Si no se encontró la característica se considera que el grupo es completamente descartable
+                continue;
             }
 
             discartability += balance_metric(&probabilities, probabilities.len() as f64);
@@ -123,6 +127,8 @@ impl Group {
                 }
             } else {
                 println!("No se encontró el subhipergrafo con prefijo '{}'", id);
+                discartability += 1.0; //Si no se encontró la característica se considera que el grupo es completamente descartable
+                continue;
             }
 
             for p in probabilities.iter_mut() {
