@@ -1,6 +1,6 @@
 import polars as pl
 from sklearn.preprocessing import KBinsDiscretizer
-from core.consts import *
+from consts import *
 
 def load_from_csv(file_path: str) -> pl.DataFrame:
     """
