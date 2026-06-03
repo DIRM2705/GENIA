@@ -1,4 +1,5 @@
 from genia_libs import GeneticAlgorithm
+from utils.hypergraph_utils import create_hipergraph
 from utils.dataframe_utils import get_characteristics_dataframe
 from experiments.experiment import Experiment
 import polars as pl
@@ -19,12 +20,16 @@ Configuración del algoritmo genético (Parámetros a ajustar):
 """
 
 def _real_data_experiment():
-    ga = GeneticAlgorithm(100, 500, 25, 2, 10, 50)
-    best_groups = ga.run(5) # 5 grupos a formar
-    _print_groups(best_groups)
+    HYPERGRAPH_PATH = "src_py/data/characteristics.hg"
+    CHARACTERISTICS_PATH = "src_py/data/characteristics.parquet"
     
-def _print_groups(best_groups : list[list[int]]):
-    df = get_characteristics_dataframe("characteristics.parquet")
+    df = get_characteristics_dataframe(CHARACTERISTICS_PATH)
+    create_hipergraph(HYPERGRAPH_PATH)
+    ga = GeneticAlgorithm(100, 500, 25, 2, 10, 50)
+    best_groups = ga.run(5, HYPERGRAPH_PATH) # 5 grupos a formar
+    _print_groups(df, best_groups)
+    
+def _print_groups(df : pl.DataFrame, best_groups : list[list[int]]):
     df = df.with_row_index("Id")
     for i, group in enumerate(best_groups):
         print(f"Grupo {i+1}:")
