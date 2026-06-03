@@ -1,5 +1,5 @@
 from genia_libs import GeneticAlgorithm
-from data.dataframe import get_characteristics_dataframe
+from utils.dataframe_utils import get_characteristics_dataframe
 from experiments.experiment import Experiment
 import polars as pl
 
@@ -24,7 +24,7 @@ def _real_data_experiment():
     _print_groups(best_groups)
     
 def _print_groups(best_groups : list[list[int]]):
-    df = get_characteristics_dataframe("hypergraph.parquet")
+    df = get_characteristics_dataframe("characteristics.parquet")
     df = df.with_row_index("Id")
     for i, group in enumerate(best_groups):
         print(f"Grupo {i+1}:")
