@@ -24,7 +24,7 @@ Python requires some self-made libraries to run the code, you can either downloa
 ### Installing using pre-compiled versions (download the wheel files first)
 ```bash
 pip install -r requirements.txt
-pip install pip install path_to_lib/genia_libs-0.1.1-cp313-cp313-win_amd64.whl  
+pip install path_to_lib/genia_libs-0.1.1-cp313-cp313-win_amd64.whl  
 ```
 
 ## Installing using maturin (compile the libraries yourself)
