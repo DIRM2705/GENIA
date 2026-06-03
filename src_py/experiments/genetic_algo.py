@@ -25,7 +25,7 @@ def _real_data_experiment():
     
     df = get_characteristics_dataframe(CHARACTERISTICS_PATH)
     create_hipergraph(HYPERGRAPH_PATH)
-    ga = GeneticAlgorithm(100, 500, 25, 2, 10, 50)
+    ga = GeneticAlgorithm(100, 5000, 25, 2, 10, 50)
     best_groups = ga.run(5, HYPERGRAPH_PATH) # 5 grupos a formar
     _print_groups(df, best_groups)
     
@@ -42,7 +42,7 @@ REAL_DATA_GA_EXPERIMENT = Experiment(
     crea el hipergrafo de características y realiza el proces de formación de grupos
     Parámetros del algoritmo genético:
     - Población: 100
-    - Número de generaciones: 500
+    - Número de generaciones: 5000
     - Spins por generación: 25
     - Elitismo: 2
     - Mutación: 10%
