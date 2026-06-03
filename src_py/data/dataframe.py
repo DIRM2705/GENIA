@@ -2,7 +2,8 @@ import polars as pl
 from pathlib import Path
 from preprocessing.dataframe import discretize_column
 
-def get_dataframe(parquet_path: Path) -> pl.DataFrame:
+def get_dataframe(parquet_path: str) -> pl.DataFrame:
+    parquet_path = Path(parquet_path)
     if not parquet_path.exists():
         df = _get_dataframe_from_csv(parquet_path.with_suffix(".csv"))
         df.write_parquet(parquet_path)
@@ -16,7 +17,7 @@ def _get_dataframe_from_csv(csv_path: Path) -> pl.DataFrame:
     
     return pl.read_csv(csv_path)
     
-def get_characteristics_dataframe(characteristics_path: Path) -> pl.DataFrame:
+def get_characteristics_dataframe(characteristics_path: str) -> pl.DataFrame:
     df = get_dataframe(characteristics_path)
     df = df.with_columns(
         AM = discretize_column(df["AM"], 5),
