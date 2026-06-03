@@ -16,7 +16,7 @@ mod genia_libs {
     use std::path::Path;
 
     #[pyfunction]
-    fn hypergraph_from_dataframe(py_df: PyDataFrame) -> PyResult<()> {
+    fn hypergraph_from_dataframe(py_df: PyDataFrame, output_file: String) -> PyResult<()> {
         // Convierte el DataFrame de Polars a un dataframe de Rust
         let df: DataFrame = py_df.into();
         let mut hypergraph = Hypergraph::new(df.height());
@@ -65,7 +65,7 @@ mod genia_libs {
             }
         }
 
-        hypergraph.save_to_file("characteristics.hg").map_err(|e| {
+        hypergraph.save_to_file(&output_file).map_err(|e| {
             PyErr::new::<PyTypeError, _>(format!("Error al guardar el hypergraph en el archivo: {}", e))
         })?;
 
@@ -103,8 +103,8 @@ mod genia_libs {
             };
         }
 
-        pub fn run(&self, num_groups: usize) ->  Vec<Vec<usize>> {
-            let hypergraph = load_hypergraph_from_file();
+        pub fn run(&self, num_groups: usize, input_file: String) ->  Vec<Vec<usize>> {
+            let hypergraph = load_hypergraph_from_file(&input_file);
 
             // Genera la población inicial de individuos
             let mut population =
@@ -135,15 +135,15 @@ mod genia_libs {
         }
     }
 
-    fn load_hypergraph_from_file() -> Hypergraph {
-        if !Path::new("characteristics.hg").exists() {
-            panic!("El archivo characteristics.hg no existe");
+    fn load_hypergraph_from_file(file_path: &str) -> Hypergraph {
+        if !Path::new(file_path).exists() {
+            panic!("El archivo {} no existe", file_path);
         }
 
-        if let Ok(hypergraph) = Hypergraph::load_from_file("characteristics.hg") {
+        if let Ok(hypergraph) = Hypergraph::load_from_file(file_path) {
             return hypergraph;
         } else {
-            panic!("Error al cargar el hypergraph desde el archivo characteristics.hg");
+            panic!("Error al cargar el hypergraph desde el archivo {}", file_path);
         }
     }
 
