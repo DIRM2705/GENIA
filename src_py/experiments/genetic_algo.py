@@ -29,6 +29,16 @@ def _real_data_experiment():
     best_groups = ga.run(5, HYPERGRAPH_PATH) # 5 grupos a formar
     _print_groups(df, best_groups)
     
+def _synthetic_data_experiment():
+    HYPERGRAPH_PATH = "src_py/data/synthetic_chars.hg"
+    CHARACTERISTICS_PATH = "src_py/data/synthetic_chars.parquet"
+    
+    df = get_characteristics_dataframe(CHARACTERISTICS_PATH)
+    create_hipergraph(HYPERGRAPH_PATH)
+    ga = GeneticAlgorithm(100, 5000, 25, 2, 10, 50)
+    best_groups = ga.run(16, HYPERGRAPH_PATH) # 8 grupos a formar
+    _print_groups(df, best_groups)
+    
 def _print_groups(df : pl.DataFrame, best_groups : list[list[int]]):
     df = df.with_row_index("Id")
     for i, group in enumerate(best_groups):
@@ -49,4 +59,19 @@ REAL_DATA_GA_EXPERIMENT = Experiment(
     - Cruzamiento: 50%
     - Número de grupos a formar: 5""",
     run_function = _real_data_experiment
+)
+
+SYNTHETIC_DATA_GA_EXPERIMENT = Experiment(
+    name = "Algoritmo Genético con Datos Sintéticos",
+    explanation = """Este algoritmo genético carga el DataFrame con los 399 estudiantes sintéticos
+    crea el hipergrafo de características y realiza el proceso de formación de grupos
+    Parámetros del algoritmo genético:
+    - Población: 100
+    - Número de generaciones: 5000
+    - Spins por generación: 25
+    - Elitismo: 2
+    - Mutación: 10%
+    - Cruzamiento: 50%
+    - Número de grupos a formar: 8""",
+    run_function = _synthetic_data_experiment
 )
