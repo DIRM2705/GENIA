@@ -19,12 +19,12 @@ py -m venv .venv
 .venv/Scripts/activate
 ```
 
-Python requires some self-made libraries to run the code, you can either download the pre-compiled versions [here](https://github.com/DIRM2705/GENIA/releases/download/GENIA-lib-0.1.1/genia_libs-0.1.1-cp313-cp313-win_amd64.whl) or compile them yourself using maturin.
+Python requires some self-made libraries to run the code, you can either download the pre-compiled versions [here](https://github.com/DIRM2705/GENIA/releases/download/GENIA-lib-0.1.2/genia_libs-0.1.2-cp313-cp313-win_amd64.whl) or compile them yourself using maturin.
 
 ### Installing using pre-compiled versions (download the wheel files first)
 ```bash
 pip install -r requirements.txt
-pip install path_to_lib/genia_libs-0.1.1-cp313-cp313-win_amd64.whl  
+pip install path_to_lib/genia_libs-0.1.2-cp313-cp313-win_amd64.whl  
 ```
 
 ## Installing using maturin (compile the libraries yourself)
