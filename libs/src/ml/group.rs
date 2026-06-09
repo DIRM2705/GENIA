@@ -3,7 +3,7 @@ use crate::utils::bitmap::BitmapLen;
 use crate::utils::math::{balance_metric, homogeneity_metric};
 use rayon::prelude::*;
 
-const DELTA_CALCULATIONS: [&'static str; 6] = ["CE", "BE", "EE", "AM", "RM", "Cronotipo"];
+const DELTA_CALCULATIONS: [&'static str; 8] = ["CE", "BE", "EE", "AM", "RM", "Cronotipo", "PI", "HS"];
 const EPSILON_CALCULATIONS: [&'static str; 1] = ["CM"];
 const REPLACEMENT_CALCULATIONS: [&'static str; 2] = ["MI", "VARK"];
 
