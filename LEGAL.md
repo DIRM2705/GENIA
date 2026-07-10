@@ -15,6 +15,7 @@ The following dependencies are used under the terms of the MIT License:
 - serde (1.0.228)
 - rand (0.10.0)
 - rayon (1.12.0)
+- spacy (3.8.14)
 
 **MIT License Text:**
 
