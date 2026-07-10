@@ -1,7 +1,6 @@
 from genia_libs import GeneticAlgorithm
 from utils.hypergraph_utils import create_hipergraph
-from utils.dataframe_utils import get_characteristics_dataframe
-from experiments.experiment import Experiment
+from utils.dataframe_utils import get_grouping_dataframe
 import polars as pl
 
 """
@@ -19,36 +18,18 @@ Configuración del algoritmo genético (Parámetros a ajustar):
 - Cruzamiento: Porcentaje aproximado de alumnos que se intercambiarán entre dos soluciones
 """
 
-def _real_data_experiment():
-    HYPERGRAPH_PATH = "src_py/data/characteristics.hg"
-    CHARACTERISTICS_PATH = "src_py/data/characteristics.parquet"
-    
-    df = get_characteristics_dataframe(CHARACTERISTICS_PATH)
-    create_hipergraph(HYPERGRAPH_PATH)
-    ga = GeneticAlgorithm(100, 5000, 25, 2, 10, 50)
-    best_groups = ga.run(5, HYPERGRAPH_PATH) # 5 grupos a formar
-    _print_groups(df, best_groups)
-    
-def _synthetic_data_experiment():
-    HYPERGRAPH_PATH = "src_py/data/synthetic_chars.hg"
-    CHARACTERISTICS_PATH = "src_py/data/synthetic_chars.parquet"
-    
-    df = get_characteristics_dataframe(CHARACTERISTICS_PATH)
-    create_hipergraph(HYPERGRAPH_PATH)
-    ga = GeneticAlgorithm(100, 5000, 25, 2, 10, 50)
-    best_groups = ga.run(16, HYPERGRAPH_PATH) # 8 grupos a formar
-    _print_groups(df, best_groups)
-    
 def _print_groups(df : pl.DataFrame, best_groups : list[list[int]]):
     df = df.with_row_index("Id")
     for i, group in enumerate(best_groups):
         print(f"Grupo {i+1}:")
         group_df = df.filter(pl.col("Id").is_in(group))
         print(group_df)
-        
-REAL_DATA_GA_EXPERIMENT = Experiment(
-    name = "Algoritmo Genético con Datos Reales",
-    explanation = """Este algoritmo genético carga el DataFrame con los 30 estudiantes reales
+
+def _real_data_experiment():
+    """_summary_
+    Experimento: Algoritmo Genético con datos Reales
+    
+    Este algoritmo genético carga el DataFrame con los 30 estudiantes reales
     crea el hipergrafo de características y realiza el proces de formación de grupos
     Parámetros del algoritmo genético:
     - Población: 100
@@ -57,13 +38,22 @@ REAL_DATA_GA_EXPERIMENT = Experiment(
     - Elitismo: 2
     - Mutación: 10%
     - Cruzamiento: 50%
-    - Número de grupos a formar: 5""",
-    run_function = _real_data_experiment
-)
-
-SYNTHETIC_DATA_GA_EXPERIMENT = Experiment(
-    name = "Algoritmo Genético con Datos Sintéticos",
-    explanation = """Este algoritmo genético carga el DataFrame con los 399 estudiantes sintéticos
+    - Número de grupos a formar: 5
+    """
+    HYPERGRAPH_PATH = "src_py/data/characteristics.hg"
+    CHARACTERISTICS_PATH = "src_py/data/characteristics.parquet"
+    
+    df = get_grouping_dataframe(CHARACTERISTICS_PATH)
+    create_hipergraph(HYPERGRAPH_PATH)
+    ga = GeneticAlgorithm(100, 5000, 25, 2, 10, 50)
+    best_groups = ga.run(5, HYPERGRAPH_PATH) # 5 grupos a formar
+    _print_groups(df, best_groups)
+    
+def _synthetic_data_experiment():
+    """_summary_
+    Experimento: Algoritmo genético con datos sintéticos
+    
+    Este algoritmo genético carga el DataFrame con los 399 estudiantes sintéticos
     crea el hipergrafo de características y realiza el proceso de formación de grupos
     Parámetros del algoritmo genético:
     - Población: 100
@@ -72,6 +62,19 @@ SYNTHETIC_DATA_GA_EXPERIMENT = Experiment(
     - Elitismo: 2
     - Mutación: 10%
     - Cruzamiento: 50%
-    - Número de grupos a formar: 8""",
-    run_function = _synthetic_data_experiment
-)
+    - Número de grupos a formar: 8
+    """
+    HYPERGRAPH_PATH = "src_py/data/synthetic_chars.hg"
+    CHARACTERISTICS_PATH = "src_py/data/synthetic_chars.parquet"
+    
+    df = get_grouping_dataframe(CHARACTERISTICS_PATH)
+    create_hipergraph(HYPERGRAPH_PATH)
+    ga = GeneticAlgorithm(100, 5000, 25, 2, 10, 50)
+    best_groups = ga.run(16, HYPERGRAPH_PATH) # 8 grupos a formar
+    _print_groups(df, best_groups)
+        
+if __name__ == "main":
+
+    pl.Config.set_tbl_cols(-1)
+    pl.Config.set_tbl_rows(-1)
+    _synthetic_data_experiment()
