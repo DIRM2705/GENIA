@@ -331,4 +331,15 @@ mod tests {
         assert!(hg.get_subhypergraph_by_prefix("Unexistent").is_err());
         assert!(hg.add_student_to_hyperedge("MI_5", 3).is_err());
     }
+
+    #[test]
+    pub fn hypergraph_test()
+    {
+        let mut hg = Hypergraph::new(10);
+
+        assert!(hg.add_student_to_hyperedge("NoPrefix", 5).is_err());
+        assert!(hg.add_student_to_hyperedge("MI_3", 4).is_ok());
+        assert!(hg.get_subhypergraph_by_prefix("VARK").is_err());
+        assert!(hg.get_subhypergraph_by_prefix("MI").is_ok());
+    }
 }

@@ -85,6 +85,11 @@ impl Hypergraph {
     fn add_hyperedge(&mut self, name: String) -> Result<&mut Hyperedge, HypergraphError> {
         let hyperedge = Hyperedge::new(self.student_count, name.clone());
 
+        if !name.contains("_")
+        {
+            return Err(HypergraphError::InvalidHyperedgeError);
+        }
+
         // Extrae el prefijo del nombre de la hiperarista y actualiza el mapa de prefijos
         if let Some(prefix) = name.split("_").next() {
             self.hyperedges
@@ -93,7 +98,7 @@ impl Hypergraph {
                 .push(hyperedge);
 
             return Ok(self.hyperedges.get_mut(prefix).unwrap().last_mut().unwrap());
-        }
+        } 
 
         return Err(HypergraphError::InvalidHyperedgeError);
     }
