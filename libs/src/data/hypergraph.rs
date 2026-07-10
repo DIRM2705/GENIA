@@ -25,8 +25,8 @@ impl Hyperedge {
     }
 
     // Agrega un estudiante a la hiperarista, estableciendo el bit correspondiente en el bitmap
-    pub fn add_student(&mut self, student_id: usize) -> Result<(), String> {
-        return self.bitmap.set_bit(student_id);
+    pub fn add_student(&mut self, student_id: usize) -> Result<(), HypergraphError> {
+        return Ok(self.bitmap.set_bit(student_id)?);
     }
 
     pub fn apply_mask(&self, mask: &BitmapLen) -> BitmapLen {
@@ -58,11 +58,8 @@ impl Hypergraph {
         &mut self,
         hyperedge_name: &str,
         student_id: usize,
-    ) -> Result<(), String> {
-        let prefix = hyperedge_name.split("_").next().ok_or_else(|| {
-            "El nombre de la hiperarista debe contener un prefijo seguido de un guion bajo"
-                .to_string()
-        })?;
+    ) -> Result<(), HypergraphError> {
+        let prefix = hyperedge_name.split("_").next().ok_or_else(|| HypergraphError::InvalidHyperedgeError)?;
 
         //Si el prefijo no existe, se crea una nueva hiperarista y se agrega el estudiante
         // Eso añadirá el prefijo al mapa de prefijos
@@ -85,7 +82,7 @@ impl Hypergraph {
     }
 
     // Crea una nueva hiperarista
-    fn add_hyperedge(&mut self, name: String) -> Result<&mut Hyperedge, String> {
+    fn add_hyperedge(&mut self, name: String) -> Result<&mut Hyperedge, HypergraphError> {
         let hyperedge = Hyperedge::new(self.student_count, name.clone());
 
         // Extrae el prefijo del nombre de la hiperarista y actualiza el mapa de prefijos
@@ -98,38 +95,84 @@ impl Hypergraph {
             return Ok(self.hyperedges.get_mut(prefix).unwrap().last_mut().unwrap());
         }
 
-        return Err(
-            "El nombre de la hiperarista debe contener un prefijo seguido de un guion bajo"
-                .to_string(),
-        );
+        return Err(HypergraphError::InvalidHyperedgeError);
     }
 
-    pub fn get_subhypergraph_by_prefix(&self, prefix: &str) -> Result<&Vec<Hyperedge>, String> {
+    pub fn get_subhypergraph_by_prefix(&self, prefix: &str) -> Result<&Vec<Hyperedge>, HypergraphError> {
         if !self.hyperedges.contains_key(prefix) {
-            return Err(format!("Subhypergraph with prefix '{}' not found", prefix));
+            return Err(HypergraphError::UnknownSubHypergraphError(prefix.to_string()));
         }
 
         Ok(self.hyperedges.get(prefix).unwrap())
     }
 
     // Obtiene una referencia a una hiperarista por su nombre, permitiendo leerla
-    pub fn save_to_file(&self, filename: &str) -> Result<(), String> {
-        let encoded = postcard::to_allocvec(self)
-            .map_err(|e| format!("Error serializing hypergraph: {}", e))?;
-        let mut file = File::create(filename).map_err(|e| format!("Error creating file: {}", e))?;
-        file.write_all(&encoded)
-            .map_err(|e| format!("Error writing to file: {}", e))?;
+    pub fn save_to_file(&self, filename: &str) -> Result<(), HypergraphError> {
+        let encoded = postcard::to_allocvec(self)?;
+        let mut file = File::create(filename)?;
+        file.write_all(&encoded)?;
         Ok(())
     }
 
     // Carga un hipergrafo desde un archivo, deserializando su contenido
-    pub fn load_from_file(filename: &str) -> Result<Self, String> {
-        let mut file = File::open(filename).map_err(|e| format!("Error opening file: {}", e))?;
+    pub fn load_from_file(filename: &str) -> Result<Self, HypergraphError> {
+        let mut file = File::open(filename)?;
         let mut buffer = Vec::new();
-        file.read_to_end(&mut buffer)
-            .map_err(|e| format!("Error reading file: {}", e))?;
-        let hypergraph: Hypergraph = postcard::from_bytes(&buffer)
-            .map_err(|e| format!("Error deserializing hypergraph: {}", e))?;
+        file.read_to_end(&mut buffer)?;
+        let hypergraph: Hypergraph = postcard::from_bytes(&buffer)?;
         Ok(hypergraph)
+    }
+}
+
+#[derive(Debug)]
+pub enum HypergraphError
+{
+    InvalidHyperedgeError,
+    UnknownSubHypergraphError(String),
+    StudentOutOfBoundsError (usize, usize),
+    HypergraphSerializationError(postcard::Error),
+    HypergraphIOError(std::io::Error)
+}
+
+impl std::fmt::Display for HypergraphError
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        return match self {
+            HypergraphError::InvalidHyperedgeError => write!(f, "El nombre de la hiperarista debe contener un prefijo seguido de un guion bajo"),
+            HypergraphError::UnknownSubHypergraphError(prefix) => write!(f, "No se ha encontrado el subhipergrafo con el prefijo {}", prefix),
+            HypergraphError::HypergraphIOError(io_err) => io_err.fmt(f),
+            HypergraphError::HypergraphSerializationError(ser_err) => ser_err.fmt(f),
+            HypergraphError::StudentOutOfBoundsError(student_idx, max_students) => write!(f, "Intento de cambiar el estudiante {} cuando solo hay {}", student_idx, max_students) 
+        }
+    }
+}
+
+impl From<postcard::Error> for HypergraphError
+{
+    fn from(value: postcard::Error) -> HypergraphError {
+        return HypergraphError::HypergraphSerializationError(value);
+    }
+}
+
+impl From <std::io::Error> for HypergraphError
+{
+    fn from(value : std::io::Error) -> HypergraphError
+    {
+        return HypergraphError::HypergraphIOError(value);
+    }
+}
+
+impl From <crate::utils::bitmap::BitMapError> for HypergraphError
+{
+    fn from(value : crate::utils::bitmap::BitMapError) -> HypergraphError
+    {
+        match value
+        {
+            crate::utils::bitmap::BitMapError::IndexOutOfBitsError(idx, size) =>
+            {
+                return HypergraphError::StudentOutOfBoundsError(idx, size);
+            },
+            _ => unreachable!("Ha ocurrido un error inesperado")
+        }
     }
 }

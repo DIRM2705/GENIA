@@ -35,17 +35,17 @@ impl BitmapLen {
         self.bitmap.len() * 8
     }
 
-    pub fn get_chunk_mut(&mut self, index: usize) -> Result<&mut u8, String> {
-        if index >= self.get_size_bits() {
-            return Err("Index out of bounds for Box<[u8]> bitmap".into());
+    pub fn get_chunk_mut(&mut self, index: usize) -> Result<&mut u8, BitMapError> {
+        if index >= self.bitmap.len() {
+            return Err(BitMapError::IndexOutOfChunksError(index, self.bitmap.len()));
         }
 
         return Ok(&mut self.bitmap[index]);
     }
 
-    pub fn set_bit(&mut self, index: usize) -> Result<(), String> {
+    pub fn set_bit(&mut self, index: usize) -> Result<(), BitMapError> {
         if index >= self.get_size_bits() {
-            return Err("Index out of bounds for Box<[u8]> bitmap".into());
+            return Err(BitMapError::IndexOutOfBitsError(index, self.get_size_bits()));
         }
 
         let byte_index = index / 8;
@@ -54,9 +54,9 @@ impl BitmapLen {
         Ok(())
     }
 
-    pub fn clear_bit(&mut self, index: usize) -> Result<(), String> {
+    pub fn clear_bit(&mut self, index: usize) -> Result<(), BitMapError> {
         if index >= self.get_size_bits() {
-            return Err("Index out of bounds for Box<[u8]> bitmap".into());
+            return Err(BitMapError::IndexOutOfBitsError(index, self.get_size_bits()));
         }
 
         let byte_index = index / 8;
@@ -65,9 +65,9 @@ impl BitmapLen {
         Ok(())
     }
 
-    pub fn get_bit(&self, index: usize) -> Result<bool, String> {
+    pub fn get_bit(&self, index: usize) -> Result<bool, BitMapError> {
         if index >= self.get_size_bits() {
-            return Err("Index out of bounds for Box<[u8]> bitmap".into());
+            return Err(BitMapError::IndexOutOfBitsError(index, self.get_size_bits()));
         }
 
         let byte_index = index / 8;
@@ -75,10 +75,10 @@ impl BitmapLen {
         return Ok((self.bitmap[byte_index] & (1 << bit_index)) != 0);
     }
 
-    pub fn set_bits(&mut self, indices: &[usize]) -> Result<(), String> {
+    pub fn set_bits(&mut self, indices: &[usize]) -> Result<(), BitMapError> {
         for &index in indices {
             if index >= self.get_size_bits() {
-                return Err("Index out of bounds for Box<[u8]> bitmap".into());
+                return Err(BitMapError::IndexOutOfBitsError(index, self.get_size_bits()));
             }
 
             let byte_index = index / 8;
@@ -102,6 +102,10 @@ impl ops::BitAnd for BitmapLen {
             {
                 *chunk = self.bitmap[i] & other.bitmap[i];
             }
+            else 
+            {
+                unreachable!()
+            }
         }
 
         return result;
@@ -121,8 +125,31 @@ impl ops::BitOr for BitmapLen {
             {
                 *chunk = self.bitmap[i] | other.bitmap[i];
             }
+            else
+            {
+                unreachable!()
+            }
         }
 
         return result;
+    }
+}
+
+#[derive(Debug)]
+pub enum BitMapError
+{
+    IndexOutOfBitsError(usize, usize),
+    IndexOutOfChunksError(usize, usize)
+}
+
+
+impl std::fmt::Display for BitMapError
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        return match self
+        {
+            BitMapError::IndexOutOfBitsError(idx, len) => write!(f, "Indice {} fuera de los límites para bitmap de longitud {}", idx, len),
+            BitMapError::IndexOutOfChunksError(idx, chunk_count) => write!(f, "Indice {} fuera de los limites, hay {} chunks", idx, chunk_count)
+        }
     }
 }

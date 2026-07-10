@@ -7,9 +7,9 @@ mod genia_libs {
     use crate::data::hypergraph::Hypergraph;
     use crate::ml::genetics::Individual;
     use polars::{frame::DataFrame, prelude::*};
-    use pyo3::prelude::*;
     use pyo3::PyErr;
     use pyo3::exceptions::PyTypeError;
+    use pyo3::prelude::*;
     use pyo3_polars::PyDataFrame;
     use rand::distr::{Distribution, Uniform};
     use rayon::prelude::*;
@@ -25,22 +25,22 @@ mod genia_libs {
             let name = column.name().to_string();
 
             match column.dtype() {
-                DataType::UInt8 => 
-                {
+                DataType::UInt8 => {
                     for (student_id, value) in column.u8().unwrap().into_iter().enumerate() {
                         if let Some(value) = value {
                             let hyperedge_name = format!("{}_{}", name, value);
-                            hypergraph.add_student_to_hyperedge(&hyperedge_name, student_id).map_err(|e| {
-                                PyErr::new::<PyTypeError, _>(format!(
-                                    "Error al agregar el estudiante a la hiperarista '{}': {}",
-                                    hyperedge_name, e
-                                ))
-                            })?;
+                            hypergraph
+                                .add_student_to_hyperedge(&hyperedge_name, student_id)
+                                .map_err(|e| {
+                                    PyErr::new::<PyTypeError, _>(format!(
+                                        "Error al agregar el estudiante a la hiperarista '{}': {}",
+                                        hyperedge_name, e
+                                    ))
+                                })?;
                         }
                     }
-                },
-                DataType::List(list_type) => 
-                {
+                }
+                DataType::List(list_type) => {
                     if **list_type != DataType::UInt8 {
                         return Err(PyErr::new::<PyTypeError, _>(format!(
                             "Error al procesar la columna '{}': se esperaba una lista de UInt8",
@@ -60,13 +60,21 @@ mod genia_libs {
                             }
                         }
                     }
-                },
-                _ => return Err(PyErr::new::<PyTypeError, _>(format!("Error al procesar la columna {}", name))),
+                }
+                _ => {
+                    return Err(PyErr::new::<PyTypeError, _>(format!(
+                        "Error al procesar la columna {}",
+                        name
+                    )));
+                }
             }
         }
 
         hypergraph.save_to_file(&output_file).map_err(|e| {
-            PyErr::new::<PyTypeError, _>(format!("Error al guardar el hypergraph en el archivo: {}", e))
+            PyErr::new::<PyTypeError, _>(format!(
+                "Error al guardar el hypergraph en el archivo: {}",
+                e
+            ))
         })?;
 
         return Ok(());
@@ -103,7 +111,7 @@ mod genia_libs {
             };
         }
 
-        pub fn run(&self, num_groups: usize, input_file: String) ->  Vec<Vec<usize>> {
+        pub fn run(&self, num_groups: usize, input_file: String) -> Vec<Vec<usize>> {
             let hypergraph = load_hypergraph_from_file(&input_file);
 
             // Genera la población inicial de individuos
@@ -125,12 +133,18 @@ mod genia_libs {
                         }
                     }
                     // Imprime el fitness del mejor individuo de la población en cada generación
-                    println!("Mejor fitness en esta generación: {}", best_individual.get_fitness());
+                    println!(
+                        "Mejor fitness en esta generación: {}",
+                        best_individual.get_fitness()
+                    );
                 }
             }
-            
+
             // Devuelve la mejor solución encontrada después de todas las generaciones
-            let best_individual = population.iter().max_by(|a, b| a.get_fitness().partial_cmp(&b.get_fitness()).unwrap()).unwrap();
+            let best_individual = population
+                .iter()
+                .max_by(|a, b| a.get_fitness().partial_cmp(&b.get_fitness()).unwrap())
+                .unwrap();
             return best_individual.get_solution();
         }
     }
@@ -143,7 +157,10 @@ mod genia_libs {
         if let Ok(hypergraph) = Hypergraph::load_from_file(file_path) {
             return hypergraph;
         } else {
-            panic!("Error al cargar el hypergraph desde el archivo {}", file_path);
+            panic!(
+                "Error al cargar el hypergraph desde el archivo {}",
+                file_path
+            );
         }
     }
 
@@ -219,8 +236,16 @@ mod genia_libs {
                 child2.calculate_fitness(hypergraph);
 
                 if cfg!(debug_assertions) {
-                    println!("Child1 solution: {:?}, fitness: {}", child1.get_solution(), child1.get_fitness());
-                    println!("Child2 solution: {:?}, fitness: {}", child2.get_solution(), child2.get_fitness());
+                    println!(
+                        "Child1 solution: {:?}, fitness: {}",
+                        child1.get_solution(),
+                        child1.get_fitness()
+                    );
+                    println!(
+                        "Child2 solution: {:?}, fitness: {}",
+                        child2.get_solution(),
+                        child2.get_fitness()
+                    );
                 }
 
                 // Aplica mutación y crea 2 individuos más
@@ -228,8 +253,16 @@ mod genia_libs {
                 let child4 = child2.mutate(config.mutation_rate);
 
                 if cfg!(debug_assertions) {
-                    println!("Child3 solution: {:?}, fitness: {}", child3.get_solution(), child3.get_fitness());
-                    println!("Child4 solution: {:?}, fitness: {}", child4.get_solution(), child4.get_fitness());
+                    println!(
+                        "Child3 solution: {:?}, fitness: {}",
+                        child3.get_solution(),
+                        child3.get_fitness()
+                    );
+                    println!(
+                        "Child4 solution: {:?}, fitness: {}",
+                        child4.get_solution(),
+                        child4.get_fitness()
+                    );
                 }
 
                 let mut children = vec![child1, child2, child3, child4];
@@ -248,5 +281,54 @@ mod genia_libs {
         return (0..population_size)
             .map(|_| Individual::new(num_groups, hypergraph))
             .collect::<Vec<Individual>>();
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::utils::bitmap::BitmapLen;
+    use crate::data::hypergraph::Hypergraph;
+
+    #[test]
+    pub fn bitmap_test_index_out_of_bounds() {
+        let mut bitmap = BitmapLen::new(16);
+        assert!(bitmap.get_chunk_mut(3).is_err());
+        assert!(bitmap.set_bit(19).is_err());
+        assert!(bitmap.get_bit(17).is_err());
+        assert!(bitmap.set_bits(&[1, 2, 18]).is_err());
+        assert!(bitmap.clear_bit(25).is_err());
+    }
+
+    #[test]
+    pub fn bitmap_test_get_chunk_mut() {
+        let mut bitmap = BitmapLen::new(16);
+        assert!(bitmap.get_chunk_mut(0).is_ok());
+        assert!(bitmap.get_chunk_mut(1).is_ok());
+    }
+
+    #[test]
+    pub fn bitmap_test_set_and_get_bits() {
+        let mut bitmap = BitmapLen::new(16);
+        assert!(bitmap.set_bit(3).is_ok());
+        assert!(bitmap.set_bit(7).is_ok());
+        assert!(bitmap.set_bit(15).is_ok());
+
+        assert_eq!(bitmap.get_bit(3).unwrap(), true);
+        assert_eq!(bitmap.get_bit(7).unwrap(), true);
+        assert_eq!(bitmap.get_bit(15).unwrap(), true);
+
+        assert_eq!(bitmap.get_bit(0).unwrap(), false);
+        assert_eq!(bitmap.get_bit(1).unwrap(), false);
+        assert_eq!(bitmap.get_bit(2).unwrap(), false);
+    }
+
+    #[test]
+    pub fn hypergraph_test_no_students()
+    {
+        let mut hg = Hypergraph::new(0);
+        assert_eq!(hg.get_student_count(), 0);
+
+        assert!(hg.get_subhypergraph_by_prefix("Unexistent").is_err());
+        assert!(hg.add_student_to_hyperedge("MI_5", 3).is_err());
     }
 }
