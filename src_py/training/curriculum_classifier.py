@@ -1,15 +1,21 @@
 from pathlib import Path
-from utils.nlp_utils import extraer_texto_pdf, procesar_texto
+from preprocessing.nlp import cargar_modelo_nlp, liberar_modelo_nlp, procesar_pdf
 from collections import Counter
 import polars as pl
+import numpy as np
 from sklearn.feature_extraction.text import TfidfTransformer
 
 
 
-def train_curriculum_classifier(carpeta : Path):
+def train_curriculum_classifier(carpeta : Path) -> pl.DataFrame:
+    cargar_modelo_nlp()
+    
     # ==========================================================
     # Crear filas
     # ==========================================================
+    
+    if carpeta is None or not carpeta.exists():
+        raise ValueError(f"La carpeta '{carpeta}' no existe.")
 
     filas = []
 
@@ -21,13 +27,7 @@ def train_curriculum_classifier(carpeta : Path):
         clase = carpeta_clase.name
 
         for archivo in carpeta_clase.glob("*.pdf"):
-
-            texto = extraer_texto_pdf(archivo)
-
-            if not texto.strip():
-                continue
-
-            lemas = procesar_texto(texto)
+            lemas = procesar_pdf(archivo)
 
             conteo = Counter(lemas)
 
@@ -43,6 +43,8 @@ def train_curriculum_classifier(carpeta : Path):
             fila.update(conteo)
 
             filas.append(fila)
+            
+    liberar_modelo_nlp()
 
 
     # ==========================================================
@@ -57,8 +59,6 @@ def train_curriculum_classifier(carpeta : Path):
         })
         .fill_null(0)
     )
-
-
 
     # ==========================================================
     # Agrupar por clase
@@ -88,9 +88,9 @@ def train_curriculum_classifier(carpeta : Path):
 
     X = df_frecuencias.drop("clase").to_numpy()
 
-    transformer = TfidfTransformer()
+    transformer = TfidfTransformer(smooth_idf=False)
 
-    tfidf = transformer.fit_transform(X).toarray()
+    tfidf = transformer.fit_transform(X).toarray() / np.log10(4)
 
 
     df_tfidf = pl.DataFrame(
@@ -124,5 +124,7 @@ def train_curriculum_classifier(carpeta : Path):
             df_frecuencias.drop("clase").columns
         )
     )
-
-    df_final.write_parquet(r"models/curriculm_vectors")
+    
+    df_final = df_final.filter((pl.col("Comunicacion").eq(0)) | pl.col("Pensamiento Humano").eq(0) | pl.col("Pensamiento Logico").eq(0) | pl.col("Pensamiento Social").eq(0))
+    
+    return df_final
