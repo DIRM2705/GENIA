@@ -3,4 +3,3 @@ target/
 __pycache__/
 .pytest_cache/
 *.csv
-src_py/data/curriculums/
