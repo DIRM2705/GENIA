@@ -2,118 +2,6 @@ import polars as pl
 from sklearn.preprocessing import KBinsDiscretizer
 from consts import *
 
-def load_from_csv(file_path: str) -> pl.DataFrame:
-    """
-    Load student data from a CSV file and return a Polars DataFrame.
-
-    Args:
-        file_path (str): The path to the CSV file containing student data.
-        
-    Returns:
-        pl.DataFrame: A Polars DataFrame containing the student data.
-        
-    """
-    #Leer csv con polars, y hacer el DataFrame
-    df = pl.read_csv(file_path, infer_schema_length=1000) #infer_schema_length para que detecte bien los tipos de datos, y analice las primeras 1000 filas
-
-    df = df.drop("Id") #eliminar la columna de Id, porque el índice de la fila ya cumple esa función, y así evitamos confusiones con la columna de Id que vamos a agregar luego
-    df = df.with_row_index("Id") #agregar una columna de Id para identificar a cada estudiante, con el índice de la fila como valor
-
-    #renombrar columnas para que coincidan con las esperadas en grading.py
-    df = df.rename({"Trabajo mejor":"Cronotipo",
-            "¿Te han diagnosticado con alguno de los siguientes? Marque todas las opciones que sean válidas para usted":"TND",
-            "Ordene de la más relacionada con su forma de ser a la menos relacionada con su forma de ser":"IM1", 
-            "Ordene de la más relacionada con su forma de ser a la menos relacionada con su forma de ser1":"IM2", 
-            "Ordene de la más relacionada con su forma de ser a la menos relacionada con su forma de ser2":"IM3", 
-            "Está a punto de darle direcciones a una persona. Ella se está quedando en un hotel de su ciudad y quiere visitarlo en su casa. Ella tiene un auto rentado. Usted:":"VARK1", 
-            "Usted se está quedando en un hotel y tiene un auto rentado. Le gustaría visitar a un amigo cuyo domicilio no conoce. Usted preferiría que:":"VARK2", 
-            "Acaba de recibir una copia de su itinerario para un viaje por el mundo. Esto es de interés para su amigo. Usted:":"VARK3", 
-            "Usted va a cocinar un postre como un regalo para su familia. Usted:":"VARK4", 
-            "Usted debe instruir a un grupo de turistas sobre parques nacionales. Usted:":"VARK5", 
-            "Está a punto de comprar un nuevo reproductor de música. Además del precio, ¿qué otro factor lo influenciaría a comprarlo?":"VARK6", 
-            "Recuerde un momento en su vida en el que aprendió como realizar una nueva actividad como jugar un juego de mesa por primera vez. Evite elegir una habilidad física como andar en bicicleta. ¿Cómo aprend":"VARK7", 
-            "¿Cuál de estos juegos prefiere?":"VARK8", 
-            "Usted está a punto de aprender a usar un nuevo programa o aplicación para su computadora. Usted:":"VARK9", 
-            'No está seguro si una palabra debe escribirse ""lazo"" o ""laso"". Usted:':"VARK10", 
-            "Además del precio, ¿qué otro factor influenciaría su decisión de comprar un libro de texto en particular?":"VARK11", 
-            "Una nueva película se acaba de estrenar. ¿Qué lo influenciaría más a ir (o no ir)?":"VARK12", 
-            "Usted prefiere un profesor que use:":"VARK13", 
-            "Pongo atención en el aula":"BE1", 
-            "Sigo las reglas de la escuela":"BE2", 
-            "Usualmente, hago mi tarea en tiempo y forma":"BE3", 
-            "Cuando tengo dudas, pregunto y participo en debates dentro del aula de clases":"BE4", 
-            "Usualmente participo de manera activa en trabajos grupales":"BE5", 
-            "No me siento muy realizado en esta escuela":"EE1", 
-            "Me emociono por el trabajo de clases":"EE2", 
-            "Me gusta estar en la escuela":"EE3", 
-            "Estoy interesado en realizar el trabajo escolar":"EE4", 
-            "Mi aula de clases es un lugar interesante para estar":"EE5", 
-            "Cuando leo un libro, me cuestiono a mi mismo para asegurarme de que estoy entendiendo el tema sobre el que estoy leyendo":"CE1", 
-            "Hablo con personas fuera de la escuela sobre los temas que aprendí en clase":"CE2", 
-            "Si no comprendo el significado de una palabra, trato de resolver el problema, por ejemplo consultando un diccionario o preguntándole a alguien más.":"CE3", 
-            "Trato de integrar el conocimiento adquirido al resolver nuevos problemas":"CE4", 
-            "Trato de integrar temas de diferentes disciplinas en mi conocimiento general":"CE5", 
-            "Siento que soy libre de decidir como vivir mi vida":"AM1", 
-            "Estoy cómodo con la gente con la que interactuo":"RM1", 
-            "Frecuentemente, NO me siento muy competente":"CM1", 
-            "Me siento presionado en mi vida":"AM2", 
-            "Me llevo bien con las personas con las que estoy en contacto":"RM2", 
-            "Soy mayormente reservado y no tengo muchos contactos":"RM3", 
-            "Usualmente, me siento libre de expresar mis ideas y opiniones":"AM3", 
-            "He sido capaz de aprender nuevas habilidades interesantes últimamente":"CM2"}) 
-    
-    #aplicamos la función de grading a todo el DataFrame para procesar las respuestas de los estudiantes
-    return _grade_students(df)
-
-
-def _grade_students(students : pl.DataFrame) -> pl.DataFrame:
-    """
-    Given a student record, return a PyStudent object with the results of the tests
-    
-    Args:
-        student (pl.Row): A Polars Row representing a student with at least the following fields:
-            - "ID": Unique identifier for the student
-            - "Cronotype": The student's cronotype
-            - "TND": The student's Neurodevelopmental Disorder status regarding
-                     ADHD, ADD, ASD, Dislexia, Disgraphia and Discalculia
-            - "IM1": The student's answers to the first multiple intelligence set
-            - "IM2": The student's answers to the second multiple intelligence set
-            - "IM3": The student's answers to the third multiple intelligence set
-            - "VARK 8-20": The student's answers to the VARK questionnaire
-            - "Engagement 21-35": The student's answers to the engagement questionnaire
-            - "Motivation 36-43": The student's answers to the motivation questionnaire
-            
-    Returns:
-        DataFrame: A Polars DataFrame with the data obtained by grading student's formularies
-    """
-    #Procesar VARK
-    VARK_scores = _get_VARK_scores(students.select([f"VARK{i}" for i in range(1,14)]))
-    
-    #PROCESAR IM
-    IM_scores = _get_IM_scores_from_df(students.select(["IM1", "IM2", "IM3"]))
-    
-    #PROCESAR TND, MOTIVACIONES y COMPROMISO
-    students = students.with_columns(
-        TND = _get_NDD_bitmask(students["TND"]),
-        Cronotipo = (pl.col("Cronotipo") == "Entre las 7 am y las 3pm").cast(pl.UInt8) + 1, #Convertimos el cronotipo a 0 vespertino, 1 matutino
-        AM = ((pl.col("AM1") + pl.col("AM2") + pl.col("AM3"))/21).round(2), #Motivación de Autonomía -> de qué tan libres se sienten los estudiantes para expresar sus ideas y opiniones, y para elegir sus actividades académicas
-        RM = ((pl.col("RM1") + pl.col("RM2") + pl.col("RM3"))/21).round(2), #Motivación de Relación
-        CM = ((pl.col("CM1") + pl.col("CM2"))/14).round(2), #Motivación de Competencia -> de qué tan capaces se sienten los estudiantes respecto a sus actividades académicas
-        BE = ((pl.col("BE1") + pl.col("BE2") + pl.col("BE3") + pl.col("BE4")+pl.col("BE5"))/25).round(2), # Behavioural Engagement -> Compromiso Conductual
-        EE = ((pl.col("EE1") + pl.col("EE2") + pl.col("EE3") + pl.col("EE4")+pl.col("EE5"))/25).round(2), # Emotional Engagement -> Compromiso Emocional 
-        CE = ((pl.col("CE1") + pl.col("CE2") + pl.col("CE3") + pl.col("CE4")+pl.col("CE5"))/25).round(2) # Cognitive Engagement -> Compromiso Cognitivo
-    ).select([ #Seleccionar solo las columnas relevantes para el hipergrafo
-        "Id", "Cronotipo", "TND", "AM", "RM", "CM", "BE", "EE", "CE"
-    ])
-
-    #Agregar VARK al DataFrame de estudiantes
-    students = students.hstack(VARK_scores) #hstack=horizontal stack -> Agrega columnas lado a lado -> agregar las columnas de VARK_scores al DataFrame de estudiantes
-    
-    #Agregar IM al DataFrame de estudiantes
-    students = students.hstack(IM_scores) #Agrega las columnas de IM_scores al DataFrame de estudiantes
-    
-    return students #devuelve el DataFrame final   
-
 def discretize_column(column: pl.Series, n_bins: int) -> pl.Series:
     """
     Discretize a continuous column into n_bins using KBinsDiscretizer from sklearn.
@@ -138,115 +26,21 @@ def discretize_column(column: pl.Series, n_bins: int) -> pl.Series:
     discretized_series = pl.Series(discretized_np, dtype=pl.UInt8) #Convertimos a UInt8 para ahorrar espacio, ya que el número de bins es pequeño
     
     return discretized_series          
-            
-def _get_NDD_bitmask(tnd_series : pl.Series) -> pl.Series: #tnd_series es una serie de texto con los diagnósticos de NDD de cada estudiante, separados por punto y coma ->  Devuelve: Serie de enteros (UInt8) donde cada bit representa la presencia o ausencia de un trastorno
+
+def grade_IM_scores(mi_df: pl.DataFrame) -> pl.DataFrame:
     """
-    Given the string of NDD diagnostics, convert them to a bitmask
-
-    Args:
-        tnd_string (str): String containing the NDD diagnostics separated by semicolons.
-
-    Returns:
-        int: Bitmask representing the presence of NDD diagnostics
-    """
-    #DataFrame auxiliar (temporal) para procesar los datos de NDD y convertirlos a bitmask
-    aux_df = pl.DataFrame()
-    aux_df = aux_df.with_columns(
-        answers = tnd_series.str.to_lowercase().str.split(';'), #Convierte el texto a minúsculas y luego lo divide en una lista de respuestas, separando por punto y coma
-        TND = pl.Series("TND", [0]*len(tnd_series), dtype=pl.UInt8) #Crea una nueva columna "TND" con el mismo número de filas que tnd_series, inicializada en 0, y con tipo de dato UInt8 (entero sin signo de 8 bits)
-    )
-    
-    #Iterar sobre cada NDD en NDD_LIST y actualizar la columna TND usando operaciones de bitwise OR para establecer el bit correspondiente si el NDD está presente en las respuestas del estudiante
-    for i in range(len(NDD_LIST)):
-        ndd = NDD_LIST[i] #nombre del trastorno correspondiente al bit i
-        aux_df = aux_df.with_columns(
-            TND = pl.when( #Si el estudiante tiene ese trastorno en su lista
-                pl.col("answers").list.contains(ndd)       
-            ).then( #entonces, Se enciende el bit i usando: (1 << i) -> bitmask | -> OR binario
-                pl.col("TND") | (1 << i)
-            ).otherwise( #Si no tiene el trastorno, el número no cambia
-                pl.col("TND")
-            )
-        )
-
-    return aux_df["TND"] #Se devuelve SOLO la columna TND como Serie
-
-#Calcula el puntaje de cada tipo de inteligencia por bloque de preguntas
-def _get_IM_scores(im_answers: str, answer_list : list[str]) -> dict[str, int]:
-    """
-    Given a list of answers to the Multiple Intelligences questionnaire,
-    return a dictionary with the scores for each intelligence type.
-    
-    Args:
-        im_answers (list[str]): List of answers to the Multiple Intelligences questionnaire.
-    """
-    # im_answers -> string de frases ORDENADAS (un solo bloque IM)
-    # answer_list: Lista fija de todas las frases posibles del bloque -> Cada posición representa una inteligencia específica
-    # Devuelve un diccionario {inteligencia: puntaje}
-
-    # Inicializamos el diccionario de resultados -> Cada inteligencia empieza con puntaje 0
-    scores = {intelligence: 0 for intelligence in INTELLIGENCE_BY_INDEX}
-    
-    #Convertimos el string im_answers en una lista ordenada: Convertimos el string "a;b;c" → ["a", "b", "c"]
-    #Convertimos cada frase a minúsculas y quitamos espacios al inicio y final para facilitar la comparación con answer_list ->la convierte en lista de frases -> list[str]
-    im_answers = [ 
-        phrase.strip().lower()
-        for phrase in im_answers.split(";")
-        if phrase.strip() != ""
-    ]
-    
-    # Recorremos las frases EN EL ORDEN QUE LAS PUSO EL ESTUDIANTE
-    # enumerate nos da:
-    #   position -> la posición (0 es la más importante)
-    #   phrase   -> la frase en esa posición
-    for position, phrase in enumerate(im_answers):
-
-        phrase_index = answer_list.index(phrase) # Obtenemos el índice real de la frase
-        intelligence = INTELLIGENCE_BY_INDEX[phrase_index] # Usamos ese índice para saber qué inteligencia es
-        scores[intelligence] += position # Sumamos el peso a la inteligencia correspondiente
-        
-    return scores # Devolvemos el resultado del bloque
-
-def _get_IM_scores_from_df(im_answers: pl.DataFrame) -> pl.DataFrame:
-    """
-    Dado un DataFrame con las respuestas a los bloques de Inteligencias Múltiples (IM1, IM2, IM3) devuelve un DataFrame con los puntajes de cada tipo de inteligencia sumando los 3 bloques.
+    Dado un DataFrame con el puntaje asignado a cada inteligencia múltiple genera un dataframe
+    que rankea cada inteligencia
     
     Args:
         im_answers (pl.DataFrame): DataFrame con las respuestas a los bloques de Inteligencias Múltiples.
         
     Returns:
-        pl.DataFrame: DataFrame con los puntajes de cada tipo de inteligencia sumando los 3 bloques.
+        pl.DataFrame: DataFrame que le asigna una posición a cada inteligencia
     """
-    # Calcula los puntajes de cada tipo de inteligencia para cada bloque (IM1, IM2, IM3)
-    """
-        map_elements nos permite aplicar la función get_IM_scores a cada fila de las columnas IM1, IM2 e IM3
-        lambda x: get_IM_scores(x, ANSWER_LISTS["IM1"]) es como poner:
-                    def funcion_temporal(x):
-                        return get_IM_scores(x, ANSWER_LISTS["IM1"])
-        x representa la respuesta del estudiante a ese bloque específico (IM1, IM2 o IM3) -> se convierte en una lista de frases -> se compara con la lista de respuestas correctas para ese bloque -> se obtiene un diccionario con el puntaje de cada inteligencia para ese bloque
-        """
-    im_answers = im_answers.with_columns(
-        IM1_scores = pl.col("IM1").map_elements(lambda x: _get_IM_scores(x, ANSWER_LISTS["IM1"])),
-        IM2_scores = pl.col("IM2").map_elements(lambda x: _get_IM_scores(x, ANSWER_LISTS["IM2"])),
-        IM3_scores = pl.col("IM3").map_elements(lambda x: _get_IM_scores(x, ANSWER_LISTS["IM3"]))
-    ).select(["IM1_scores", "IM2_scores", "IM3_scores"]) #Seleccionamos solo las columnas con los puntajes de cada bloque, para luego sumarlos y obtener el puntaje final de cada inteligencia
-    
+
     # Crear un DataFrame resultado con una columna por cada tipo de inteligencia
-    result = pl.DataFrame()
-    
-    # Para cada tipo de inteligencia, sumar los puntajes de los 3 bloques
-    for intelligence in INTELLIGENCE_BY_INDEX:
-        result = result.with_columns(
-            pl.Series( #El nombre de la columna es el nombre de la inteligencia, y su valor es la suma de los puntajes de esa inteligencia en los 3 bloques
-                intelligence,
-                [
-                    (im_answers["IM1_scores"][i].get(intelligence, 0) + #se obtiene el puntaje de esa inteligencia en el bloque IM1 usando .get(intelligence, 0) para manejar el caso de que esa inteligencia no tenga puntaje en ese bloque (devuelve 0 en ese caso)
-                     im_answers["IM2_scores"][i].get(intelligence, 0) +
-                     im_answers["IM3_scores"][i].get(intelligence, 0))#se suma el puntaje de esa inteligencia en los 3 bloques
-                    for i in range(len(im_answers)) #iteramos sobre cada estudiante (cada fila del DataFrame im_answers) para calcular el puntaje total de esa inteligencia sumando los puntajes de los 3 bloques para ese estudiante
-                ]
-            )
-        )
+    mi_df = pl.DataFrame()
     
     # Crear RANKING por estudiante (1 = mayor puntaje)
     """
@@ -258,7 +52,7 @@ def _get_IM_scores_from_df(im_answers: pl.DataFrame) -> pl.DataFrame:
                 "Logica": 20.2
             }
     """
-    result = result.with_columns( #Creamos una columna temporal llamada "ranking_dict" que es una estructura con todas las inteligencias y sus puntajes para cada estudiante, para luego aplicar map_elements y obtener un diccionario con el ranking de cada inteligencia para ese estudiante
+    result = mi_df.with_columns( #Creamos una columna temporal llamada "ranking_dict" que es una estructura con todas las inteligencias y sus puntajes para cada estudiante, para luego aplicar map_elements y obtener un diccionario con el ranking de cada inteligencia para ese estudiante
         pl.struct(INTELLIGENCE_BY_INDEX) #toma las columnas de las inteligencias y las convierte en una estructura (similar a un diccionario) para cada fila del DataFrame
         .map_elements(#Aplica una función a cada fila de esa estructura -> la función toma como argumento la struct de inteligencias y puntajes -> Para cada estudiante ejecuta el lambda row.
             lambda row: {
@@ -288,30 +82,16 @@ def _get_IM_scores_from_df(im_answers: pl.DataFrame) -> pl.DataFrame:
         
     return result  #Devolvemos el DataFrame con los puntajes finales de cada inteligencia
 
-def _get_VARK_scores(vark_answers: pl.DataFrame) -> pl.DataFrame:
+def grade_VARK_scores(vark_df: pl.DataFrame) -> pl.DataFrame:
     """
-    Given a list of answers to the VARK questionnaire,
-    return a dictionary with the scores for each VARK type.
+    Dado un dataframe con los puntajes asignados a cada estilo de aprendizaje genera un dataframe
+    que rankea los estilos de aprendizaje
     
     Args:
-        vark_answers (list[str]): List of answers to the VARK questionnaire.
+        vark_df (pl.DataFrame): Dataframe con los puntajes de cada estilo de aprendizaje
     """
     
-    vark_answers = vark_answers.with_columns(
-        Answers=pl.concat_list([ #Concatena las respuestas de las columnas VARK1 a VARK13 en una sola lista de respuestas por estudiante
-            pl.col(f"VARK{i}").str.to_lowercase() #Convierte las respuestas a minúsculas para facilitar la comparación con las listas de respuestas correctas (VISUAL_ANSWERS, AURAL_ANSWERS, etc.)
-            .str.split(";") for i in range(1,14)]) #separa múltiples respuestas
-        .list.set_difference(['']), # Elimina respuestas vacías ""
-    ).select("Answers") #Selecciona solo la columna "Answers" que contiene la lista de respuestas de cada estudiante, para luego calcular el puntaje de cada tipo de aprendizaje en base a la intersección de las respuestas del estudiante con las listas de respuestas correctas para cada tipo (VISUAL_ANSWERS, AURAL_ANSWERS, etc.)
-    
-    vark_answers = vark_answers.with_columns(
-        VARKVisual = pl.col("Answers").list.set_intersection(VISUAL_ANSWERS).list.len(), #Calcula el puntaje de aprendizaje visual como la cantidad de respuestas correctas para visual (intersección entre las respuestas del estudiante y VISUAL_ANSWERS) dividido por la cantidad total de respuestas del estudiante (longitud de la lista de respuestas) -> Cuenta cuántas respuestas pertenecen al conjunto VISUAL y divide entre el total de respuestas
-        VARKAural = pl.col("Answers").list.set_intersection(AURAL_ANSWERS).list.len(),
-        VARKReadWrite = pl.col("Answers").list.set_intersection(READ_WRITE_ANSWERS).list.len(),
-        VARKKinesthetic = pl.col("Answers").list.set_intersection(KINESTHETIC_ANSWERS).list.len(),
-    )
-    
-    vark_answers = vark_answers.with_columns( 
+    vark_df = vark_df.with_columns( 
         pl.struct(VARK_BY_INDEX) #Creamos una estructura con las columnas de VARK para cada fila del DataFrame
         .map_elements( #Aplicamos una función a cada fila de esa estructura, donde la función toma como argumento la struct de VARK y puntajes, y devuelve un diccionario con el ranking de cada tipo de aprendizaje para ese estudiante
             lambda row: {
@@ -324,7 +104,7 @@ def _get_VARK_scores(vark_answers: pl.DataFrame) -> pl.DataFrame:
         .alias("ranking_dict_VARK")          
     )
     
-    vark_answers = vark_answers.with_columns(
+    vark_df = vark_df.with_columns(
         VARK = pl.col("ranking_dict_VARK") #Toma la columna "ranking_dict_VARK"
         .map_elements(
             lambda element:
