@@ -51,11 +51,11 @@ def procesar_pdf(path_pdf : Path) -> list[str]:
         raise TypeError("No se ha cargado el modelo de procesamiento de lenguaje natural")
     
     if not path_pdf.exists():
-        raise FileNotFoundError("El directorio no existe")
+        raise FileNotFoundError("El archivo no existe")
     
-    if path_pdf.is_dir() or path_pdf.suffix != "pdf":
-        raise FileNotFoundError("La ruta no es archivo pdf")
+    if path_pdf.is_dir() or path_pdf.suffix != ".pdf":
+        raise FileNotFoundError("La ruta no es un archivo pdf")
     
     texto = _extraer_texto_pdf(path_pdf)
-    return _procesar_texto(texto, nlp)
+    return _procesar_texto(texto)
     
