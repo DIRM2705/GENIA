@@ -53,18 +53,30 @@ def load_from_csv(file_path: str) -> pl.DataFrame:
             "Si no comprendo el significado de una palabra, trato de resolver el problema, por ejemplo consultando un diccionario o preguntándole a alguien más.":"CE3", 
             "Trato de integrar el conocimiento adquirido al resolver nuevos problemas":"CE4", 
             "Trato de integrar temas de diferentes disciplinas en mi conocimiento general":"CE5", 
-            "Siento que soy libre de decidir como vivir mi vida":"AM1", 
-            "Estoy cómodo con la gente con la que interactuo":"RM1", 
-            "Frecuentemente, NO me siento muy competente":"CM1", 
-            "Me siento presionado en mi vida":"AM2", 
-            "Me llevo bien con las personas con las que estoy en contacto":"RM2", 
-            "Soy mayormente reservado y no tengo muchos contactos":"RM3", 
-            "Usualmente, me siento libre de expresar mis ideas y opiniones":"AM3", 
-            "He sido capaz de aprender nuevas habilidades interesantes últimamente":"CM2"}) 
+            "Siento que soy libre de decidir como vivir mi vida":"AN1", 
+            "Estoy cómodo con la gente con la que interactuo":"RN1", 
+            "Frecuentemente, NO me siento muy competente":"CN1", 
+            "Me siento presionado en mi vida":"AN2",
+            "Las personas que conozco me dicen que soy bueno en lo que hago":"CN2",
+            "Me llevo bien con las personas con las que estoy en contacto":"RN2", 
+            "Soy mayormente reservado y no tengo muchos contactos":"RN3", 
+            "Generalmente, me siento libre de expresar mis ideas y opiniones":"AN3",
+            "Considero a las personas con las que interactúo regularmente como mis amigos":"RN4", 
+            "He sido capaz de aprender nuevas habilidades interesantes últimamente":"CN3",
+            "En mi vida diaria, frecuentemente tengo que hacer lo que me dicen":"AN4",
+            "Las personas en mi vida se preocupan por mí":"RN5",
+            "La mayoría de los días tengo una sensación de logro sobre lo que hago":"CN4",
+            "Las personas con las que interactúo a diario tienden a tomar mis sentimientos en consideración":"AN5",
+            "En mi vida, rara vez tengo la oportunidad de mostrar mis capacidades":"CN5",
+            "No hay muchas personas a las que soy cercano":"RN6",
+            "Siento que en mi vida cotidiana puedo ser yo mismo":"AN6",
+            "No parezco agradarles mucho a las personas con las que interactúo con regularidad":"RN7",
+            "Por lo general, no me siento muy capaz":"CN6",
+            "En pocas ocasiones puedo decidir como planificar mi vida diaria":"AN7",
+            "En general, las personas son muy amistosas conmigo":"RN8"}) 
     
     #aplicamos la función de grading a todo el DataFrame para procesar las respuestas de los estudiantes
     return _grade_students(df)
-
 
 def _grade_students(students : pl.DataFrame) -> pl.DataFrame:
     """
@@ -92,27 +104,42 @@ def _grade_students(students : pl.DataFrame) -> pl.DataFrame:
     #PROCESAR IM
     IM_scores = _get_IM_scores_from_df(students.select(["IM1", "IM2", "IM3"]))
     
+    invertedAN = {"AN2", "AN4", "AN7"}
+    invertedCN = {"CN1", "CN5", "CN6"}
+    invertedRN = {"RN3", "RN6", "RN7"}
+
     #PROCESAR TND, MOTIVACIONES y COMPROMISO
     students = students.with_columns(
         TND = _get_NDD_bitmask(students["TND"]),
         Cronotipo = (pl.col("Cronotipo") == "Entre las 7 am y las 3pm").cast(pl.UInt8) + 1, #Convertimos el cronotipo a 0 vespertino, 1 matutino
-        AM = ((pl.col("AM1") + pl.col("AM2") + pl.col("AM3"))/21).round(2), #Motivación de Autonomía -> de qué tan libres se sienten los estudiantes para expresar sus ideas y opiniones, y para elegir sus actividades académicas
-        RM = ((pl.col("RM1") + pl.col("RM2") + pl.col("RM3"))/21).round(2), #Motivación de Relación
-        CM = ((pl.col("CM1") + pl.col("CM2"))/14).round(2), #Motivación de Competencia -> de qué tan capaces se sienten los estudiantes respecto a sus actividades académicas
+        #AN = ((pl.col("AN1") + pl.col("AN2") + pl.col("AN3"))/21).round(2), #Motivación de Autonomía -> de qué tan libres se sienten los estudiantes para expresar sus ideas y opiniones, y para elegir sus actividades académicas
+        #RN = ((pl.col("RN1") + pl.col("RN2") + pl.col("RN3"))/21).round(2), #Motivación de Relación
+        #CN = ((pl.col("CN1") + pl.col("CN2"))/14).round(2), #Motivación de Competencia -> de qué tan capaces se sienten los estudiantes respecto a sus actividades académicas
+        AN = ((pl.sum_horizontal(*[8 - pl.col(f"AN{i}") if f"AN{i}" in invertedAN else pl.col(f"AN{i}") for i in range(1, 8)])) / 49).round(2),#Necesidad de Autonomía
+        CN = ((pl.sum_horizontal(*[8 - pl.col(f"CN{i}") if f"CN{i}" in invertedCN else pl.col(f"CN{i}") for i in range(1, 7)])) / 42).round(2), #Necesidad de Competencia
+        RN = ((pl.sum_horizontal(*[8 - pl.col(f"RN{i}") if f"RN{i}" in invertedRN else pl.col(f"RN{i}") for i in range(1, 9)])) / 56).round(2), #Necesidad de Relación
         BE = ((pl.col("BE1") + pl.col("BE2") + pl.col("BE3") + pl.col("BE4")+pl.col("BE5"))/25).round(2), # Behavioural Engagement -> Compromiso Conductual
         EE = ((pl.col("EE1") + pl.col("EE2") + pl.col("EE3") + pl.col("EE4")+pl.col("EE5"))/25).round(2), # Emotional Engagement -> Compromiso Emocional 
-        CE = ((pl.col("CE1") + pl.col("CE2") + pl.col("CE3") + pl.col("CE4")+pl.col("CE5"))/25).round(2) # Cognitive Engagement -> Compromiso Cognitivo
-    ).select([ #Seleccionar solo las columnas relevantes para el hipergrafo
-        "Id", "Cronotipo", "TND", "AM", "RM", "CM", "BE", "EE", "CE"
-    ])
-
+        CE = ((pl.col("CE1") + pl.col("CE2") + pl.col("CE3") + pl.col("CE4")+pl.col("CE5"))/25).round(2), # Cognitive Engagement -> Compromiso Cognitivo
+    )
+    
+    #Dimensiones de Motivación evaluadas por el MSLQ
+    students = students.with_columns(
+        Orientacion_metas_intrinsecas = ((pl.col("AN") + pl.col("BE"))/2).round(2), #Orientación a metas intrínsecas
+        Autoeficacia = ((pl.col("CN") + pl.col("EE"))/2).round(2), #Autoeficacia
+        Valor_tarea = ((pl.col("AN") + pl.col("CN") + pl.col("BE") + pl.col("EE"))/4).round(2), #Valor de la tarea
+        Ansiedad_examenes = 1 - (((pl.col("AN") + pl.col("CN") + pl.col("CE"))/3).round(2)) #Ansiedad ante exámenes
+    ).select([#Seleccionar solo las columnas relevantes para el hipergrafo
+        "Id", "Cronotipo", "TND", "AN", "RN", "CN", "BE", "EE", "CE", "Orientacion_metas_intrinsecas", "Autoeficacia", "Valor_tarea", "Ansiedad_examenes"])
+    
     #Agregar VARK al DataFrame de estudiantes
     students = students.hstack(VARK_scores) #hstack=horizontal stack -> Agrega columnas lado a lado -> agregar las columnas de VARK_scores al DataFrame de estudiantes
     
     #Agregar IM al DataFrame de estudiantes
     students = students.hstack(IM_scores) #Agrega las columnas de IM_scores al DataFrame de estudiantes
     
-    return students #devuelve el DataFrame final   
+    print(students)
+    return students #devuelve el DataFrame final
 
 def discretize_column(column: pl.Series, n_bins: int) -> pl.Series:
     """

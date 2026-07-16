@@ -1,5 +1,5 @@
 from pathlib import Path
-from genia_libs import hypergraph_from_dataframe
+#from genia_libs import hypergraph_from_dataframe  # TODO: Compile with maturin
 from utils.dataframe_utils import get_characteristics_dataframe
 
 def create_hipergraph(hypergraph_path: Path):
