@@ -34,7 +34,9 @@ REQUIRED_COLUMNS = [
     "OR", #Organización
     "CP", #Pensamiento crítico
     "MC"  #Metacognición
-].extend(MI_COLUMNS).extend(VARK_COLUMNS)
+]
+REQUIRED_COLUMNS.extend(MI_COLUMNS)
+REQUIRED_COLUMNS.extend(VARK_COLUMNS)
 
 IM_DISPLAY_LABELS = {
     "MIKin": "Cinestésica",
