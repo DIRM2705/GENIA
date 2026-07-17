@@ -2,5 +2,6 @@
 target/
 __pycache__/
 .pytest_cache/
+src_py/experiments/curriculum_classifier
 *.csv
 .env
