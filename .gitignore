@@ -5,3 +5,4 @@ __pycache__/
 src_py/experiments/curriculum_classifier
 *.csv
 .env
+*.png
