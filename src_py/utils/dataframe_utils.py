@@ -49,18 +49,16 @@ def get_grouping_dataframe(dataframe_path: str) -> pl.DataFrame:
     Returns:
         pl.DataFrame: DataFrame con las características de agrupamiento
     """
-    try:
-        df = load_preprocessed_df(dataframe_path)
-    except FileNotFoundError:
-        print("Se requiere preprocesar los datos para obtener el dataframe de caracteristicas")
-        return None
-        
+    df = load_preprocessed_df(dataframe_path)
+    
     df = df.with_columns(
-        AM = discretize_column(df["AM"], 5),
-        RM = discretize_column(df["RM"], 5),
-        CM = discretize_column(df["CM"], 5),
+        AN = discretize_column(df["AN"], 5),
+        RN = discretize_column(df["RN"], 5),
+        CN = discretize_column(df["CN"], 5),
         BE = discretize_column(df["BE"], 5),
         EE = discretize_column(df["EE"], 5),
-        CE = discretize_column(df["CE"], 5)
+        CE = discretize_column(df["CE"], 5),
+        HS = discretize_column(df["HS"], 5),
+        PI = discretize_column(df["PI"], 5),
     )
     return df.select(pl.exclude("Id"))
