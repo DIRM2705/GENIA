@@ -14,6 +14,7 @@ mod genia_libs {
     use rand::distr::{Distribution, Uniform};
     use rayon::prelude::*;
     use std::path::Path;
+    use crate::utils::logging::log;
 
     #[pyfunction]
     fn hypergraph_from_dataframe(py_df: PyDataFrame, output_file: String) -> PyResult<()> {
@@ -88,6 +89,7 @@ mod genia_libs {
         elites: usize,
         mutation_rate: u8,
         crossover_rate: u8,
+        log_file_path: Option<String>,
     }
 
     #[pymethods]
@@ -100,44 +102,51 @@ mod genia_libs {
             elites: usize,
             mutation_rate: u8,
             crossover_rate: u8,
+            log_file_path: Option<String>,
         ) -> Self {
             return GeneticAlgorithm {
                 population_size,
                 spins,
                 elites,
-                generations,
+                generations : generations + 1, //Se suma 1 para que la última generación sea evaluada
                 mutation_rate,
                 crossover_rate,
+                log_file_path
             };
         }
 
         pub fn run(&self, num_groups: usize, input_file: String) -> Vec<Vec<usize>> {
+            println!("------------------------ALGORITMO GENÉTICO--------------------------------------------");
             let hypergraph = load_hypergraph_from_file(&input_file);
 
             // Genera la población inicial de individuos
             let mut population =
                 create_initial_population(self.population_size, num_groups, &hypergraph);
 
+            log(format!("Población inicial creada con {} individuos", self.population_size), self.log_file_path.as_deref());
+
+            let mut best_fitness = 0.0;
+            let mut change_counter = 1000; //Contador para limitar la cantidad de generaciones sin cambios en el mejor fitness
             for generation in 0..self.generations {
+                //Ordena la población por fitness de mayor a menor
+                population.sort_by(|a, b| b.get_fitness().partial_cmp(&a.get_fitness()).unwrap());
+
+                log(format!("Generación {} --- Mejor fitness: {}", generation, population[0].get_fitness()), self.log_file_path.as_deref());
+                if population[0].get_fitness() > best_fitness {
+                    best_fitness = population[0].get_fitness();
+                    change_counter = 1000;
+                } else {
+                    change_counter -= 1;
+                }
+
+                if best_fitness >= 6.6 || change_counter == 0 {
+                    log(format!("Convergencia detectada: {}", population[0].get_fitness()), self.log_file_path.as_deref());
+                    break;
+                }
+
                 //En paralelo realiza la selección, crossover y mutación para generar la nueva población
                 population = create_new_population(self, num_groups, &population, &hypergraph);
-
-                if cfg!(debug_assertions) {
-                    //Imprime datos de la generación actual para debuggear
-                    let mut best_individual = &population[0];
-                    println!("Generación {}", generation);
-                    for (i, individual) in population.iter().enumerate() {
-                        println!("Individuo {}: Fitness = {}", i, individual.get_fitness());
-                        if individual.get_fitness() > best_individual.get_fitness() {
-                            best_individual = individual;
-                        }
-                    }
-                    // Imprime el fitness del mejor individuo de la población en cada generación
-                    println!(
-                        "Mejor fitness en esta generación: {}",
-                        best_individual.get_fitness()
-                    );
-                }
+                log (format!("Creada siguiente generación con {} individuos", population.len()), self.log_file_path.as_deref());
             }
 
             // Devuelve la mejor solución encontrada después de todas las generaciones
@@ -196,9 +205,10 @@ mod genia_libs {
     }
 
     fn elitism(population: &Vec<Individual>, num_elites: usize) -> Vec<Individual> {
-        let mut elites = population.clone();
-        elites.sort_by(|a, b| b.get_fitness().partial_cmp(&a.get_fitness()).unwrap());
-        return elites.into_iter().take(num_elites).collect();
+        return population.iter()
+            .take(num_elites)
+            .cloned()
+            .collect();
     }
 
     fn create_new_population(
@@ -207,14 +217,15 @@ mod genia_libs {
         population: &Vec<Individual>,
         hypergraph: &Hypergraph,
     ) -> Vec<Individual> {
-        let probabilities = make_probabilities(population);
-
         /*
            Esta función corre en paralelo por cada spin de la ruleta. Cada spin genera 4 nuevos individuos
            a partir de 2 padres seleccionados por la ruleta,
            realizando crossover y mutación en paralelo para cada grupo de los individuos.
         */
-        return (0..config.spins)
+
+        let probabilities = make_probabilities(population);
+
+        let children = (0..config.spins)
             .into_par_iter()
             .flat_map(|_| {
                 // Selecciona dos individuos utilizando la selección por ruleta
@@ -265,12 +276,14 @@ mod genia_libs {
                     );
                 }
 
-                let mut children = vec![child1, child2, child3, child4];
-                children.extend(elitism(population, config.elites));
-
-                return children;
+                return vec![child1, child2, child3, child4];
             })
             .collect::<Vec<Individual>>();
+
+        // La nueva población se compone de los individuos élite y los hijos generados
+        let mut new_population = elitism(population, config.elites);
+        new_population.extend(children);
+        return new_population;
     }
 
     fn create_initial_population(
