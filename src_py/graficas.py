@@ -8,25 +8,6 @@ import polars as pl
 
 from consts import *
 
-IM_DISPLAY_LABELS = {
-    "MIKin": "Cinestésica",
-    "MIExis": "Existencial",
-    "MIInter": "Interpersonal",
-    "MIIntra": "Intrapersonal",
-    "MILog": "Lógico-matemática",
-    "MIMus": "Musical",
-    "MINat": "Naturalista",
-    "MIVer": "Verbal",
-    "MIVis": "Visual",
-}
-
-VARK_DISPLAY_LABELS = {
-    "VARKVisual": "Visual",
-    "VARKAural": "Auditivo",
-    "VARKReadWrite": "Lectura/Escritura",
-    "VARKKinesthetic": "Kinestésico",
-}
-
 # Motor de renderizado de gráficos 2D que se utiliza para generar imágenes en memoria
 matplotlib.use("Agg") 
 
@@ -51,14 +32,14 @@ def info_graphics_fromDataframe(df: pl.DataFrame, selected_id: int | None = None
         "selected_id": "promedio" if view_mode == "average" else int(selected_id),
         "view_mode": view_mode,
         "available_ids": ids_availables,
-        "im_scores": _get_metric_vector_from_group_or_row(df=df, row=row, categories=INTELLIGENCE_BY_INDEX, raw_column="MI",), #Si row es None, se calculará el promedio del grupo, si no, se tomará el estudiante seleccionado ->genera lista para usar para la grafica de radar
-        "vark_scores": _get_metric_vector_from_group_or_row(df=df, row=row, categories=VARK_BY_INDEX, raw_column="VARK",), #->genera lista para usar para la grafica de radar
+        "im_scores": _get_metric_vector_from_group_or_row(df=df, row=row, categories=MI_COLUMNS, raw_column="MI",), #Si row es None, se calculará el promedio del grupo, si no, se tomará el estudiante seleccionado ->genera lista para usar para la grafica de radar
+        "vark_scores": _get_metric_vector_from_group_or_row(df=df, row=row, categories=VARK_COLUMNS, raw_column="VARK",), #->genera lista para usar para la grafica de radar
         "cronotipo": _get_chronotype_data(df=df, row=row, view_mode=view_mode),
         "engagement": _get_group_or_row_profile(df=df, row=row, columns=["BE", "EE", "CE"],),
         "motivation": _get_group_or_row_profile(df=df, row=row, columns=["Orientacion_metas_intrinsecas", "Autoeficacia", "Valor_tarea", "Ansiedad_examenes"],),
         "labels": { #para graficas de RADAR
-            "im": [IM_DISPLAY_LABELS[label] for label in INTELLIGENCE_BY_INDEX],
-            "vark": [VARK_DISPLAY_LABELS[label] for label in VARK_BY_INDEX],},
+            "im": [IM_DISPLAY_LABELS[label] for label in MI_COLUMNS],
+            "vark": [VARK_DISPLAY_LABELS[label] for label in VARK_COLUMNS],},
     }
 
 ##Recibe la ruta donde se guardarán las imágenes y devuelve la ruta convertida en un objeto Path -> para que sea más fácil trabajar con rutas de archivos
