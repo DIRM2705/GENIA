@@ -104,12 +104,11 @@ impl Individual {
         let fitness_sum: f64 = self
             .groups
             .par_iter()
-            .map(|group| group.calculate_discartability(hypergraph))
+            .map(|group| 11f64 - group.calculate_discartability(hypergraph))
             .sum();
 
-        //Mayores sumas de fitness indican mayor descartabilidad
-        //para maximizar fitness se toma el inverso de la suma de las descartabilidades
-        self.fitness = 1.0 / (fitness_sum + 1e-10);
+        //El fitness de una solución es el error absoluto medio
+        self.fitness = fitness_sum/self.groups.len() as f64;
     }
 
     pub fn crossover(&self, other: &Individual, crossover_rate: u8) -> (Individual, Individual) {
