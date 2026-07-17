@@ -1,13 +1,13 @@
 from utils.dataframe_utils import get_grouping_dataframe
-from main import load_preprocessed_df, lazy_from_csv
+from main import load_preprocessed_df, lazy_from_csv, create_hipergraph
 from preprocessing.dataframe import extract_characteristics
 from consts import REQUIRED_HG_COLUMNS, REQUIRED_OUTPUT_COLUMNS
 from pathlib import Path
 import polars as pl
 
-def test_load_df():
+def test_invalid_df():
     """
-    Test loading a invvalid dataframes
+    Test loading invalid dataframes
     """
     
     try:
@@ -52,6 +52,8 @@ def test_preprocess():
     #Verify schema
     assert set(df.columns) == set(REQUIRED_OUTPUT_COLUMNS), f"The columns of the dataframe do not match the required columns."
     
+    df.write_parquet(Path("data/test_data/preprocessed_test.parquet"))
+    
 def test_grouping_df():
     """
     Test the transformation of the dataframe so it can be used by the hypergraph constructor
@@ -69,3 +71,13 @@ def test_grouping_df():
         assert grouping_df[col].dtype == pl.UInt8, f"The column {col} is not discretized to UInt8."
         assert grouping_df[col].max() < 5, f"The column {col} has values greater than or equal to 5, which is not expected after discretization."
         assert grouping_df[col].min() >= 0, f"The column {col} has values less than 0, which is not expected after discretization."
+        
+def test_hypergraph_construction():
+    """
+    Test the construction of the hypergraph from the grouping dataframe
+    """
+    #This should be a valid df
+    grouping_df = load_preprocessed_df(Path("data/test_data/synthetic_chars.parquet"))
+    grouping_df = get_grouping_dataframe(grouping_df)
+    
+    create_hipergraph(grouping_df, Path("data/test_data/hypergraph_test.hg"))

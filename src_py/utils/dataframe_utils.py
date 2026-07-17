@@ -70,16 +70,4 @@ def get_grouping_dataframe(df: pl.DataFrame) -> pl.DataFrame:
         HS = discretize_column(df["HS"], 5),
         PL = discretize_column(df["PL"], 5),
     )
-    return df.select([
-        "Cronotype",
-        "AN",
-        "RN",
-        "CN",
-        "BE",
-        "EE",
-        "CE",
-        "HS",
-        "PL",
-        "VARK",
-        "MI"
-    ])
+    return df.select(REQUIRED_HG_COLUMNS)

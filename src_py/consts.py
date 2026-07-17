@@ -19,7 +19,7 @@ VARK_COLUMNS = [
 
 REQUIRED_INPUT_COLUMNS = [
     "Id",
-    "Cronotype", #Cronotipo
+    "Chronotype", #Cronotipo
     "AN", #Necesidad de autonomía
     "RN", #Necesidad de relaciones
     "CN", #Necesidad de competencia
@@ -41,7 +41,7 @@ REQUIRED_OUTPUT_COLUMNS = REQUIRED_INPUT_COLUMNS + ["VARK", "MI", "EGO", "IGO", 
 REQUIRED_INPUT_COLUMNS.extend(MI_COLUMNS)
 REQUIRED_INPUT_COLUMNS.extend(VARK_COLUMNS)
 
-REQUIRED_HG_COLUMNS = ["Cronotype", "AN", "RN", "CN", "PL", "HS", "CE", "EE", "BE", "VARK", "MI"]
+REQUIRED_HG_COLUMNS = ["AN", "RN", "CN", "PL", "HS", "CE", "EE", "BE", "VARK", "MI"]
 
 
 

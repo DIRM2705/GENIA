@@ -1,9 +1,10 @@
 from pathlib import Path
-import sys
 import polars as pl
 from utils.dataframe_utils import verify_columns
 from preprocessing.graficas import export_info_from_console
 from consts import REQUIRED_INPUT_COLUMNS, REQUIRED_OUTPUT_COLUMNS
+from genia_libs import hypergraph_from_dataframe
+from utils.dataframe_utils import get_grouping_dataframe
 
 def lazy_from_csv(file_path : Path) -> pl.LazyFrame:
     """
@@ -80,10 +81,9 @@ def load_preprocessed_df(parquet_path : Path) -> pl.DataFrame:
     verify_columns(df.lazy(), REQUIRED_OUTPUT_COLUMNS) 
     return df
 
-if __name__ == "__main__":
-    df = pl.read_parquet(Path("src_py/data/synthetic_chars.parquet"))
-    export_info_from_console(df)
-    #REAL_DATA_GA_EXPERIMENT.run()
-
-
-
+def create_hipergraph(df: pl.DataFrame, hypergraph_path: Path) -> None:
+    if hypergraph_path.exists():
+        return
+    
+    # Crear el hipergrafo de características a partir del dataframe, excluyendo las columnas "Id"
+    hypergraph_from_dataframe(df, str(hypergraph_path))
