@@ -299,11 +299,13 @@ mod genia_libs {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
     use crate::utils::bitmap::BitmapLen;
     use crate::data::hypergraph::Hypergraph;
+    use crate::ml::genetics::Individual;
 
     #[test]
-    pub fn bitmap_test_index_out_of_bounds() {
+    pub fn test_bitmap_index_out_of_bounds() {
         let mut bitmap = BitmapLen::new(16);
         assert!(bitmap.get_chunk_mut(3).is_err());
         assert!(bitmap.set_bit(19).is_err());
@@ -313,14 +315,14 @@ mod tests {
     }
 
     #[test]
-    pub fn bitmap_test_get_chunk_mut() {
+    pub fn test_bitmap_get_chunk_mut() {
         let mut bitmap = BitmapLen::new(16);
         assert!(bitmap.get_chunk_mut(0).is_ok());
         assert!(bitmap.get_chunk_mut(1).is_ok());
     }
 
     #[test]
-    pub fn bitmap_test_set_and_get_bits() {
+    pub fn test_bitmap_set_and_get_bits() {
         let mut bitmap = BitmapLen::new(16);
         assert!(bitmap.set_bit(3).is_ok());
         assert!(bitmap.set_bit(7).is_ok());
@@ -336,7 +338,7 @@ mod tests {
     }
 
     #[test]
-    pub fn hypergraph_test_no_students()
+    pub fn test_hypergraph_no_students()
     {
         let mut hg = Hypergraph::new(0);
         assert_eq!(hg.get_student_count(), 0);
@@ -346,7 +348,7 @@ mod tests {
     }
 
     #[test]
-    pub fn hypergraph_test()
+    pub fn test_hypergraph()
     {
         let mut hg = Hypergraph::new(10);
 
@@ -354,5 +356,85 @@ mod tests {
         assert!(hg.add_student_to_hyperedge("MI_3", 4).is_ok());
         assert!(hg.get_subhypergraph_by_prefix("VARK").is_err());
         assert!(hg.get_subhypergraph_by_prefix("MI").is_ok());
+    }
+
+    #[test]
+    pub fn test_random_group_generator() {
+        let individual = Individual::new(3, &Hypergraph::new(30));
+        let solution = individual.get_solution();
+        assert_eq!(solution.len(), 3); // Check number of groups
+
+        // Check duplicate students
+        let mut all_students = HashSet::new();
+        for group in solution {
+            for student  in group {
+                assert!(all_students.insert(student), "Duplicate student found: {}", student);
+            }
+        }
+    }
+
+    #[test]
+    pub fn test_crossover()
+    {
+        let hypergraph = Hypergraph::new(10);
+        let parent1 = Individual::new(3, &hypergraph);
+        let parent2 = Individual::new(3, &hypergraph);
+
+        let (mut child1, mut child2) = parent1.crossover(&parent2, 50);
+        child1.check_constraints(3);
+        child2.check_constraints(3);
+
+        // Check that the children have the correct number of groups
+        assert_eq!(child1.get_solution().len(), 3);
+        assert_eq!(child2.get_solution().len(), 3);
+
+        // Check that all students are only in one group for child 1
+        let mut unseen_students = HashSet::<usize>::from_iter(0..10);
+        for child1_group in child1.get_solution() {
+            let mut seen_students = HashSet::<usize>::new();
+            for student in child1_group {
+                assert!(seen_students.insert(student), "Duplicate student found in child 1: {}", student);
+                assert!(unseen_students.remove(&student), "Student {} is in multiple groups in child 1", student);
+            }
+        }
+
+        assert!(unseen_students.is_empty(), "Some students are not assigned to any group in child 1: {:?}", unseen_students);
+
+        unseen_students = HashSet::<usize>::from_iter(0..10);
+        // Check that all students are only in one group for child 2
+        for child2_group in child2.get_solution() {
+            let mut seen_students = HashSet::<usize>::new();
+            for student in child2_group {
+                assert!(seen_students.insert(student), "Duplicate student found in child 2: {}", student);
+                assert!(unseen_students.remove(&student), "Student {} is in multiple groups in child 2", student);
+            }
+        }
+
+        assert!(unseen_students.is_empty(), "Some students are not assigned to any group in child 2: {:?}", unseen_students);
+    }
+
+    #[test]
+    pub fn test_mutation() {
+        let hypergraph = Hypergraph::new(10);
+        let individual = Individual::new(3, &hypergraph);
+
+        individual.mutate(70);
+
+        let mutated_solution = individual.get_solution();
+
+        // Check that the mutated solution has the correct number of groups
+        assert_eq!(mutated_solution.len(), 3);
+
+        // Check that all students are only in one group
+        let mut unseen_students = HashSet::<usize>::from_iter(0..10);
+        for group in mutated_solution {
+            let mut seen_students = HashSet::<usize>::new();
+            for student in group {
+                assert!(seen_students.insert(student), "Duplicate student found after mutation: {}", student);
+                assert!(unseen_students.remove(&student), "Student {} is in multiple groups after mutation", student);
+            }
+        }
+
+        assert!(unseen_students.is_empty(), "Some students are not assigned to any group after mutation: {:?}", unseen_students);
     }
 }

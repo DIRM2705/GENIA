@@ -3,7 +3,7 @@ use crate::utils::bitmap::BitmapLen;
 use crate::utils::math::{balance_metric, homogeneity_metric};
 use rayon::prelude::*;
 
-const DELTA_CALCULATIONS: [&'static str; 9] = ["CE", "BE", "EE", "AN", "RN", "Cronotipo", "PL", "HS", "CN"];
+const DELTA_CALCULATIONS: [&'static str; 9] = ["CE", "BE", "EE", "AN", "RN", "Chronotype", "PL", "HS", "CN"];
 const REPLACEMENT_CALCULATIONS: [&'static str; 2] = ["MI", "VARK"];
 
 #[derive(Clone)]
@@ -27,11 +27,11 @@ impl Group {
     pub fn calculate_discartability(&self, hypergraph: &Hypergraph) -> f64 {
         /*
         La discartabilidad de un grupo se calcula a partir de tres métricas:
-        - Delta Discartability: Mide la homogeneidad del grupo con respecto a las
+        - Delta Discardability: Mide la homogeneidad del grupo con respecto a las
                                 características delta. Se calcula utilizando una métrica de homogeneidad.
-        - Epsilon Discartability: Mide el balance del grupo con respecto a las
+        - Epsilon Discardability: Mide el balance del grupo con respecto a las
                                   características epsilon. Se calcula utilizando una métrica de balance.
-        - Replacement Discartability: Mide el balance del grupo con respecto a las
+        - Replacement Discardability: Mide el balance del grupo con respecto a las
                                       características de reemplazo. Se calcula utilizando una métrica de balance.
 
         La discartabilidad total del grupo es la suma de las tres métricas anteriores.
