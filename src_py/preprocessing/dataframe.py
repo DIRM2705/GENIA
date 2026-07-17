@@ -1,7 +1,8 @@
 import polars as pl
 from consts import REQUIRED_INPUT_COLUMNS, MI_COLUMNS, VARK_COLUMNS
+from utils.dataframe_utils import verify_columns
 
-def preprocess(students : pl.LazyFrame) -> pl.DataFrame:
+def extract_characteristics(students : pl.LazyFrame) -> pl.DataFrame:
     """
     Dado un archivo en formato csv, crea un dataframe de polars creando las columnas necesarias
     
@@ -41,7 +42,7 @@ def preprocess(students : pl.LazyFrame) -> pl.DataFrame:
         DataFrame: Un dataframe de polars con el formato requerido
     """
     
-    _verify_columns(students) #Verifica que el DataFrame tenga las columnas necesarias para el preprocesamiento
+    verify_columns(students, REQUIRED_INPUT_COLUMNS) #Verifica que el DataFrame tenga las columnas necesarias para el preprocesamiento
     
     #Procesar VARK
     students = _grade_VARK_scores(students) #Selecciona las columnas de VARK y las procesa para obtener los puntajes de VARK
@@ -53,22 +54,6 @@ def preprocess(students : pl.LazyFrame) -> pl.DataFrame:
     students = _grade_motivations(students)
     
     return students.collect() #devuelve el DataFrame final   
-
-def _verify_columns(df: pl.DataFrame):
-    """
-    Verifica que el DataFrame tenga las columnas necesarias para el preprocesamiento
-    
-    Args:
-        df (pl.DataFrame): DataFrame a verificar
-        
-    Raises:
-        ValueError: Si falta alguna columna necesaria
-    """
-    
-    missing_columns = [col for col in REQUIRED_INPUT_COLUMNS if col not in df.collect_schema().names()]
-    
-    if missing_columns:
-        raise ValueError(f"Las siguientes columnas no existen y son necesarias en el DataFrame: {missing_columns}")
 
 def _grade_motivations(students : pl.LazyFrame) -> pl.LazyFrame:
     """
