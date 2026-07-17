@@ -1,15 +1,3 @@
-/*
-   Módulo para crear los bitmaps de tamaño variable requeridos por las hiperaristas
-   Se implementan para tamaños variables, principalmente:
-   - 8 bits
-   - 16 bits
-   - 32 bits
-   - 64 bits
-   - 128 bits
-
-   Se utiliza un arreglo de bytes por si se necesitaran bitmaps de tamaño superior
-*/
-
 use serde::{Deserialize, Serialize};
 use std::cmp::min;
 use std::ops;
@@ -21,7 +9,8 @@ pub struct BitmapLen {
 
 impl BitmapLen {
     pub fn new(size_bits: usize) -> Self {
-        let size_bytes = (size_bits + 7) / 8; // Calcular el número de bytes mínimo
+        // Calculate the number of bytes needed to store the bits, rounding up
+        let size_bytes = (size_bits + 7) / 8; 
         BitmapLen {
             bitmap: vec![0u8; size_bytes].into_boxed_slice(),
         }

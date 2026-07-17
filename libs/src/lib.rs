@@ -18,7 +18,7 @@ mod genia_libs {
 
     #[pyfunction]
     fn hypergraph_from_dataframe(py_df: PyDataFrame, output_file: String) -> PyResult<()> {
-        // Convierte el DataFrame de Polars a un dataframe de Rust
+        // Transform the PyDataFrame into a Polars DataFrame
         let df: DataFrame = py_df.into();
         let mut hypergraph = Hypergraph::new(df.height());
 
@@ -108,7 +108,7 @@ mod genia_libs {
                 population_size,
                 spins,
                 elites,
-                generations : generations + 1, //Se suma 1 para que la última generación sea evaluada
+                generations : generations + 1, // Sum 1 to include the last generation in the loop
                 mutation_rate,
                 crossover_rate,
                 log_file_path
@@ -119,14 +119,14 @@ mod genia_libs {
             println!("------------------------ALGORITMO GENÉTICO--------------------------------------------");
             let hypergraph = load_hypergraph_from_file(&input_file);
 
-            // Genera la población inicial de individuos
+            // Create the initial population of individuals in parallel
             let mut population =
                 create_initial_population(self.population_size, num_groups, &hypergraph);
 
             log(format!("Población inicial creada con {} individuos", self.population_size), self.log_file_path.as_deref());
 
             let mut best_fitness = 0.0;
-            let mut change_counter = 1000; //Contador para limitar la cantidad de generaciones sin cambios en el mejor fitness
+            let mut change_counter = 1000; // Counter to halt if the best fitness doesn't change for 1000 generations
             for generation in 0..self.generations {
                 //Ordena la población por fitness de mayor a menor
                 population.sort_by(|a, b| b.get_fitness().partial_cmp(&a.get_fitness()).unwrap());
@@ -144,12 +144,12 @@ mod genia_libs {
                     break;
                 }
 
-                //En paralelo realiza la selección, crossover y mutación para generar la nueva población
+                // In parallel, create a new population by selecting parents, performing crossover and mutation
                 population = create_new_population(self, num_groups, &population, &hypergraph);
                 log (format!("Creada siguiente generación con {} individuos", population.len()), self.log_file_path.as_deref());
             }
 
-            // Devuelve la mejor solución encontrada después de todas las generaciones
+            // Return the solution of the best individual in the final population
             let best_individual = population
                 .iter()
                 .max_by(|a, b| a.get_fitness().partial_cmp(&b.get_fitness()).unwrap())
@@ -174,10 +174,9 @@ mod genia_libs {
     }
 
     fn make_probabilities(population: &Vec<Individual>) -> Vec<f64> {
-        // Calcula la suma total de los fitness de todos los individuos en la población
         let total_fitness: f64 = population.iter().map(|ind| ind.get_fitness()).sum();
 
-        // Calcula la probabilidad acumulada para cada individuo en la población
+        // Calculate the cumulative probabilities for each individual based on their fitness
         let mut probabilities = vec![population[0].get_fitness() / total_fitness];
 
         for i in 1..population.len() {
@@ -191,10 +190,10 @@ mod genia_libs {
         if let Ok(rng) = Uniform::new(0.0, 1.0) {
             let mut index = 0;
 
-            // Genera un número aleatorio entre 0 y 1 uniformemente distribuido
+            // Generate a uniformly distributed random number between 0 and 1
             let random_value = rng.sample(&mut rand::rng());
 
-            // Busca al primer individuo cuya probabilidad acumulada sea mayor que el número aleatorio generado
+            // Looks for the first index where the cumulative probability exceeds the random value
             while index < probabilities.len() && random_value > probabilities[index] {
                 index += 1;
             }
@@ -218,9 +217,9 @@ mod genia_libs {
         hypergraph: &Hypergraph,
     ) -> Vec<Individual> {
         /*
-           Esta función corre en paralelo por cada spin de la ruleta. Cada spin genera 4 nuevos individuos
-           a partir de 2 padres seleccionados por la ruleta,
-           realizando crossover y mutación en paralelo para cada grupo de los individuos.
+           This function runs in parallel for each spin of the roulette. Each spin generates 4 new individuals
+           from 2 parents selected by the roulette,
+           performing crossover and mutation in parallel for each group of the individuals.
         */
 
         let probabilities = make_probabilities(population);
@@ -228,21 +227,21 @@ mod genia_libs {
         let children = (0..config.spins)
             .into_par_iter()
             .flat_map(|_| {
-                // Selecciona dos individuos utilizando la selección por ruleta
+                // Select two parents using the roulette wheel selection method
                 let parent1_idx = roulette_wheel_selection(&probabilities);
                 let parent2_idx = roulette_wheel_selection(&probabilities);
 
                 let parent1 = &population[parent1_idx];
                 let parent2 = &population[parent2_idx];
 
-                // Realiza el crossover entre los dos padres para generar un nuevo individuo
+                // Perform crossover to create two children from the selected parents
                 let (mut child1, mut child2) = parent1.crossover(parent2, config.crossover_rate);
 
-                // Forza el cumplimiento de las restricciones en los nuevos individuos
+                // Forces the fulfillment of the constraints in the new individuals
                 child1.check_constraints(num_groups);
                 child2.check_constraints(num_groups);
 
-                //Calcula fitness de los nuevos individuos
+                // Calculate the fitness of the new individuals
                 child1.calculate_fitness(hypergraph);
                 child2.calculate_fitness(hypergraph);
 
@@ -259,7 +258,7 @@ mod genia_libs {
                     );
                 }
 
-                // Aplica mutación y crea 2 individuos más
+                // Mutate the new individuals to create two more children
                 let child3 = child1.mutate(config.mutation_rate);
                 let child4 = child2.mutate(config.mutation_rate);
 
@@ -280,7 +279,7 @@ mod genia_libs {
             })
             .collect::<Vec<Individual>>();
 
-        // La nueva población se compone de los individuos élite y los hijos generados
+        // New population is formed by the elites and the children generated in parallel
         let mut new_population = elitism(population, config.elites);
         new_population.extend(children);
         return new_population;

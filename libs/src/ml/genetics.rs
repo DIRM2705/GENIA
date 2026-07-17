@@ -29,7 +29,12 @@ impl Individual {
     }
 
     pub fn get_solution(&self) -> Vec<Vec<usize>> {
-        //Devuelve la solución del individuo como un vector de grupos, donde cada grupo es un vector de índices de estudiantes
+        /*
+         * Returns the solution of the individual as a vector of groups,
+         * where each group is a vector of student indices.
+         */
+
+    
         let groups_bitmaps = self
             .groups
             .iter()
@@ -63,13 +68,13 @@ impl Individual {
         let mut group = Vec::new();
 
         while i < queue.len() {
-            //El grupo está lleno
+            // Group is full
             if group.len() == max_students_per_group {
                 let mut group_bitmap = BitmapLen::new(self.student_total as usize);
 
-                //Establece los bits del grupo a partir de los estudiantes asignados al grupo
+                // Set the bits of the group from the students assigned to the group
                 if let Ok(_) = group_bitmap.set_bits(&group) {
-                    self.groups.push(Group::new(group_bitmap)); //Agrega el grupo al individuo
+                    self.groups.push(Group::new(group_bitmap)); // Add the group to the individual
                 } else {
                     println!(
                         "Error al establecer los bits del grupo: {}",
@@ -79,16 +84,16 @@ impl Individual {
                 group = Vec::new();
             }
 
-            //Agrega el estudiante al grupo
+            // Adds the student to the group
             group.push(queue[i]);
             i += 1;
         }
 
         let mut group_bitmap = BitmapLen::new(self.student_total as usize);
 
-        //Establece los bits del grupo a partir de los estudiantes asignados al grupo
+        // Set the bits of the group from the students assigned to the group
         if let Ok(_) = group_bitmap.set_bits(&group) {
-            self.groups.push(Group::new(group_bitmap)); //Agrega el grupo al individuo
+            self.groups.push(Group::new(group_bitmap)); // Add the group to the individual
         } else {
             println!(
                 "Error al establecer los bits del grupo: {}",
@@ -98,24 +103,26 @@ impl Individual {
     }
 
     pub fn calculate_fitness(&mut self, hypergraph: &Hypergraph) {
-        //Calcula la fitness del individuo como la suma de las descartabilidades de cada grupo,
-        //donde la descartabilidad de un grupo se calcula a partir del hipergrafo
-        //Esta función es en paralelo para cada grupo
+        /*
+         * Calculates individual's fitness as the MAE of the discardabilities of each group,
+         * where the discardability of a group is calculated from the hypergraph.
+         * This function is parallelized for each group.
+         */
+
         let fitness_sum: f64 = self
             .groups
             .par_iter()
-            .map(|group| 11f64 - group.calculate_discartability(hypergraph))
+            .map(|group| 11f64 - group.calculate_discardability(hypergraph))
             .sum();
 
-        //El fitness de una solución es el error absoluto medio
         self.fitness = fitness_sum/self.groups.len() as f64;
     }
 
     pub fn crossover(&self, other: &Individual, crossover_rate: u8) -> (Individual, Individual) {
         /*
-        Crea dos hijos a partir de dos individuos padres,
-        intercambiando estudiantes entre grupos según una tasa de crossover
-        esta función es en paralelo para cada grupo
+        * Performs crossover between two individuals, generating two new individuals (children).
+        * The crossover is done by exchanging students between the groups of the parents according to a crossover rate.
+        * This function is parallelized for each group.
         */
 
         if crossover_rate < 1 || crossover_rate > 100 {
@@ -266,8 +273,10 @@ impl Individual {
     }
 
     pub fn mutate(&self, mutation_rate: u8) -> Individual {
-        //Mutar el individuo cambiando la asignación de estudiantes a grupos según una tasa de mutación
-        //Esta función es en paralelo para cada grupo
+        /*
+         * Mutates the individual changing students between groups according to a mutation rate.
+         * This function is parallelized for each group.
+        */
 
         if mutation_rate < 1 || mutation_rate > 100 {
             println!("La tasa de mutación debe estar entre 1 y 100");
@@ -276,15 +285,15 @@ impl Individual {
 
         let random_students = get_random_permutation(self.student_total);
 
-        // Divide entre 200 porque solo tomamos la mitad de estudiantes pues, son intercambios por pareja
+        // Divide the number of students to change by 200, since we will swap students between groups
         let changes =
             ((self.student_total as f32) * (mutation_rate as f32 / 200.0)).floor() as usize;
 
-        // Crea un nuevo individuo a partir del actual
+        // Create a new individual as a clone of the current one, to apply the mutations
         let mut new_individual = self.clone();
 
-        //Intercambia estudiantes entre grupos según la tasa de mutación,
-        //tomando estudiantes aleatorios del grupo actuald
+        //Switch students between groups according to the mutation rate,
+        //taking random students from the current group
         for i in (0..changes).step_by(2) {
             for ref mut group in new_individual.groups.iter_mut() {
                 if let Ok(true) = group.get_students().get_bit(random_students[i]) {
@@ -306,7 +315,7 @@ impl Individual {
     }
 }
 
-//Genera una permutación aleatoria de los números del 0 al n-1
+//Generates a random permutation of the numbers from 0 to n-1
 fn get_random_permutation(n: usize) -> Vec<usize> {
     let mut perm: Vec<usize> = (0..n).collect();
     perm.shuffle(&mut rng());

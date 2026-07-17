@@ -24,23 +24,18 @@ impl Group {
         return self.students.clone();
     }
 
-    pub fn calculate_discartability(&self, hypergraph: &Hypergraph) -> f64 {
+    pub fn calculate_discardability(&self, hypergraph: &Hypergraph) -> f64 {
         /*
-        La discartabilidad de un grupo se calcula a partir de tres métricas:
-        - Delta Discardability: Mide la homogeneidad del grupo con respecto a las
-                                características delta. Se calcula utilizando una métrica de homogeneidad.
-        - Epsilon Discardability: Mide el balance del grupo con respecto a las
-                                  características epsilon. Se calcula utilizando una métrica de balance.
-        - Replacement Discardability: Mide el balance del grupo con respecto a las
-                                      características de reemplazo. Se calcula utilizando una métrica de balance.
-
-        La discartabilidad total del grupo es la suma de las tres métricas anteriores.
-        El cálculo de cada métrica se realiza de manera paralela utilizando Rayon para mejorar el rendimiento.
-        */
+         * A group's discardability is calculated from two metrics:
+         * - Delta Discardability: Measures the group's homogeneity with respect to delta characteristics.
+         * - Replacement Discardability: Measures the group's balance with respect to replacement characteristics.
+         * A group's total discardability is the sum of the two metrics above.
+         * The calculation of each metric is done in parallel using Rayon to improve performance.
+         */
 
         let calculations = [
-            Self::calculate_delta_discartability,
-            Self::calculate_replacement_discartability,
+            Self::calculate_delta_discardability,
+            Self::calculate_replacement_discardability,
         ];
 
         return calculations
@@ -49,68 +44,69 @@ impl Group {
             .sum();
     }
 
-    fn calculate_delta_discartability(&self, hypergraph: &Hypergraph) -> f64 {
+    fn calculate_delta_discardability(&self, hypergraph: &Hypergraph) -> f64 {
         let mut probabilities = Vec::new();
-        let mut discartability = 0.0;
+        let mut discardability = 0.0;
 
-        //Calcular la homogeneidad de cada grupo con respecto a las características delta
+        //Calculate the homogeneity of each group with respect to the delta characteristics
         for id in DELTA_CALCULATIONS.iter() {
             if let Ok(subhypergraph) = hypergraph.get_subhypergraph_by_prefix(id) {
-                // Cuantos estudiantes del grupo cumplen con el valor x de la característica
+                // How many students of the group meet the value of the characteristic
                 for hyperedge in subhypergraph {
                     let incident_students =
                         hyperedge.apply_mask(&self.students).count_ones() as f64;
 
-                    // La probabilidad de que un estudiante del grupo cumpla con el valor x de la característica
+                    // Probability of a student in the group meeting the value x of the characteristic
                     probabilities.push(incident_students / self.student_count as f64);
                 }
             } else {
+                // If the characteristic is not found, the group is considered completely discardable
                 println!("No se encontró el subhipergrafo con prefijo '{}'", id);
-                discartability += 1.0; //Si no se encontró la característica se considera que el grupo es completamente descartable
+                discardability += 1.0;
                 continue;
             }
 
-            discartability += homogeneity_metric(&probabilities);
+            discardability += homogeneity_metric(&probabilities);
             probabilities.clear();
         }
 
-        return discartability;
+        return discardability;
     }
 
-    fn calculate_replacement_discartability(&self, hypergraph: &Hypergraph) -> f64 {
+    fn calculate_replacement_discardability(&self, hypergraph: &Hypergraph) -> f64 {
         let mut probabilities = Vec::new();
-        let mut discartability = 0.0;
+        let mut discardability = 0.0;
 
-        //Calcular el balance de cada grupo con respecto a las características epsilon
+        //Calculate the balance of each group with respect to the replacement characteristics
         for id in REPLACEMENT_CALCULATIONS.iter() {
             let mut total_incidences = 0.0;
             if let Ok(subhypergraph) = hypergraph.get_subhypergraph_by_prefix(id) {
-                // Cuantos estudiantes del grupo cumplen con el valor x de la característica
+                // How many students of the group meet the value of the characteristic
                 for hyperedge in subhypergraph {
                     let incident_students =
                         hyperedge.apply_mask(&self.students).count_ones() as f64;
                     total_incidences += incident_students;
 
-                    // Por ahora, solo guardar la cantidad de estudiantes que cumplen con el valor x de la característica,
-                    // para luego calcular la probabilidad de que un estudiante del grupo cumpla con el valor x de la característica
+                    // Firstly, just store the number of students in the group that meet the value
+                    // of the characteristic, to later calculate the probability
                     probabilities.push(incident_students);
                 }
             } else {
+                // If the characteristic is not found, the group is considered completely discardable
                 println!("No se encontró el subhipergrafo con prefijo '{}'", id);
-                discartability += 1.0; //Si no se encontró la característica se considera que el grupo es completamente descartable
+                discardability += 1.0;
                 continue;
             }
 
             for p in probabilities.iter_mut() {
-                // La probabilidad de que un estudiante del grupo cumpla con el valor x de la característica
+                // Calculate the probability of a student in the group meeting the value x of the characteristic
                 *p /= total_incidences;
             }
 
-            //Todas las caracteristicas de reemplazo son epsilon
-            discartability += balance_metric(&probabilities, probabilities.len() as f64);
+            discardability += balance_metric(&probabilities, probabilities.len() as f64);
             probabilities.clear();
         }
 
-        return discartability;
+        return discardability;
     }
 }

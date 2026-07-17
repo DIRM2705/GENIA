@@ -13,18 +13,17 @@ pub struct Hyperedge {
 }
 
 impl Hyperedge {
-    // Crea una nueva hiperarista con un bitmap del tamaño adecuado para el número de estudiantes
+    // Creates a new hyperedge with a max student count (size_bits) and an identifier
     pub fn new(size_bits: usize, id: String) -> Self {
         let bitmap = BitmapLen::new(size_bits);
         Hyperedge { bitmap, id }
     }
 
-    // Getter del id
     pub fn get_id(&self) -> &String {
         return &self.id;
     }
 
-    // Agrega un estudiante a la hiperarista, estableciendo el bit correspondiente en el bitmap
+    // Adds a student to the hyperedge by setting the corresponding bit in the bitmap
     pub fn add_student(&mut self, student_id: usize) -> Result<(), HypergraphError> {
         return Ok(self.bitmap.set_bit(student_id)?);
     }
@@ -41,7 +40,6 @@ pub struct Hypergraph {
 }
 
 impl Hypergraph {
-    // Crea un nuevo hipergrafo con un número específico de estudiantes
     pub fn new(student_count: usize) -> Self {
         return Hypergraph {
             hyperedges: HashMap::new(),
@@ -49,7 +47,6 @@ impl Hypergraph {
         };
     }
 
-    // Getter del número de estudiantes
     pub fn get_student_count(&self) -> usize {
         return self.student_count;
     }
@@ -61,27 +58,26 @@ impl Hypergraph {
     ) -> Result<(), HypergraphError> {
         let prefix = hyperedge_name.split("_").next().ok_or_else(|| HypergraphError::InvalidHyperedgeError)?;
 
-        //Si el prefijo no existe, se crea una nueva hiperarista y se agrega el estudiante
-        // Eso añadirá el prefijo al mapa de prefijos
+        // If the prefix does not exist in the hyperedges map, create a new hyperedge and add the student
         if !self.hyperedges.contains_key(prefix) {
             let hyperedge = self.add_hyperedge(hyperedge_name.to_string())?;
             return hyperedge.add_student(student_id);
         }
 
-        // Busca la hiperarista dentro del subhipergrafo correspondiente al prefijo
+        // LLook for the hyperedge with the given name in the hyperedges map and add the student
         for hyperedge in self.hyperedges.get_mut(prefix).unwrap() {
             if hyperedge.get_id() == hyperedge_name {
                 return hyperedge.add_student(student_id);
             }
         }
 
-        // Si no se encuentra la hiperarista, se crea una nueva y se agrega el estudiante
+        // If the hyperedge is not found, create a new one and add the student
         let hyperedge = self.add_hyperedge(hyperedge_name.to_string())?;
         hyperedge.add_student(student_id)?;
         return Ok(());
     }
 
-    // Crea una nueva hiperarista
+    /// Adds a new hyperedge to the hypergraph.
     fn add_hyperedge(&mut self, name: String) -> Result<&mut Hyperedge, HypergraphError> {
         let hyperedge = Hyperedge::new(self.student_count, name.clone());
 
@@ -90,11 +86,11 @@ impl Hypergraph {
             return Err(HypergraphError::InvalidHyperedgeError);
         }
 
-        // Extrae el prefijo del nombre de la hiperarista y actualiza el mapa de prefijos
+        // Get the prefix of the hyperedge name (the part before the first underscore)
         if let Some(prefix) = name.split("_").next() {
             self.hyperedges
                 .entry(prefix.to_string())
-                .or_insert(Vec::new()) // Si no existe el prefijo, crea la entrada
+                .or_insert(Vec::new()) // If the prefix does not exist, add it
                 .push(hyperedge);
 
             return Ok(self.hyperedges.get_mut(prefix).unwrap().last_mut().unwrap());
@@ -111,7 +107,6 @@ impl Hypergraph {
         Ok(self.hyperedges.get(prefix).unwrap())
     }
 
-    // Obtiene una referencia a una hiperarista por su nombre, permitiendo leerla
     pub fn save_to_file(&self, filename: &str) -> Result<(), HypergraphError> {
         let encoded = postcard::to_allocvec(self)?;
         let mut file = File::create(filename)?;
@@ -119,7 +114,6 @@ impl Hypergraph {
         Ok(())
     }
 
-    // Carga un hipergrafo desde un archivo, deserializando su contenido
     pub fn load_from_file(filename: &str) -> Result<Self, HypergraphError> {
         let mut file = File::open(filename)?;
         let mut buffer = Vec::new();
