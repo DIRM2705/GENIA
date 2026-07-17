@@ -17,7 +17,7 @@ VARK_COLUMNS = [
     "VARKKinesthetic" #Cinestésico
 ]
 
-REQUIRED_COLUMNS = [
+REQUIRED_INPUT_COLUMNS = [
     "Id",
     "Cronotype", #Cronotipo
     "AN", #Necesidad de autonomía
@@ -35,8 +35,13 @@ REQUIRED_COLUMNS = [
     "CP", #Pensamiento crítico
     "MC"  #Metacognición
 ]
-REQUIRED_COLUMNS.extend(MI_COLUMNS)
-REQUIRED_COLUMNS.extend(VARK_COLUMNS)
+
+REQUIRED_OUTPUT_COLUMNS = REQUIRED_INPUT_COLUMNS + ["VARK", "MI", "EGO", "IGO", "SE", "TV", "TA"]
+
+REQUIRED_INPUT_COLUMNS.extend(MI_COLUMNS)
+REQUIRED_INPUT_COLUMNS.extend(VARK_COLUMNS)
+
+
 
 IM_DISPLAY_LABELS = {
     "MIKin": "Cinestésica",
