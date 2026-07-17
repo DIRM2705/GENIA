@@ -3,8 +3,7 @@ use crate::utils::bitmap::BitmapLen;
 use crate::utils::math::{balance_metric, homogeneity_metric};
 use rayon::prelude::*;
 
-const DELTA_CALCULATIONS: [&'static str; 8] = ["CE", "BE", "EE", "AM", "RM", "Cronotipo", "PI", "HS"];
-const EPSILON_CALCULATIONS: [&'static str; 1] = ["CM"];
+const DELTA_CALCULATIONS: [&'static str; 9] = ["CE", "BE", "EE", "AN", "RN", "Cronotipo", "PI", "HS", "CN"];
 const REPLACEMENT_CALCULATIONS: [&'static str; 2] = ["MI", "VARK"];
 
 #[derive(Clone)]
@@ -41,7 +40,6 @@ impl Group {
 
         let calculations = [
             Self::calculate_delta_discartability,
-            Self::calculate_epsilon_discartability,
             Self::calculate_replacement_discartability,
         ];
 
@@ -73,34 +71,6 @@ impl Group {
             }
 
             discartability += homogeneity_metric(&probabilities);
-            probabilities.clear();
-        }
-
-        return discartability;
-    }
-
-    fn calculate_epsilon_discartability(&self, hypergraph: &Hypergraph) -> f64 {
-        let mut probabilities = Vec::new();
-        let mut discartability = 0.0;
-
-        //Calcular el balance de cada grupo con respecto a las características epsilon
-        for id in EPSILON_CALCULATIONS.iter() {
-            if let Ok(subhypergraph) = hypergraph.get_subhypergraph_by_prefix(id) {
-                // Cuantos estudiantes del grupo cumplen con el valor x de la característica
-                for hyperedge in subhypergraph {
-                    let incident_students =
-                        hyperedge.apply_mask(&self.students).count_ones() as f64;
-
-                    // La probabilidad de que un estudiante del grupo cumpla con el valor x de la característica
-                    probabilities.push(incident_students / self.student_count as f64);
-                }
-            } else {
-                println!("No se encontró el subhipergrafo con prefijo '{}'", id);
-                discartability += 1.0; //Si no se encontró la característica se considera que el grupo es completamente descartable
-                continue;
-            }
-
-            discartability += balance_metric(&probabilities, probabilities.len() as f64);
             probabilities.clear();
         }
 
