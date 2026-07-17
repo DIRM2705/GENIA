@@ -2,6 +2,69 @@ import polars as pl
 from sklearn.preprocessing import KBinsDiscretizer
 from consts import *
 
+def grade_students(students : pl.DataFrame) -> pl.DataFrame:
+    """
+    Given a student record, return a PyStudent object with the results of the tests
+    
+    Args:
+        student (pl.Row): A Polars Row representing a student with at least the following fields:
+            - "ID": Unique identifier for the student
+            - "Cronotype": The student's cronotype
+            - "TND": The student's Neurodevelopmental Disorder status regarding
+                     ADHD, ADD, ASD, Dislexia, Disgraphia and Discalculia
+            - "IM1": The student's answers to the first multiple intelligence set
+            - "IM2": The student's answers to the second multiple intelligence set
+            - "IM3": The student's answers to the third multiple intelligence set
+            - "VARK 8-20": The student's answers to the VARK questionnaire
+            - "Engagement 21-35": The student's answers to the engagement questionnaire
+            - "Motivation 36-43": The student's answers to the motivation questionnaire
+            
+    Returns:
+        DataFrame: A Polars DataFrame with the data obtained by grading student's formularies
+    """
+    #Procesar VARK
+    VARK_scores = _get_VARK_scores(students.select([f"VARK{i}" for i in range(1,14)]))
+    
+    #PROCESAR IM
+    IM_scores = _get_IM_scores_from_df(students.select(["IM1", "IM2", "IM3"]))
+    
+    invertedAN = {"AN2", "AN4", "AN7"}
+    invertedCN = {"CN1", "CN5", "CN6"}
+    invertedRN = {"RN3", "RN6", "RN7"}
+
+    #PROCESAR TND, MOTIVACIONES y COMPROMISO
+    students = students.with_columns(
+        TND = _get_NDD_bitmask(students["TND"]),
+        Cronotipo = (pl.col("Cronotipo") == "Entre las 7 am y las 3pm").cast(pl.UInt8) + 1, #Convertimos el cronotipo a 0 vespertino, 1 matutino
+        #AN = ((pl.col("AN1") + pl.col("AN2") + pl.col("AN3"))/21).round(2), #Motivación de Autonomía -> de qué tan libres se sienten los estudiantes para expresar sus ideas y opiniones, y para elegir sus actividades académicas
+        #RN = ((pl.col("RN1") + pl.col("RN2") + pl.col("RN3"))/21).round(2), #Motivación de Relación
+        #CN = ((pl.col("CN1") + pl.col("CN2"))/14).round(2), #Motivación de Competencia -> de qué tan capaces se sienten los estudiantes respecto a sus actividades académicas
+        AN = ((pl.sum_horizontal(*[8 - pl.col(f"AN{i}") if f"AN{i}" in invertedAN else pl.col(f"AN{i}") for i in range(1, 8)])) / 49).round(2),#Necesidad de Autonomía
+        CN = ((pl.sum_horizontal(*[8 - pl.col(f"CN{i}") if f"CN{i}" in invertedCN else pl.col(f"CN{i}") for i in range(1, 7)])) / 42).round(2), #Necesidad de Competencia
+        RN = ((pl.sum_horizontal(*[8 - pl.col(f"RN{i}") if f"RN{i}" in invertedRN else pl.col(f"RN{i}") for i in range(1, 9)])) / 56).round(2), #Necesidad de Relación
+        BE = ((pl.col("BE1") + pl.col("BE2") + pl.col("BE3") + pl.col("BE4")+pl.col("BE5"))/25).round(2), # Behavioural Engagement -> Compromiso Conductual
+        EE = ((pl.col("EE1") + pl.col("EE2") + pl.col("EE3") + pl.col("EE4")+pl.col("EE5"))/25).round(2), # Emotional Engagement -> Compromiso Emocional 
+        CE = ((pl.col("CE1") + pl.col("CE2") + pl.col("CE3") + pl.col("CE4")+pl.col("CE5"))/25).round(2), # Cognitive Engagement -> Compromiso Cognitivo
+    )
+    
+    #Dimensiones de Motivación evaluadas por el MSLQ
+    students = students.with_columns(
+        Orientacion_metas_intrinsecas = ((pl.col("AN") + pl.col("BE"))/2).round(2), #Orientación a metas intrínsecas
+        Autoeficacia = ((pl.col("CN") + pl.col("EE"))/2).round(2), #Autoeficacia
+        Valor_tarea = ((pl.col("AN") + pl.col("CN") + pl.col("BE") + pl.col("EE"))/4).round(2), #Valor de la tarea
+        Ansiedad_examenes = 1 - (((pl.col("AN") + pl.col("CN") + pl.col("CE"))/3).round(2)) #Ansiedad ante exámenes
+    ).select([#Seleccionar solo las columnas relevantes para el hipergrafo
+        "Id", "Cronotipo", "TND", "AN", "RN", "CN", "BE", "EE", "CE", "Orientacion_metas_intrinsecas", "Autoeficacia", "Valor_tarea", "Ansiedad_examenes"])
+    
+    #Agregar VARK al DataFrame de estudiantes
+    students = students.hstack(VARK_scores) #hstack=horizontal stack -> Agrega columnas lado a lado -> agregar las columnas de VARK_scores al DataFrame de estudiantes
+    
+    #Agregar IM al DataFrame de estudiantes
+    students = students.hstack(IM_scores) #Agrega las columnas de IM_scores al DataFrame de estudiantes
+    
+    print(students)
+    return students #devuelve el DataFrame final
+
 def discretize_column(column: pl.Series, n_bins: int) -> pl.Series:
     """
     Discretize a continuous column into n_bins using KBinsDiscretizer from sklearn.

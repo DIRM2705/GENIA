@@ -98,7 +98,7 @@ ANSWER_LISTS = {
 }
 
 INTELLIGENCE_BY_INDEX = [
-        "MIKin", #corporal-cinestésica
+        "MIKin", #Cinestésica
         "MIExis", #Existencial
         "MIInter", #interpersonal
         "MIIntra", #intrapersonal
@@ -106,7 +106,7 @@ INTELLIGENCE_BY_INDEX = [
         "MIMus", #musical
         "MINat", #naturalista
         "MIVer", #verbal
-        "MIVis" #visual (Inteligencia múltiple)
+        "MIVis" #visual
     ]
 
 VARK_BY_INDEX = [

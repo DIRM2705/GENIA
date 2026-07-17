@@ -1,4 +1,4 @@
-from genia_libs import GeneticAlgorithm
+#from genia_libs import GeneticAlgorithm  # TODO: Compile with maturin
 from utils.hypergraph_utils import create_hipergraph
 from utils.dataframe_utils import get_grouping_dataframe
 import polars as pl
