@@ -137,18 +137,8 @@ impl Individual {
                 let mut positive_mask = BitmapLen::new(self.student_total);
                 let mut negative_mask = positive_mask.clone();
 
-                //Generar las máscaras de crossover para el grupo actual,
-                //indicando qué estudiantes serán intercambiados entre los hijos
-                for student_idx in 0..self.student_total {
-                    if generator.sample(&mut rand::rng()) <= crossover_rate {
-                        positive_mask.set_bit(student_idx).unwrap();
-                    } else {
-                        negative_mask.set_bit(student_idx).unwrap();
-                    }
-                }
-
-                //Crea los grupos a partir de las máscaras de crossover,
-                //intercambiando los estudiantes entre los padres según las máscaras
+                // Create the new groups from the crossover masks,
+                // swapping students between the parents according to the masks
                 let new_group1 = (self.groups[group_idx].get_students() & positive_mask.clone())
                     | (other.groups[group_idx].get_students() & negative_mask.clone());
                 let new_group2 = (self.groups[group_idx].get_students() & negative_mask.clone())
@@ -177,12 +167,12 @@ impl Individual {
 
     pub fn check_constraints(&mut self, group_amount: usize) {
         /*
-        Verifica si el individuo cumple con las restricciones:
-        - Cada estudiante debe pertenecer a exactamente un grupo
-        - No debe haber grupos vacíos
-        - Todos los grupos deben tener un número de estudiantes dentro de un rango permitido
-        - Todos los estudiantes deben ser asignados a un grupo
-        Si alguna de las restricciones no se cumple se mueven estudiantes arbitrariamente para cumplirlas
+        Verify wether the individual meets the constraints:
+        - Each student must belong to exactly one group
+        - There must be no empty groups
+        - All groups must have a number of students within an allowed range
+        - All students must be assigned to a group
+        If any of the constraints are not met, students are moved arbitrarily to meet them.
         */
 
         let max_students_per_group =
@@ -195,16 +185,14 @@ impl Individual {
             .map(|group| group.get_students())
             .collect::<Vec<BitmapLen>>();
         
-        // Mutex para cada bitmap de grupo para evitar condiciones de carrera al modificar los grupos en paralelo
+        // Mutex for each bitmap to allow parallel access
         let bitmaps_locks = group_bitmaps
             .iter_mut()
             .map(|bitmap| Mutex::new(bitmap))
             .collect::<Vec<Mutex<&mut BitmapLen>>>();
-        //Lista de estudiantes libres
+
         let mut freed_students = HashSet::new();
         let freed_mtx = Mutex::new(&mut freed_students);
-
-        // Por cada estudiante en paralelo
         
         (0..self.student_total).into_par_iter()
         .for_each(|student_idx|
@@ -212,14 +200,16 @@ impl Individual {
             // Asumir que no se le asignó a un grupo
             let mut assigned = false;
 
-            // Verificar grupo a grupo si el estudiante pertenece a ese grupo
+            // Verify if the student is assigned to more than one group or 
+            // if the group has more students than allowed
             for i in 0..bitmaps_locks.len() {
                 let mut lock_res = bitmaps_locks[i].lock();
 
-                //Si el estudiante pertenece al grupo, se marca como asignado, si ya estaba asignado a otro grupo, se elimina del grupo actual
+                // If the student is assigned to the group and the group has more students than allowed, 
+                // remove the student from the group
                 if let Ok(ref mut bitmap) = lock_res && let Ok(true) = bitmap.get_bit(student_idx) {
                     if bitmap.count_ones() as usize > max_students_per_group {
-                        //El grupo tiene más estudiantes de los permitidos, se elimina el estudiante del grupo
+
                         bitmap.clear_bit(student_idx).unwrap();
                         if cfg!(debug_assertions) {
                             println!("Grupo {} tiene más estudiantes de los permitidos, eliminando estudiante {}...", i, student_idx);
@@ -230,15 +220,15 @@ impl Individual {
                         if cfg!(debug_assertions) {
                             println!("Estudiante {} asignado grupo {}, corrigiendo...", student_idx, i);
                         }
-                        //El estudiante ha sido asignado a más de un grupo, se elimina del grupo actual
+                        // The student has already been assigned to a group, remove it from the current group
                         bitmap.clear_bit(student_idx).unwrap();
                     } else {
-                        assigned = true; //El estudiante ha sido asignado a un grupo
+                        assigned = true; 
                     }
                 }
             }
 
-            //Si el estudiante no fue asignado agregar a lista
+            // The student is not assigned to any group, add it to the freed students set
             if !assigned {
                 let lock_res = freed_mtx.lock();
                 if lock_res.is_err() {
@@ -246,11 +236,12 @@ impl Individual {
                     return;
                 }
                 let mut freed = lock_res.unwrap();
-                freed.insert(student_idx); //Agrega el estudiante al conjunto de estudiantes liberados
+                freed.insert(student_idx);
             }
         });
 
-        //Limpiar los grupos del individuo para luego reconstruirlos con los bitmaps corregidos
+        // Reconstruct the groups with the corrected bitmaps and 
+        // add freed students to groups that have less than the maximum number of students
         self.groups.clear(); 
 
         for group in group_bitmaps.iter_mut()
@@ -258,12 +249,13 @@ impl Individual {
             let mut student_count = group.count_ones() as usize;
             while student_count < max_students_per_group && freed_students.len() > 0
             {
-                let index = *freed_students.iter().next().unwrap(); //Toma un estudiante libre
-                freed_students.remove(&index); //Lo elimina de la lista de estudiantes libres
+                // Get a student from the freed students set and add it to the group
+                let index = *freed_students.iter().next().unwrap();
+                freed_students.remove(&index);
                 group.set_bit(index).unwrap();
                 student_count += 1;
             }
-            self.groups.push(Group::new(group.clone())); //Actualiza el grupo del individuo con el bitmap corregido
+            self.groups.push(Group::new(group.clone()));
         }
 
         if cfg!(debug_assertions) {
