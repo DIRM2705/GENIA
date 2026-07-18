@@ -137,6 +137,16 @@ impl Individual {
                 let mut positive_mask = BitmapLen::new(self.student_total);
                 let mut negative_mask = positive_mask.clone();
 
+                // Generate crossover masks for the group, where each student has a probability of being swapped between parents according to the crossover rate
+                for student_idx in 0..self.student_total {
+                    let random_value = generator.sample(&mut rng());
+                    if random_value < crossover_rate {
+                        positive_mask.set_bit(student_idx).unwrap();
+                    } else {
+                        negative_mask.set_bit(student_idx).unwrap();
+                    }
+                }
+
                 // Create the new groups from the crossover masks,
                 // swapping students between the parents according to the masks
                 let new_group1 = (self.groups[group_idx].get_students() & positive_mask.clone())
