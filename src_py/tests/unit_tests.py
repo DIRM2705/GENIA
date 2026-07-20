@@ -1,6 +1,6 @@
 from utils.dataframe_utils import get_grouping_dataframe
 from main import load_preprocessed_df, lazy_from_csv, create_hipergraph
-from preprocessing.dataframe import extract_characteristics
+from preprocessing.psicometrical import extract_characteristics
 from consts import REQUIRED_HG_COLUMNS, REQUIRED_OUTPUT_COLUMNS
 from pathlib import Path
 import polars as pl
