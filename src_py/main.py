@@ -56,7 +56,7 @@ def lazy_from_csv(file_path : Path) -> pl.LazyFrame:
     
     return lf
 
-def load_preprocessed_df(parquet_path : Path) -> pl.DataFrame:
+def load_preprocessed_lf(parquet_path : Path) -> pl.LazyFrame:
     """
     Cargar un dataframe previamente procesado
 
@@ -68,18 +68,18 @@ def load_preprocessed_df(parquet_path : Path) -> pl.DataFrame:
         FileNotFoundError: Si el archivo no existe
 
     Returns:
-        pl.DataFrame: El dataframe de polars cargado desde el archivo parquet
+        pl.LazyFrame: El lazyframe de polars cargado desde el archivo parquet
     """
     if not parquet_path.suffix == ".parquet":
         raise ValueError(f"El archivo {parquet_path.absolute()} no es un archivo parquet")
     if not parquet_path.exists():
         raise FileNotFoundError(f"El archivo {parquet_path.absolute()} no existe")
      
-    df = pl.read_parquet(parquet_path)
+    lf = pl.read_parquet(parquet_path).lazy()
     
     #Verifica que el DataFrame tenga las columnas de salida del preprocesamiento
-    verify_columns(df.lazy(), REQUIRED_OUTPUT_COLUMNS) 
-    return df
+    verify_columns(lf, REQUIRED_OUTPUT_COLUMNS) 
+    return lf
 
 def create_hipergraph(df: pl.DataFrame, hypergraph_path: Path) -> None:
     if hypergraph_path.exists():
