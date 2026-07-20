@@ -114,3 +114,22 @@ VARK_BY_INDEX = [
     "VARKAural",
     "VARKReadWrite",
     "VARKKinesthetic"]
+
+IM_DISPLAY_LABELS = {
+    "MIKin": "Cinestésica",
+    "MIExis": "Existencial",
+    "MIInter": "Interpersonal",
+    "MIIntra": "Intrapersonal",
+    "MILog": "Lógico-matemática",
+    "MIMus": "Musical",
+    "MINat": "Naturalista",
+    "MIVer": "Verbal",
+    "MIVis": "Visual",
+}
+
+VARK_DISPLAY_LABELS = {
+    "VARKVisual": "Visual",
+    "VARKAural": "Auditivo",
+    "VARKReadWrite": "Lectura/Escritura",
+    "VARKKinesthetic": "Kinestésico",
+}
