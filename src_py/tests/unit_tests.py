@@ -1,5 +1,5 @@
 from utils.dataframe_utils import get_grouping_dataframe
-from main import load_preprocessed_df, lazy_from_csv, create_hipergraph
+from main import load_preprocessed_lf, lazy_from_csv, create_hipergraph
 from preprocessing.psicometrical import extract_characteristics
 from consts import REQUIRED_HG_COLUMNS, REQUIRED_OUTPUT_COLUMNS
 from pathlib import Path
@@ -18,14 +18,14 @@ def test_invalid_df():
         assert False, "Expected FileNotFoundError was not raised"
     
     try:
-        load_preprocessed_df(Path("data/test_data/invalid.parquet"))
+        load_preprocessed_lf(Path("data/test_data/invalid.parquet"))
     except FileNotFoundError as e:
         assert "no existe" in str(e)
     else:
         assert False, "Expected FileNotFoundError was not raised"
         
     try:
-        load_preprocessed_df(Path("data/test_data/preprocessing_test.csv"))
+        load_preprocessed_lf(Path("data/test_data/preprocessing_test.csv"))
     except ValueError as e:
         assert "no es un archivo parquet" in str(e)
     else:
@@ -59,7 +59,7 @@ def test_grouping_df():
     Test the transformation of the dataframe so it can be used by the hypergraph constructor
     """
     
-    grouping_df = load_preprocessed_df(Path("data/test_data/preprocessed_test.parquet"))
+    grouping_df = load_preprocessed_lf(Path("data/test_data/preprocessed_test.parquet"))
     #This should be a valid df
     grouping_df = get_grouping_dataframe(grouping_df)
     
@@ -77,7 +77,40 @@ def test_hypergraph_construction():
     Test the construction of the hypergraph from the grouping dataframe
     """
     #This should be a valid df
-    grouping_df = load_preprocessed_df(Path("data/test_data/synthetic_chars.parquet"))
+    grouping_df = load_preprocessed_lf(Path("data/test_data/synthetic_chars.parquet"))
     grouping_df = get_grouping_dataframe(grouping_df)
     
     create_hipergraph(grouping_df, Path("data/test_data/hypergraph_test.hg"))
+    
+def test_cognitive_load():
+    """
+    Test the cognitive load estimation for a set of subjects
+    """
+    
+    from preprocessing.cognitive_load import Subject, get_cognitive_load_for_subjects
+    
+    subjects = [
+        Subject("Matematicas", 5, 2.5, "logical thinking"),
+        Subject("Inglés", 8, 4, "comunication"),
+        Subject("Psicología", 6, 3, "humanities"),
+        Subject("Ciencias Sociales", 7, 3.5, "social sciences")
+    ]
+    
+    lf = pl.LazyFrame(
+        {
+            "Id": [1, 2, 3],
+            "MI": [[0, 4], [1, 2], [3, 5]]
+        }
+    )
+    df = get_cognitive_load_for_subjects(lf, subjects)
+    
+    #Verify that the cognitive load columns are present in the dataframe
+    assert df.null_count().sum_horizontal().item() == 0, "There are null values in the cognitive load columns, which is not expected."
+    
+    #Verify that cognitive load columns behave as expected
+    results = df.select(pl.exclude("Id", "MI")).to_numpy()
+    assert results.shape == (3, 4), "The resulting dataframe should have 3 rows and 4 columns for the cognitive load of each subject."
+    assert results[0][0] < results[1][0], "Cognitive load for Matematicas should be lower for student 1 than for student 2, given their MI."
+    assert results[1][3] < results[0][3], "Cognitive load for Ciencias Sociales should be lower for student 2 than for student 1, given their MI."
+    assert results[1][1] == results[2][1], "Cognitive load for Inglés should be equal for student 2 than for student 3, given their MI."
+    assert results[2][1] < results[0][1], "Cognitive load for Inglés should be lower for student 3 than for student 1, given their MI."

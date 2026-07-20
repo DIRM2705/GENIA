@@ -43,8 +43,6 @@ REQUIRED_INPUT_COLUMNS.extend(VARK_COLUMNS)
 
 REQUIRED_HG_COLUMNS = ["AN", "RN", "CN", "PL", "HS", "CE", "EE", "BE", "VARK", "MI"]
 
-
-
 IM_DISPLAY_LABELS = {
     "MIKin": "Cinestésica",
     "MIExis": "Existencial",
@@ -62,4 +60,16 @@ VARK_DISPLAY_LABELS = {
     "VARKAural": "Auditivo",
     "VARKReadWrite": "Lectura/Escritura",
     "VARKKinesthetic": "Kinestésico",
+}
+
+MI_INDICES = {
+    "MIKin": 0,
+    "MIExis": 1,
+    "MIInter": 2,
+    "MIIntra": 3,
+    "MILog": 4,
+    "MIMus": 5,
+    "MINat": 6,
+    "MIVer": 7,
+    "MIVis": 8
 }
