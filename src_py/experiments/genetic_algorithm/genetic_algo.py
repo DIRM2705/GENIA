@@ -7,7 +7,7 @@ parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
 sys.path.append(parent_dir)
 
 from genia_libs import GeneticAlgorithm
-from utils.hypergraph_utils import create_hipergraph
+from main import create_hipergraph, load_preprocessed_lf
 from utils.dataframe_utils import get_grouping_dataframe
 import polars as pl
 
@@ -74,26 +74,21 @@ def _synthetic_data_experiment():
     - Cruzamiento: 50%
     - Número de grupos a formar: 8
     """
-    HYPERGRAPH_PATH = "src_py/data/synthetic_chars.hg"
-    CHARACTERISTICS_PATH = "src_py/data/synthetic_chars.parquet"
+    HYPERGRAPH_PATH = "data/test_data/hypergraph_test.hg"
+    CHARACTERISTICS_PATH = "data/test_data/synthetic_chars.parquet"
     
-    df = get_grouping_dataframe(Path(CHARACTERISTICS_PATH))
-    create_hipergraph(Path(HYPERGRAPH_PATH))
-    ga = GeneticAlgorithm(100, 3500, 25, 2, 70, 20, "synthetic_data_log.txt")
+    df = load_preprocessed_lf(Path(CHARACTERISTICS_PATH)).collect()
+    df = get_grouping_dataframe(df)
+    print(df)
+    create_hipergraph(df, Path(HYPERGRAPH_PATH))
+    ga = GeneticAlgorithm(100, 3500, 25, 2, 70, 20, "experiments/genetic_algorithm/synthetic_data_log.txt")
     for _ in range(200):
         ga.run(16, HYPERGRAPH_PATH) # 16 grupos a formar
     #_print_groups(df, best_groups)
         
 if __name__ == "__main__":
-    #df = get_grouping_dataframe(Path("src_py/data/synthetic_chars.parquet"))
-    #df =df.with_columns(PI = pl.col("AM"), HS = pl.col("CM"))
-    #df = df.rename({"AM":"AN", "CM":"CN", "RM":"RN"})
-    #df = df.select(pl.exclude("TND"))
-    #print(df.columns)
-    #df.write_parquet("src_py/data/synthetic_chars.parquet")
-    
-    #_synthetic_data_experiment()
-    #input("Press Enter to continue...")
+    _synthetic_data_experiment()
+    input("Press Enter to continue...")
     
     exp_id = -1
     with open("experiment.txt", "r") as infile, open("experiment_clean.txt", "w") as outfile:
