@@ -1,10 +1,8 @@
 from pathlib import Path
 import polars as pl
 from utils.dataframe_utils import verify_columns
-from preprocessing.graficas import export_info_from_console
 from consts import REQUIRED_INPUT_COLUMNS, REQUIRED_OUTPUT_COLUMNS
 from genia_libs import hypergraph_from_dataframe
-from utils.dataframe_utils import get_grouping_dataframe
 
 def lazy_from_csv(file_path : Path) -> pl.LazyFrame:
     """
