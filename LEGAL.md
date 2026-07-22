@@ -34,6 +34,8 @@ The following dependencies are used under the terms of the BSD 3-Clause License:
 - scikit-learn (1.8.0)
 - numpy (2.3.5)
 - matplotlib (3.11.0)
+- joblib (1.5.3)
+- python-dotenv (1.2.2)
 
 **BSD 3-Clause License Text:**
 
