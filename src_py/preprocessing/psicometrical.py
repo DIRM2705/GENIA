@@ -4,10 +4,10 @@ from utils.dataframe_utils import verify_columns
 
 def extract_characteristics(students : pl.LazyFrame) -> pl.DataFrame:
     """
-    Dado un archivo en formato csv, crea un dataframe de polars creando las columnas necesarias
+    Dado un lazyframe, crea un dataframe de polars creando las columnas necesarias
     
     Args:
-        file_path (str): La ruta de un archivo csv con las siguientes columnas:
+        students (pl.LazyFrame): Un lazyframe de polars con las siguientes columnas:
             - "Id": Identificador único del estudiante
             - "Cronotype": El cronotipo del estudiante
             - "AN": Porcentaje de satisfacción de la necesidad de autonomía
