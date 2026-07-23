@@ -28,10 +28,10 @@ Python requires some self-made libraries to run the code, they got installed aut
 
 ## Installing the libraries from the releases page
 
-To install the libraries from the releases page, you can use pip to install the wheel files directly. Replace `<version>` with the desired version number and `<sha256>` with the corresponding SHA256 hash for that version.
+To install the libraries from the releases page, you can use pip to install the wheel files directly. Replace `<link-to-wheel-file>` with the link to the wheel file and `<sha256>` with the corresponding SHA256 hash for that version.
 
 ```bash
-pip install https://github.com/DIRM2705/GENIA/releases/download/GENIA-lib-2.0.0/genia_libs-<version>-cp313-cp313-win_amd64.whl#sha256:<sha256>
+pip install <link-to-wheel-file>#sha256:<sha256>
 ```
 
 ## Compiling the libraries yourself via maturin
