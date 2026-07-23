@@ -32,6 +32,16 @@ impl BitmapLen {
         return Ok(&mut self.bitmap[index]);
     }
 
+    pub fn get_bit(&self, index: usize) -> Result<bool, BitMapError> {
+        if index >= self.get_size_bits() {
+            return Err(BitMapError::IndexOutOfBitsError(index, self.get_size_bits()));
+        }
+
+        let byte_index = index / 8;
+        let bit_index = index % 8;
+        Ok((self.bitmap[byte_index] & (1 << bit_index)) != 0)
+    }
+
     pub fn set_bit(&mut self, index: usize) -> Result<(), BitMapError> {
         if index >= self.get_size_bits() {
             return Err(BitMapError::IndexOutOfBitsError(index, self.get_size_bits()));

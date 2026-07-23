@@ -141,7 +141,7 @@ impl Individual {
          * the crossover is performed, otherwise the parents are returned as children.
          */
         
-        if generator.sample(&mut rng()) < crossover_rate {
+        if generator.sample(&mut rng()) >= crossover_rate {
             if cfg!(debug_assertions) {
                 println!("Crossover not performed, returning parents as children");
             }
@@ -185,21 +185,35 @@ impl Individual {
             println!("Parent 2: {:?}", other.solution);
         }
 
+        let mut offspring1_bitmap = BitmapLen::new(student_count);
+        let mut offspring2_bitmap = BitmapLen::new(student_count);
+
         // Swap the crossover segment from the parents to the offspring
         for i in cx_point1..cx_point2 {
             offspring1.solution[i] = other.solution[i];
             offspring2.solution[i] = self.solution[i];
+
+            offspring1_bitmap.set_bit(other.solution[i])?;
+            offspring2_bitmap.set_bit(self.solution[i])?;
         }
 
         let offsprings_result = rayon::join(
             || {
                 for i in 0..cx_point1 {
                     let student_idx = self.solution[i];
+                    if !offspring1_bitmap.get_bit(student_idx)? {
+                        offspring1.solution[i] = student_idx;
+                        continue;
+                    }
                     offspring1.partial_map(student_idx, i, self, cx_point1, cx_point2)?;
                 }
 
                 for i in cx_point2..student_count {
                     let student_idx = self.solution[i];
+                    if !offspring1_bitmap.get_bit(student_idx)? {
+                        offspring1.solution[i] = student_idx;
+                        continue;
+                    }
                     offspring1.partial_map(student_idx, i, self, cx_point1, cx_point2)?;
                 }
 
@@ -214,11 +228,19 @@ impl Individual {
             || {
                 for i in 0..cx_point1 {
                     let student_idx = other.solution[i];
+                    if !offspring2_bitmap.get_bit(student_idx)? {
+                        offspring2.solution[i] = student_idx;
+                        continue;
+                    }
                     offspring2.partial_map(student_idx, i, other, cx_point1, cx_point2)?;
                 }
 
                 for i in cx_point2..student_count {
                     let student_idx = other.solution[i];
+                    if !offspring2_bitmap.get_bit(student_idx)? {
+                        offspring2.solution[i] = student_idx;
+                        continue;
+                    }
                     offspring2.partial_map(student_idx, i, other, cx_point1, cx_point2)?;
                 }
 
