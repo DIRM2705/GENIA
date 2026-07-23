@@ -81,9 +81,14 @@ def _synthetic_data_experiment():
     df = get_grouping_dataframe(df)
     print(df)
     create_hipergraph(df, Path(HYPERGRAPH_PATH))
-    ga = GeneticAlgorithm(100, 3500, 25, 2, 70, 20, None)
-    for _ in range(200):
+    ga = GeneticAlgorithm(100, 1500, 25, 2, 70, 1, None)
+    
+    import time
+    start_time = time.time()
+    for _ in range(1):
         ga.run(16, HYPERGRAPH_PATH) # 16 grupos a formar
+    end_time = time.time()
+    print(f"Execution time: {end_time - start_time} seconds")
     #_print_groups(df, best_groups)
         
 if __name__ == "__main__":
