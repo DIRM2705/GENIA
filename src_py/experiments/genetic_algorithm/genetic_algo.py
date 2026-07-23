@@ -81,7 +81,7 @@ def _synthetic_data_experiment():
     df = get_grouping_dataframe(df)
     print(df)
     create_hipergraph(df, Path(HYPERGRAPH_PATH))
-    ga = GeneticAlgorithm(100, 3500, 25, 2, 70, 20, "experiments/genetic_algorithm/synthetic_data_log.txt")
+    ga = GeneticAlgorithm(100, 3500, 25, 2, 70, 20, None)
     for _ in range(200):
         ga.run(16, HYPERGRAPH_PATH) # 16 grupos a formar
     #_print_groups(df, best_groups)
