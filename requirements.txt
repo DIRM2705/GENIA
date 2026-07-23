@@ -8,4 +8,4 @@ python-dotenv==1.2.2
 scikit_learn==1.9.0
 spacy==3.8.14
 es_core_news_sm @ https://github.com/explosion/spacy-models/releases/download/es_core_news_sm-3.8.0/es_core_news_sm-3.8.0-py3-none-any.whl#sha256=e451a83d6df79b87e9eed0cb553f03e99e36a3bab18a7b79f0dcfd1fdf875e12
-genia_libs @ https://github.com/DIRM2705/GENIA/releases/download/GENIA-lib-2.0.0/genia_libs-2.0.0-cp313-cp313-win_amd64.whl#sha256:0dfc619486f33615e971ff1b8b726bafee8ab4b7570f472488862944c54282aa
+genia_libs @ https://github.com/DIRM2705/GENIA/releases/download/GENIA-lib-2.0.0/genia_libs-1.0.0-cp313-cp313-win_amd64.whl#sha256:66de363b899451019c995604a0e5b80657f13a9293ef37d07b5ba80b8e40154c
