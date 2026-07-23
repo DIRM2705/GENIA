@@ -19,18 +19,35 @@ py -m venv .venv
 .venv/Scripts/activate
 ```
 
-Python requires some self-made libraries to run the code, you can either download the pre-compiled versions [here](https://github.com/DIRM2705/GENIA/releases/download/GENIA-lib-0.1.3/genia_libs-0.1.3-cp313-cp313-win_amd64.whl) or compile them yourself using maturin.
-
-### Installing using pre-compiled versions (download the wheel files first)
+Then, install the required dependencies using:
 ```bash
 pip install -r requirements.txt
-pip install path_to_lib/genia_libs-0.1.3-cp313-cp313-win_amd64.whl  
 ```
 
-## Installing using maturin (compile the libraries yourself)
+Python requires some self-made libraries to run the code, they got installed automatically when you ran the previous command. However, if you wish to install older versions you may do it by selecting the desired version from the [releases page](https://github.com/DIRM2705/GENIA/releases) or compile them yourself using maturin.
+
+## Installing the libraries from the releases page
+
+To install the libraries from the releases page, you can use pip to install the wheel files directly. Replace `<version>` with the desired version number and `<sha256>` with the corresponding SHA256 hash for that version.
+
 ```bash
-pip install -r requirements.txt
+pip install https://github.com/DIRM2705/GENIA/releases/download/GENIA-lib-2.0.0/genia_libs-<version>-cp313-cp313-win_amd64.whl#sha256:<sha256>
+```
+
+## Compiling the libraries yourself via maturin
+
+To compile the libraries yourself, you can use maturin. First, install maturin using pip:
+
+```bash
 pip install maturin
+```
+
+Then, navigate to the directory containing the library's source code and run:
+```bash
 cd libs
+maturin develop
+```
+This command will build the library on debug mode and install it in your current Python environment. If you desire to build the library in release mode, you can use the following command instead:
+```bash
 maturin develop -r
 ```
