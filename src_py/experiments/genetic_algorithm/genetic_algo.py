@@ -1,4 +1,3 @@
-from pathlib import Path
 import sys
 import os
 
@@ -10,6 +9,7 @@ from genia_libs import GeneticAlgorithm
 from main import create_hipergraph, load_preprocessed_lf
 from utils.dataframe_utils import get_grouping_dataframe
 import polars as pl
+import time
 
 
 
@@ -75,30 +75,20 @@ def _synthetic_data_experiment():
     - Número de grupos a formar: 8
     """
     HYPERGRAPH_PATH = "data/test_data/hypergraph_test.hg"
-    CHARACTERISTICS_PATH = "data/test_data/synthetic_chars.parquet"
+    ga = GeneticAlgorithm(8, 1500, 25, 2, 90, 70, "src_py/experiments/genetic_algorithm/experiment.txt")
     
-    df = load_preprocessed_lf(Path(CHARACTERISTICS_PATH)).collect()
-    df = get_grouping_dataframe(df)
-    print(df)
-    create_hipergraph(df, Path(HYPERGRAPH_PATH))
-    ga = GeneticAlgorithm(100, 3500, 25, 2, 70, 20, "src_py/experiments/genetic_algorithm/synthetic_data_log.txt")
-    
-    import time
-    start_time = time.perf_counter()
-    for _ in range(1):
+    #start_time = time.time()
+    for _ in range(200):
         ga.run(16, HYPERGRAPH_PATH) # 16 grupos a formar
-    end_time = time.perf_counter()
-    
-    elapsed_time = end_time - start_time
-    print(f"Elapsed time: {elapsed_time:.2f} seconds")
-    #_print_groups(df, best_groups)
+    #end_time = time.time()
+    #print(f"Execution time: {end_time - start_time} seconds")
         
 if __name__ == "__main__":
     _synthetic_data_experiment()
     input("Press Enter to continue...")
     
     exp_id = -1
-    with open("experiment.txt", "r") as infile, open("experiment_clean.txt", "w") as outfile:
+    with open("src_py/experiments/genetic_algorithm/experiment.txt", "r") as infile, open("src_py/experiments/genetic_algorithm/experiment_clean.txt", "w") as outfile:
         outfile.write("ID_experiment,Generation,Best_fitness,Converged\n")
         for line in infile.readlines():
             strip_line = line.strip()
@@ -118,7 +108,7 @@ if __name__ == "__main__":
     pl.Config.set_tbl_rows(-1)
     
     
-    df = pl.read_csv("experiment_clean.txt").lazy()#Get data from all experiments
+    df = pl.read_csv("src_py/experiments/genetic_algorithm/experiment_clean.txt").lazy()#Get data from all experiments
     df = df.with_columns(pl.col("Best_fitness").round(4))
     experiment_results = df.unique("ID_experiment", keep="last").sort("ID_experiment") #Final output of the GA
     

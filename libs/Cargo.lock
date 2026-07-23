@@ -785,7 +785,7 @@ dependencies = [
 
 [[package]]
 name = "genia_libs"
-version = "0.1.3"
+version = "2.0.0"
 dependencies = [
  "polars",
  "postcard",

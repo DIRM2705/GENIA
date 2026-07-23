@@ -1,105 +1,84 @@
-use super::group::Group;
+use std::println;
+
 use crate::data::hypergraph::Hypergraph;
+use crate::ml::group::Group;
 use crate::utils::bitmap::BitmapLen;
 use rand::distr::{Distribution, Uniform};
 use rand::rng;
 use rand::seq::SliceRandom;
 use rayon::prelude::*;
-use std::collections::HashSet;
-use std::sync::Mutex;
 
 #[derive(Clone)]
 pub struct Individual {
-    groups: Vec<Group>,
-    student_total: usize,
+    solution: Vec<usize>,
+    min_students_per_group: usize,
+    group_amount: usize,
+    residual_students: usize,
+    base_indices: Vec<usize>,
     fitness: f64,
 }
 
 impl Individual {
     pub fn new(group_amount: usize, hypergraph: &Hypergraph) -> Self {
         let mut individual = Individual {
-            groups: Vec::new(),
-            student_total: hypergraph.get_student_count(),
+            solution: get_random_permutation(hypergraph.get_student_count()),
+            min_students_per_group: hypergraph.get_student_count() / group_amount,
+            residual_students: hypergraph.get_student_count() % group_amount,
+            group_amount,
+            base_indices: Vec::new(),
             fitness: 0.0,
         };
 
-        individual.generate_random_groups(group_amount);
+        individual.make_base_indices();
         individual.calculate_fitness(hypergraph);
         return individual;
     }
 
-    pub fn get_solution(&self) -> Vec<Vec<usize>> {
+    fn make_base_indices(&mut self) {
         /*
-         * Returns the solution of the individual as a vector of groups,
-         * where each group is a vector of student indices.
+         * Creates a vector of base indices for each group in the solution.
+         * Each base index represents the starting index of a group in the solution vector.
          */
 
-    
-        let groups_bitmaps = self
-            .groups
-            .iter()
-            .map(|group| group.get_students())
-            .collect::<Vec<BitmapLen>>();
-        let solution = groups_bitmaps
-            .into_par_iter()
-            .map(|group_bitmap| {
-                let mut students_in_group = Vec::new();
-                for student_idx in 0..self.student_total {
-                    if let Ok(true) = group_bitmap.get_bit(student_idx) {
-                        students_in_group.push(student_idx);
-                    }
-                }
-                return students_in_group;
-            })
-            .collect::<Vec<Vec<usize>>>();
-
-        return solution;
+        self.base_indices = vec![0];
+        for group_idx in 1..self.group_amount {
+            let base_idx = self.base_indices[group_idx - 1]
+                + self.min_students_per_group
+                + if group_idx <= self.residual_students {
+                    1
+                } else {
+                    0
+                };
+            self.base_indices.push(base_idx);
+            if cfg!(debug_assertions) {
+                println!("Base index for group {}: {}", group_idx, base_idx);
+            }
+        }
+        self.base_indices.push(self.solution.len());
     }
 
     pub fn get_fitness(&self) -> f64 {
         return self.fitness;
     }
 
-    fn generate_random_groups(&mut self, group_amount: usize) {
-        let queue = get_random_permutation(self.student_total);
-        let max_students_per_group =
-            (self.student_total as f64 / group_amount as f64).ceil() as usize;
-        let mut i: usize = 0;
-        let mut group = Vec::new();
+    pub fn get_solution(&self) -> Vec<Vec<usize>> {
+        /*
+         * Returns the solution of the individual as a vector of groups,
+         * where each group is represented as a vector of student indices.
+         */
 
-        while i < queue.len() {
-            // Group is full
-            if group.len() == max_students_per_group {
-                let mut group_bitmap = BitmapLen::new(self.student_total as usize);
+        let mut groups = Vec::new();
 
-                // Set the bits of the group from the students assigned to the group
-                if let Ok(_) = group_bitmap.set_bits(&group) {
-                    self.groups.push(Group::new(group_bitmap)); // Add the group to the individual
-                } else {
-                    println!(
-                        "Error al establecer los bits del grupo: {}",
-                        self.groups.len() + 1
-                    );
-                }
-                group = Vec::new();
+        for group_idx in 0..self.group_amount {
+            let mut group = Vec::new();
+            let mut idx = self.base_indices[group_idx];
+            while idx < self.base_indices[group_idx + 1] {
+                group.push(self.solution[idx]);
+                idx += 1;
             }
-
-            // Adds the student to the group
-            group.push(queue[i]);
-            i += 1;
+            groups.push(group);
         }
-
-        let mut group_bitmap = BitmapLen::new(self.student_total as usize);
-
-        // Set the bits of the group from the students assigned to the group
-        if let Ok(_) = group_bitmap.set_bits(&group) {
-            self.groups.push(Group::new(group_bitmap)); // Add the group to the individual
-        } else {
-            println!(
-                "Error al establecer los bits del grupo: {}",
-                self.groups.len() + 1
-            );
-        }
+        return groups;
     }
 
     pub fn calculate_fitness(&mut self, hypergraph: &Hypergraph) {
@@ -110,210 +89,244 @@ impl Individual {
          */
 
         let fitness_sum: f64 = self
-            .groups
+            .get_groups()
             .par_iter()
             .map(|group| 11f64 - group.calculate_discardability(hypergraph))
             .sum();
 
-        self.fitness = fitness_sum/self.groups.len() as f64;
+        self.fitness = fitness_sum / self.group_amount as f64;
     }
 
-    pub fn crossover(&self, other: &Individual, crossover_rate: u8) -> (Individual, Individual) {
+    fn get_groups(&self) -> Vec<Group> {
         /*
-        * Performs crossover between two individuals, generating two new individuals (children).
-        * The crossover is done by exchanging students between the groups of the parents according to a crossover rate.
-        * This function is parallelized for each group.
-        */
+         * Creates groups from the individual's solution.
+         * Each group contains a set of students.
+         */
 
-        if crossover_rate < 1 || crossover_rate > 100 {
-            println!("La tasa de crossover debe estar entre 1 y 100");
-            return (self.clone(), other.clone());
-        }
-
-        let results = (0..self.groups.len())
+        return (0..self.group_amount)
             .into_par_iter()
             .map(|group_idx| {
-                let generator = Uniform::new_inclusive(0, 100).unwrap();
-                let mut positive_mask = BitmapLen::new(self.student_total);
-                let mut negative_mask = positive_mask.clone();
+                let mut bitmap = BitmapLen::new(self.solution.len());
 
-                // Generate crossover masks for the group, where each student has a probability of being swapped between parents according to the crossover rate
-                for student_idx in 0..self.student_total {
-                    let random_value = generator.sample(&mut rng());
-                    if random_value < crossover_rate {
-                        positive_mask.set_bit(student_idx).unwrap();
-                    } else {
-                        negative_mask.set_bit(student_idx).unwrap();
-                    }
+                let mut idx = self.base_indices[group_idx];
+                while idx < self.base_indices[group_idx + 1] {
+                    bitmap.set_bit(self.solution[idx]).unwrap();
+                    idx += 1;
                 }
-
-                // Create the new groups from the crossover masks,
-                // swapping students between the parents according to the masks
-                let new_group1 = (self.groups[group_idx].get_students() & positive_mask.clone())
-                    | (other.groups[group_idx].get_students() & negative_mask.clone());
-                let new_group2 = (self.groups[group_idx].get_students() & negative_mask.clone())
-                    | (other.groups[group_idx].get_students() & positive_mask.clone());
-
-                (Group::new(new_group1), Group::new(new_group2))
+                return Group::new(bitmap);
             })
-            .collect::<Vec<(Group, Group)>>();
-
-        let (child1_groups, child2_groups): (Vec<Group>, Vec<Group>) = results.into_iter().unzip();
-
-        let childs = (
-            Individual {
-                groups: child1_groups,
-                student_total: self.student_total,
-                fitness: 0.0,
-            },
-            Individual {
-                groups: child2_groups,
-                student_total: self.student_total,
-                fitness: 0.0,
-            },
-        );
-        return childs;
+            .collect::<Vec<Group>>();
     }
 
-    pub fn check_constraints(&mut self, group_amount: usize) {
+    pub fn crossover(
+        &self,
+        other: &Individual,
+        crossover_rate: u8,
+    ) -> Result<(Individual, Individual), GeneticAlgorithmError> {
         /*
-        Verify wether the individual meets the constraints:
-        - Each student must belong to exactly one group
-        - There must be no empty groups
-        - All groups must have a number of students within an allowed range
-        - All students must be assigned to a group
-        If any of the constraints are not met, students are moved arbitrarily to meet them.
-        */
+         * Performs crossover between two individuals, generating two new individuals (children).
+         * The crossover is done by the PMX method (Partially Mapped Crossover)
+         * This function is parallelized for each group.
+         */
 
-        let max_students_per_group =
-            (self.student_total as f64 / group_amount as f64).ceil() as usize;
-
-        // Bitmaps de los grupos
-        let mut group_bitmaps = self
-            .groups
-            .iter()
-            .map(|group| group.get_students())
-            .collect::<Vec<BitmapLen>>();
-        
-        // Mutex for each bitmap to allow parallel access
-        let bitmaps_locks = group_bitmaps
-            .iter_mut()
-            .map(|bitmap| Mutex::new(bitmap))
-            .collect::<Vec<Mutex<&mut BitmapLen>>>();
-
-        let mut freed_students = HashSet::new();
-        let freed_mtx = Mutex::new(&mut freed_students);
-        
-        (0..self.student_total).into_par_iter()
-        .for_each(|student_idx|
-        {
-            // Asumir que no se le asignó a un grupo
-            let mut assigned = false;
-
-            // Verify if the student is assigned to more than one group or 
-            // if the group has more students than allowed
-            for i in 0..bitmaps_locks.len() {
-                let mut lock_res = bitmaps_locks[i].lock();
-
-                // If the student is assigned to the group and the group has more students than allowed, 
-                // remove the student from the group
-                if let Ok(ref mut bitmap) = lock_res && let Ok(true) = bitmap.get_bit(student_idx) {
-                    if bitmap.count_ones() as usize > max_students_per_group {
-
-                        bitmap.clear_bit(student_idx).unwrap();
-                        if cfg!(debug_assertions) {
-                            println!("Grupo {} tiene más estudiantes de los permitidos, eliminando estudiante {}...", i, student_idx);
-                            println!("Bitmap del grupo {} después de eliminar: {:?}", i, bitmap);
-                        }
-                    } 
-                    else if assigned {
-                        if cfg!(debug_assertions) {
-                            println!("Estudiante {} asignado grupo {}, corrigiendo...", student_idx, i);
-                        }
-                        // The student has already been assigned to a group, remove it from the current group
-                        bitmap.clear_bit(student_idx).unwrap();
-                    } else {
-                        assigned = true; 
-                    }
-                }
-            }
-
-            // The student is not assigned to any group, add it to the freed students set
-            if !assigned {
-                let lock_res = freed_mtx.lock();
-                if lock_res.is_err() {
-                    println!("Error al adquirir el lock del mutex de estudiantes liberados");
-                    return;
-                }
-                let mut freed = lock_res.unwrap();
-                freed.insert(student_idx);
-            }
-        });
-
-        // Reconstruct the groups with the corrected bitmaps and 
-        // add freed students to groups that have less than the maximum number of students
-        self.groups.clear(); 
-
-        for group in group_bitmaps.iter_mut()
-        {
-            let mut student_count = group.count_ones() as usize;
-            while student_count < max_students_per_group && freed_students.len() > 0
-            {
-                // Get a student from the freed students set and add it to the group
-                let index = *freed_students.iter().next().unwrap();
-                freed_students.remove(&index);
-                group.set_bit(index).unwrap();
-                student_count += 1;
-            }
-            self.groups.push(Group::new(group.clone()));
+        if crossover_rate < 1 || crossover_rate > 100 {
+            return Err(GeneticAlgorithmError::InvalidCrossoverRate);
         }
+
+        let generator = Uniform::new_inclusive(0, 100)?;
+
+        /*
+         * The crossover determines whether to perform crossover or not based on the crossover rate.
+         * If the random value is less than the crossover rate,
+         * the crossover is performed, otherwise the parents are returned as children.
+         */
+        
+        if generator.sample(&mut rng()) >= crossover_rate {
+            if cfg!(debug_assertions) {
+                println!("Crossover not performed, returning parents as children");
+            }
+            return Ok((self.clone(), other.clone()));
+        }
+
+        let student_count = self.solution.len();
+        //Generate two crossover points
+        let limit_generator = Uniform::new(1, student_count / 2)?;
+        // First crossover point must be in the first half of the solution
+        let cx_point1 = limit_generator.sample(&mut rng());
+        // Second crossover point must be after the first crossover point
+        let cx_point2 = limit_generator.sample(&mut rng()) + cx_point1;
+
+        // Init the offspring solutions
+        let mut offspring1 = Individual {
+            solution: vec![0; student_count],
+            min_students_per_group: self.min_students_per_group,
+            residual_students: self.residual_students,
+            group_amount: self.group_amount,
+            base_indices: self.base_indices.clone(),
+            fitness: 0.0,
+        };
+
+        let mut offspring2 = Individual {
+            solution: vec![0; student_count],
+            min_students_per_group: self.min_students_per_group,
+            residual_students: self.residual_students,
+            group_amount: self.group_amount,
+            base_indices: self.base_indices.clone(),
+            fitness: 0.0,
+        };
 
         if cfg!(debug_assertions) {
-            println!("Individuo después de verificar restricciones: {:?}", self.get_solution());
+            println!(
+                "Crossover points: {} - {}",
+                cx_point1, cx_point2
+            );
+
+            println!("Parent 1: {:?}", self.solution);
+            println!("Parent 2: {:?}", other.solution);
         }
 
+        let mut offspring1_bitmap = BitmapLen::new(student_count);
+        let mut offspring2_bitmap = BitmapLen::new(student_count);
+
+        // Swap the crossover segment from the parents to the offspring
+        for i in cx_point1..cx_point2 {
+            offspring1.solution[i] = other.solution[i];
+            offspring2.solution[i] = self.solution[i];
+
+            offspring1_bitmap.set_bit(other.solution[i])?;
+            offspring2_bitmap.set_bit(self.solution[i])?;
+        }
+
+        let offsprings_result = rayon::join(
+            || {
+                for i in 0..cx_point1 {
+                    let student_idx = self.solution[i];
+                    if !offspring1_bitmap.get_bit(student_idx)? {
+                        offspring1.solution[i] = student_idx;
+                        continue;
+                    }
+                    offspring1.partial_map(student_idx, i, self, cx_point1, cx_point2)?;
+                }
+
+                for i in cx_point2..student_count {
+                    let student_idx = self.solution[i];
+                    if !offspring1_bitmap.get_bit(student_idx)? {
+                        offspring1.solution[i] = student_idx;
+                        continue;
+                    }
+                    offspring1.partial_map(student_idx, i, self, cx_point1, cx_point2)?;
+                }
+
+                if cfg!(debug_assertions) {
+                    println!(
+                        "Offspring 1 solution: {:?}", offspring1.solution
+                    );
+                }
+
+                return Ok(());
+            },
+            || {
+                for i in 0..cx_point1 {
+                    let student_idx = other.solution[i];
+                    if !offspring2_bitmap.get_bit(student_idx)? {
+                        offspring2.solution[i] = student_idx;
+                        continue;
+                    }
+                    offspring2.partial_map(student_idx, i, other, cx_point1, cx_point2)?;
+                }
+
+                for i in cx_point2..student_count {
+                    let student_idx = other.solution[i];
+                    if !offspring2_bitmap.get_bit(student_idx)? {
+                        offspring2.solution[i] = student_idx;
+                        continue;
+                    }
+                    offspring2.partial_map(student_idx, i, other, cx_point1, cx_point2)?;
+                }
+
+                if cfg!(debug_assertions) {
+                    println!(
+                        "Offspring 2 solution: {:?}", offspring2.solution
+                    );
+                }
+
+                return Ok(());
+            },
+        );
+
+        return match offsprings_result {
+            (Ok(_), Ok(_)) => Ok((offspring1, offspring2)),
+            (Err(e), _) => Err(e),
+            (_, Err(e)) => Err(e),
+        };
     }
 
-    pub fn mutate(&self, mutation_rate: u8) -> Individual {
+    fn partial_map(
+        &mut self,
+        mut student_idx : usize,
+        position: usize,
+        other: &Individual,
+        cx_point1: usize,
+        cx_point2: usize,
+    ) -> Result<(), GeneticAlgorithmError> {
+        // While the student is in offspring
+        while let Some(mapped_idx) = self.get_index_of_student(student_idx, cx_point1, cx_point2) {
+            student_idx = other.solution[mapped_idx];
+        }
+
+        //Found a student that is not in offspring, set it
+        self.solution[position] = student_idx;
+        return Ok(());
+    }
+
+    pub fn mutate(&self, mutation_rate: u8) -> Result<Individual, GeneticAlgorithmError> {
         /*
          * Mutates the individual changing students between groups according to a mutation rate.
          * This function is parallelized for each group.
-        */
+         */
 
         if mutation_rate < 1 || mutation_rate > 100 {
-            println!("La tasa de mutación debe estar entre 1 y 100");
-            return self.clone();
+            return Err(GeneticAlgorithmError::InvalidMutationRate);
         }
 
-        let random_students = get_random_permutation(self.student_total);
-
-        // Divide the number of students to change by 200, since we will swap students between groups
-        let changes =
-            ((self.student_total as f32) * (mutation_rate as f32 / 200.0)).floor() as usize;
+        let uniform_rng = Uniform::new_inclusive(0, 100)?;
 
         // Create a new individual as a clone of the current one, to apply the mutations
         let mut new_individual = self.clone();
 
-        //Switch students between groups according to the mutation rate,
-        //taking random students from the current group
-        for i in (0..changes).step_by(2) {
-            for ref mut group in new_individual.groups.iter_mut() {
-                if let Ok(true) = group.get_students().get_bit(random_students[i]) {
-                    group.get_students().set_bit(random_students[i]).unwrap();
-                    group
-                        .get_students()
-                        .clear_bit(random_students[i + 1])
-                        .unwrap();
-                } else if let Ok(true) = group.get_students().get_bit(random_students[i + 1]) {
-                    group
-                        .get_students()
-                        .set_bit(random_students[i + 1])
-                        .unwrap();
-                    group.get_students().clear_bit(random_students[i]).unwrap();
+        for i in 0..self.min_students_per_group {
+            // If the gene should be mutated
+            if uniform_rng.sample(&mut rng()) < mutation_rate {
+                // Swap the student at i position with the student at the next group
+                let mut student_idx = new_individual.solution[i];
+                for group_idx in 0..self.group_amount - 1 {
+                    let idx = new_individual.base_indices[group_idx] + i;
+                    let actual_student_idx = new_individual.solution[idx];
+                    new_individual.solution[idx] = student_idx;
+                    student_idx = actual_student_idx;
                 }
+                new_individual.solution[i] = student_idx;
             }
         }
-        return new_individual;
+
+        return Ok(new_individual);
+    }
+
+    fn get_index_of_student(
+        &self,
+        student_idx: usize,
+        cx_point1: usize,
+        cx_point2: usize,
+    ) -> Option<usize> {
+        /*
+         * Returns the index of the student in the solution vector.
+         * This function is used to find the index of a student in the solution vector,
+         * excluding positions that have not been assigned yet (between the crossover points).
+         */
+
+        return (cx_point1..cx_point2)
+            .into_par_iter()
+            .find_any(|&i| self.solution[i] == student_idx);
     }
 }
 
@@ -322,4 +335,35 @@ fn get_random_permutation(n: usize) -> Vec<usize> {
     let mut perm: Vec<usize> = (0..n).collect();
     perm.shuffle(&mut rng());
     return perm;
+}
+
+#[derive(Debug)]
+pub enum GeneticAlgorithmError {
+    InvalidCrossoverRate,
+    InvalidMutationRate,
+    RNGError(rand::distr::uniform::Error),
+    BitmapError(crate::utils::bitmap::BitMapError),
+}
+
+impl std::fmt::Display for GeneticAlgorithmError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        return match self {
+            GeneticAlgorithmError::InvalidCrossoverRate => write!(f, "La tasa de crossover debe estar entre 1 y 100"),
+            GeneticAlgorithmError::InvalidMutationRate => write!(f, "La tasa de mutación debe estar entre 1 y 100"),
+            GeneticAlgorithmError::RNGError(e) => write!(f, "Error en el generador de números aleatorios: {}", e),
+            GeneticAlgorithmError::BitmapError(e) => write!(f, "Error en el bitmap: {}", e),
+        };
+    }
+}
+
+impl From<rand::distr::uniform::Error> for GeneticAlgorithmError {
+    fn from(err: rand::distr::uniform::Error) -> GeneticAlgorithmError {
+        return GeneticAlgorithmError::RNGError(err);
+    }
+}
+
+impl From<crate::utils::bitmap::BitMapError> for GeneticAlgorithmError {
+    fn from(err: crate::utils::bitmap::BitMapError) -> GeneticAlgorithmError {
+        return GeneticAlgorithmError::BitmapError(err);
+    }
 }

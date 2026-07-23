@@ -20,10 +20,6 @@ impl Group {
         };
     }
 
-    pub fn get_students(&self) -> BitmapLen {
-        return self.students.clone();
-    }
-
     pub fn calculate_discardability(&self, hypergraph: &Hypergraph) -> f64 {
         /*
          * A group's discardability is calculated from two metrics:
