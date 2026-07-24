@@ -1,7 +1,7 @@
 use std::fs::OpenOptions;
 use std::io::{BufWriter, Write};
 
-pub fn log(message: String, file_path: Option<&str>) {
+pub fn log(message: String, file_path: &Option<String>, log_to_console: bool) {
     if let Some(path) = file_path {
         let open_file_result = OpenOptions::new().create(true).append(true).open(path);
         if let Err(e) = open_file_result {
@@ -24,5 +24,8 @@ pub fn log(message: String, file_path: Option<&str>) {
             eprintln!("Error al vaciar el búfer de escritura: {}", e);
         }
     }
-    println!("[INFO]: {}", message);
+
+    if log_to_console {
+        println!("[INFO] {}", message);
+    }
 }

@@ -14,8 +14,10 @@ mod genia_libs {
     use rand::distr::{Distribution, Uniform};
     use rayon::prelude::*;
     use core::panic;
-    use std::path::Path;
+    use std::{format, path::Path, println};
     use crate::utils::logging::log;
+    use indicatif::{ProgressBar, ProgressStyle};
+    use console::{Term, style};
 
     #[pyfunction]
     fn hypergraph_from_dataframe(py_df: PyDataFrame, output_file: String) -> PyResult<()> {
@@ -117,22 +119,38 @@ mod genia_libs {
         }
 
         pub fn run(&self, num_groups: usize, input_file: String) -> Vec<Vec<usize>> {
-            println!("------------------------ALGORITMO GENÉTICO--------------------------------------------");
+            let hg_bar = ProgressBar::new_spinner();
+            hg_bar.set_message("[1] Cargando el hipergrafo de características...");
+            hg_bar.enable_steady_tick(std::time::Duration::from_millis(100));
             let hypergraph = load_hypergraph_from_file(&input_file);
+            hg_bar.println(format!("{} Hipergrafo cargado exitosamente.", style("[INFO]").bold().blue()));
+            hg_bar.finish_and_clear();
 
             // Create the initial population of individuals in parallel
+            let pop_bar = ProgressBar::new_spinner();
+            pop_bar.set_message("[2] Creando la población inicial...");
+            pop_bar.enable_steady_tick(std::time::Duration::from_millis(100));
             let mut population =
                 create_initial_population(self.population_size, num_groups, &hypergraph);
+            pop_bar.println(format!("{} Población inicial creada exitosamente.", style("[INFO]").bold().blue()));
+            pop_bar.finish_and_clear();
 
-            log(format!("Población inicial creada con {} individuos", self.population_size), self.log_file_path.as_deref());
+            log(format!("Población inicial creada con {} individuos", self.population_size), &self.log_file_path, false);
 
+            let running_bar = ProgressBar::new((self.generations - 1) as u64);
+            running_bar.set_style(
+                ProgressStyle::with_template(&(format!("{}: ", style("Explorando").blue()) + " [{wide_bar:.white}] Generación: {pos}/{len} | Mejor fitness: {msg} | Tiempo transcurrido: {elapsed_precise}"))
+                .unwrap_or(ProgressStyle::default_bar())
+                .progress_chars("##-")
+            );
+            running_bar.println(format!("{} Ejecutando algoritmo genético con {} individuos y {} generaciones", style("[INFO]").bold().blue(), self.population_size, self.generations-1));
             let mut best_fitness = 0.0;
             let mut change_counter = 1000; // Counter to halt if the best fitness doesn't change for 1000 generations
             for generation in 0..self.generations {
                 //Ordena la población por fitness de mayor a menor
                 population.sort_by(|a, b| b.get_fitness().partial_cmp(&a.get_fitness()).unwrap());
 
-                log(format!("Generación {} --- Mejor fitness: {}", generation, population[0].get_fitness()), self.log_file_path.as_deref());
+                
                 if population[0].get_fitness() > best_fitness {
                     best_fitness = population[0].get_fitness();
                     change_counter = 1000;
@@ -140,14 +158,31 @@ mod genia_libs {
                     change_counter -= 1;
                 }
 
-                if best_fitness >= 6.6 || change_counter == 0 {
-                    log(format!("Convergencia detectada: {}", population[0].get_fitness()), self.log_file_path.as_deref());
+                running_bar.set_message(format!("{:.4}", best_fitness));
+                running_bar.inc(1);
+
+                if best_fitness >= 6.6 || change_counter <= 0 {
+                    log(format!("{},{},true", generation, population[0].get_fitness()), &self.log_file_path, false);
+                    running_bar.abandon();
                     break;
                 }
+                else {
+                    log(format!("{},{},false", generation, population[0].get_fitness()), &self.log_file_path, false);
+                }
+                change_counter -= 1;
 
                 // In parallel, create a new population by selecting parents, performing crossover and mutation
-                population = create_new_population(self, &population, &hypergraph);
-                log (format!("Creada siguiente generación con {} individuos", population.len()), self.log_file_path.as_deref());
+                population = create_new_population(self, &population, &hypergraph);                
+            }
+
+            if !running_bar.is_finished() {
+                running_bar.println(format!(" {} El algoritmo genético alcanzó su máximo de generaciones", 
+                    style("[EXITO]").bold().green()));
+                running_bar.finish();
+            } else {
+                running_bar.println(format!(" {} El algoritmo genético alcanzó un valor de convergencia", 
+                    style("[EXITO]").bold().green()));
+
             }
 
             // Return the solution of the best individual in the final population
@@ -156,6 +191,29 @@ mod genia_libs {
                 .max_by(|a, b| a.get_fitness().partial_cmp(&b.get_fitness()).unwrap())
                 .unwrap();
             return best_individual.get_solution();
+        }
+    
+        pub fn show_config(&self) {
+            let (_, width) = Term::stdout().size_checked().unwrap_or((0, 80));
+            let title = " Configuración del Algoritmo Genético ";
+            let title_len = title.len();
+            let border = "=".repeat((width as usize - title_len) / 2);
+
+            println!("{}{}{}", style(&border).green(), style(title).bold().green(), style(&border).green());
+            println!("{}", style("[Configuración de la población]").bold().magenta());
+            println!("  {} {}: {}", style("+").green(), style("Tamaño de la población inicial").bold(), self.population_size-1);
+            println!("  {} {}: {}", style("+").green(), style("Número de generaciones").bold(), self.generations);
+            println!("  {} {}: {}", style("+").green(), style("Número de élites").bold(), self.elites);
+            println!("{}", style("[Configuración de la evolución]").bold().magenta());
+            println!("  {} {}: {}", style("+").green(), style("Número de spins").bold(), self.spins);
+            println!("  {} {}: {}%", style("+").green(), style("Tasa de cruce").bold(), self.crossover_rate);
+            println!("  {} {}: {}%", style("+").green(), style("Tasa de mutación").bold(), self.mutation_rate);
+            println!("{}", style("[Configuración de logging]").bold().magenta());
+            match &self.log_file_path {
+                Some(path) => println!(" {} {}: {}", style("+").green(), style("Ruta del archivo de log").bold(), path),
+                None => println!("  {} {}", style("+").green(), style("Logging desactivado").bold().dim()),
+            }
+            println!("{}\n", style("=".repeat(width as usize)).green());
         }
     }
 
@@ -168,7 +226,7 @@ mod genia_libs {
 
         if hg.is_err() {
             panic!(
-                "Error al cargar el hypergraph desde el archivo {}: {}",
+                "Error al cargar el hipergrafo desde el archivo {}: {}",
                 file_path,
                 hg.err().unwrap()
             );

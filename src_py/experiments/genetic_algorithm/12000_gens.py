@@ -11,6 +11,8 @@ from utils.dataframe_utils import get_grouping_dataframe
 import polars as pl
 import time
 
+
+
 """
 Experimentos con el algoritmo genético carga el DataFrame de los estudiantes,
 crea el hipergrafo de características y realiza el proceso de formación de grupos usando 
@@ -34,7 +36,7 @@ def _synthetic_data_experiment():
     crea el hipergrafo de características y realiza el proceso de formación de grupos
     Parámetros del algoritmo genético:
     - Población: 8
-    - Número de generaciones: 1500
+    - Número de generaciones: 12000
     - Spins por generación: 2
     - Elitismo: 2
     - Mutación: 90%
@@ -42,17 +44,15 @@ def _synthetic_data_experiment():
     - Número de grupos a formar: 16
     """
     HYPERGRAPH_PATH = "data/test_data/hypergraph_test.hg"
-    ga = GeneticAlgorithm(8, 1500, 2, 2, 90, 70, "src_py/experiments/genetic_algorithm/experiment_1500.txt")
-    
+    ga = GeneticAlgorithm(8, 50000, 2, 2, 90, 70, "src_py/experiments/genetic_algorithm/experiment_12000.txt")
     ga.show_config()
-    for _ in range(400):
-        print(f"Running experiment {_+1}/400")
+    for _ in range(100):
+        print(f"Running experiment {_+1}/100")
         ga.run(16, HYPERGRAPH_PATH) # 16 grupos a formar
         
 if __name__ == "__main__":
-    EXPERIMENT_FILE_PATH = "src_py/experiments/genetic_algorithm/experiment_1500.txt"
-    RESULTS_FILE_PATH = "src_py/experiments/genetic_algorithm/results_1500.txt"
-        
+    EXPERIMENT_FILE_PATH = "src_py/experiments/genetic_algorithm/experiment_12000.txt"
+    RESULTS_FILE_PATH = "src_py/experiments/genetic_algorithm/results_12000.txt"
     _synthetic_data_experiment()
     input("Press Enter to continue...")
     
