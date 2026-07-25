@@ -17,7 +17,7 @@ mod genia_libs {
     use pyo3_polars::PyDataFrame;
     use rand::distr::{Distribution, Uniform};
     use rayon::prelude::*;
-    use std::path::Path;
+    use std::{path::Path, unreachable};
 
     #[pyfunction]
     fn hypergraph_from_dataframe(py_df: PyDataFrame, output_file: String) -> PyResult<()> {
@@ -119,8 +119,8 @@ mod genia_libs {
                 spins,
                 elites,
                 generations: generations + 1, // Sum 1 to include the last generation in the loop
-                mutation_rate : (mutation_rate * 100.0) as u8,
-                crossover_rate : (crossover_rate * 100.0) as u8,
+                mutation_rate: (mutation_rate * 100.0) as u8,
+                crossover_rate: (crossover_rate * 100.0) as u8,
                 log_file_path,
             };
         }
@@ -163,7 +163,7 @@ mod genia_libs {
 
             let running_bar = ProgressBar::new((self.generations - 1) as u64);
             running_bar.set_style(
-                ProgressStyle::with_template(&(format!("{}: ", style("Explorando").blue()) + " [{wide_bar:.white}] Generación: {pos}/{len} | {msg} | Tiempo transcurrido: {elapsed_precise}"))
+                ProgressStyle::with_template(&(format!("{}: ", style("Explorando").blue()) + " [{wide_bar:.white}] Generación: {pos}/{len} | Tiempo transcurrido: {elapsed_precise}\n{msg}"))
                 .unwrap_or(ProgressStyle::default_bar())
                 .progress_chars("##-")
             );
@@ -177,6 +177,8 @@ mod genia_libs {
             let mut change_counter = 1; // Counter to halt if the best fitness doesn't change for 1000 generations
             let mut used_lifes = 0; // Lifes to re-initialize the population if it gets stuck
             let mut last_incident_gen = 0; // Last generation where population was re-initialized due to stagnation
+            let mut curr_mutation_rate = self.mutation_rate; // Current mutation rate, which can change during execution
+            let mut curr_crossover_rate = self.crossover_rate; // Current crossover rate, which can change during execution
             for generation in 0..self.generations {
                 running_bar.inc(1);
 
@@ -188,8 +190,8 @@ mod genia_libs {
                 let ratio = mean_fitness / best_fitness;
 
                 running_bar.set_message(format!(
-                    "Mejor fitness: {:.4} | Tasa de convergencia: {:.2}",
-                    best_fitness, ratio
+                    "| Tasa de mutación: {}% | Tasa de cruce: {}% | Mejor fitness: {:.4} | Tasa de convergencia: {:.2}",
+                    curr_mutation_rate, curr_crossover_rate, best_fitness, ratio
                 ));
 
                 if population[0].get_fitness() > best_fitness {
@@ -199,26 +201,53 @@ mod genia_libs {
                     change_counter += 1; // Increment the counter if the best fitness doesn't improve
                 }
 
-                if ratio >= 0.95 && used_lifes < MAX_LIFES && change_counter > 500 {
+                if ratio > 0.95 && used_lifes < MAX_LIFES && change_counter > 500 {
                     used_lifes += 1;
                     change_counter = 1; // Reset the counter after re-initializing the population
                     last_incident_gen = generation; // Update the last incident generation
-                    running_bar.println(format!(" {} La población se está estancando, re-inicializando | Intento de salvación {}", 
-                        style("[WARNING]").bold().yellow(), used_lifes));
-
-                    let begining_purge_idx = ((1f64 - 0.3 * (used_lifes as f64))* population.len() as f64).floor() as usize;
-                    for i in begining_purge_idx..population.len() {
-                        population[i] = Individual::new(num_groups, &hypergraph);
+                    match used_lifes {
+                        1 => {
+                            curr_mutation_rate = 75; // Increase mutation rate to 75% to increase diversity in the population
+                        }
+                        2 => {
+                            curr_mutation_rate = 100; // Increase mutation rate to 100% to increase diversity in the population
+                            curr_crossover_rate = 40; // Decrease crossover rate to 40% to increase diversity in the population
+                        }
+                        3 => {
+                            running_bar.println(format!(" {} La población se está estancando, re-inicializando | Último intento de salvación", style("[WARNING]").bold().yellow()));
+                            let begining_purge_idx =
+                                (0.2 * population.len() as f64).floor() as usize;
+                            for i in begining_purge_idx..population.len() {
+                                population[i] = Individual::new(num_groups, &hypergraph);
+                            }
+                        }
+                        _ => unreachable!(
+                            "Se ha alcanzado un número de vidas no esperado: {}",
+                            used_lifes
+                        ),
                     }
-                } else if used_lifes > 0 && last_incident_gen + 750 < generation && ratio < 0.95
-                {
-                    running_bar.println(format!(
-                        " {} Ha aumentado la varianza de la población",
-                        style("[INFO]").bold().blue()
-                    ));
-                    used_lifes = 0; // Reset lifes if the population variance improves after re-initialization
-                }
-                else if used_lifes == MAX_LIFES && change_counter > MAX_NO_CHANGE_GENERATIONS {
+                } else if used_lifes > 0 && last_incident_gen + 750 < generation && ratio <= 0.95 {
+                    match used_lifes {
+                        1 => {
+                            curr_mutation_rate = self.mutation_rate; // Decrease mutation rate back to the original value
+                        }
+                        2 => {
+                            curr_mutation_rate = 75; // Reset mutation rate to 75% to keep some diversity in the population
+                            curr_crossover_rate = self.crossover_rate; // Reset crossover rate to the original value
+                        }
+                        3 => {
+                            running_bar.println(format!(
+                                " {} La varianza de la población ha mejorado",
+                                style("[INFO]").bold().blue()
+                            ));
+                        }
+                        _ => unreachable!(
+                            "Se ha alcanzado un número de vidas no esperado: {}",
+                            used_lifes
+                        ),
+                    }
+                    used_lifes -= 1; // Reset lifes if the population variance improves after re-initialization
+                } else if used_lifes == MAX_LIFES && change_counter > MAX_NO_CHANGE_GENERATIONS {
                     running_bar.println(format!(
                         " {} La población se ha estancado, terminando la ejecución",
                         style("[FORCED]").bold().magenta()
@@ -235,16 +264,16 @@ mod genia_libs {
 
                 if best_fitness >= CONVERGENCE_THRESHOLD {
                     running_bar.println(format!(
-                    " {} El algoritmo genético alcanzó un valor de convergencia en {} segundos",
-                    style("[ÉXITO]").bold().green(),
-                    running_bar.elapsed().as_secs_f64()
-                ));
+                        " {} El algoritmo genético alcanzó un valor de convergencia en {} segundos",
+                        style("[ÉXITO]").bold().green(),
+                        running_bar.elapsed().as_secs_f64()
+                    ));
                     running_bar.abandon();
                     break;
                 }
 
                 // In parallel, create a new population by selecting parents, performing crossover and mutation
-                population = create_new_population(self, &mut population, &hypergraph);
+                population = create_new_population(curr_mutation_rate, curr_crossover_rate, self.spins, self.elites, &mut population, &hypergraph);
             }
 
             if !running_bar.is_finished() {
@@ -399,7 +428,10 @@ mod genia_libs {
     }
 
     fn create_new_population(
-        config: &GeneticAlgorithm,
+        mutation_rate: u8,
+        crossover_rate: u8,
+        spins : usize,
+        elites : usize,
         population: &mut Vec<Individual>,
         hypergraph: &Hypergraph,
     ) -> Vec<Individual> {
@@ -408,11 +440,11 @@ mod genia_libs {
            from 2 parents selected by the roulette,
            performing crossover and mutation in parallel for each group of the individuals.
         */
-        let mut new_population = elitism(population, config.elites);
+        let mut new_population = elitism(population, elites);
 
         let probabilities = make_probabilities(population);
 
-        let children = (0..config.spins)
+        let children = (0..spins)
             .into_par_iter()
             .flat_map(|_| {
                 // Select two parents using the roulette wheel selection method
@@ -423,20 +455,29 @@ mod genia_libs {
                 let parent2 = &population[parent2_idx];
 
                 // Perform crossover to create two children from the selected parents
-                let crossover_result = parent1.crossover(parent2, config.crossover_rate);
-                //let crossover2_result = parent2.crossover(parent1, config.crossover_rate);
-                if let Err(e) = crossover_result {
-                    panic!("Error en la cruza: {}", e);
-                }
-                let (mut child1, mut child2) = crossover_result.unwrap();
-            
-                let mut child3 = child1.mutate(config.mutation_rate).unwrap_or_else(|e|
-                {
-                    panic!("Error en la mutación del hijo 1: {}", e)
-                });
-                let mut child4 = child2.mutate(config.mutation_rate).unwrap_or_else(|e| {
-                    panic!("Error en la mutación del hijo 2: {}", e)
-                });
+                let (mut child1, mut child2) = parent1
+                    .crossover(parent2, crossover_rate)
+                    .unwrap_or_else(|e| panic!("Error en la cruza: {}", e));
+
+                child1 = child1
+                    .mutate(mutation_rate)
+                    .unwrap_or_else(|e| panic!("Error en la mutación del hijo 1: {}", e));
+
+                child2 = child2
+                    .mutate(mutation_rate)
+                    .unwrap_or_else(|e| panic!("Error en la mutación del hijo 2: {}", e));
+
+                let (mut child3, mut child4) = parent2
+                    .crossover(parent1, crossover_rate)
+                    .unwrap_or_else(|e| panic!("Error en la cruza: {}", e));
+
+                child3 = child3
+                    .mutate(mutation_rate)
+                    .unwrap_or_else(|e| panic!("Error en la mutación del hijo 3: {}", e));
+
+                child4 = child4
+                    .mutate(mutation_rate)
+                    .unwrap_or_else(|e| panic!("Error en la mutación del hijo 4: {}", e));
 
                 // Calculate the fitness of the new individuals
                 child1.calculate_fitness(hypergraph);
@@ -538,7 +579,6 @@ mod tests {
         // Check all students are present
         let expected_students: HashSet<usize> = (0..30).collect();
         assert_eq!(all_students, expected_students);
-
     }
 
     #[test]

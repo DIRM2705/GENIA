@@ -46,7 +46,7 @@ def _synthetic_data_experiment():
     - Número de grupos a formar: 16
     """
     HYPERGRAPH_PATH = "data/test_data/hypergraph_test.hg"
-    ga = GeneticAlgorithm(30, 150000, 7, 2, 1, 0.7, None)
+    ga = GeneticAlgorithm(30, 300000, 7, 2, 0.25, 0.95, EXPERIMENT_FILE_PATH) # 30 poblacion, 300000 generaciones, 7 spins, 2 elitismo, 0.25 mutacion, 0.95 cruzamiento
     ga.show_config()
     for _ in range(10):
         print(f"Running experiment {_+1}/10")
@@ -55,116 +55,67 @@ def _synthetic_data_experiment():
 if __name__ == "__main__":
     RESULTS_FILE_PATH = "src_py/experiments/genetic_algorithm/results_12000.csv"
     TIMES_FILE_PATH = "src_py/experiments/genetic_algorithm/times_12000.csv"
-    _synthetic_data_experiment()
-    input("Press Enter to continue...")
+    #_synthetic_data_experiment()
+    #input("Press Enter to continue...")
     
-    exp_id = -1
-    with open(EXPERIMENT_FILE_PATH, "r") as infile, open(RESULTS_FILE_PATH, "w") as outfile, open(TIMES_FILE_PATH, "w") as timefile:
-        outfile.write("ID_experiment,Generation,Best_fitness,Convergence_ratio\n")
-        timefile.write("ID_experiment,Execution_seconds\n")
-        for line in infile.readlines():
-            strip_line = line.strip()
-            if not strip_line:
-                continue
-            
-            if strip_line.startswith("Pobl"):
-                exp_id += 1
-            elif strip_line.startswith("Sol"):
-                timefile.write(f"{exp_id},{strip_line.split(":")[-1].replace(" segundos", "").strip()}\n")
-            else:    
-                outfile.write(f"{exp_id},{strip_line}\n")
+    #exp_id = -1
+    #with open(EXPERIMENT_FILE_PATH, "r") as infile, open(RESULTS_FILE_PATH, "w") as outfile, open(TIMES_FILE_PATH, "w") as timefile:
+    #    outfile.write("ID_experiment,Generation,Best_fitness,Convergence_ratio\n")
+    #    timefile.write("ID_experiment,Execution_seconds\n")
+    #    for line in infile.readlines():
+    #        strip_line = line.strip()
+    #        if not strip_line:
+    #            continue
+    #        
+    #        if strip_line.startswith("Pobl"):
+    #            exp_id += 1
+    #        elif strip_line.startswith("Sol"):
+    #            timefile.write(f"{exp_id},{strip_line.split(":")[-1].replace(" segundos", "").strip()}\n")
+    #        else:    
+    #            outfile.write(f"{exp_id},{strip_line}\n")
     
     pl.Config.set_tbl_cols(-1)
     pl.Config.set_tbl_rows(-1)
     
     df = pl.read_csv(RESULTS_FILE_PATH).lazy()#Get data from all experiments
     df = df.with_columns(pl.col("Best_fitness").round(4))
+    time_df = pl.read_csv(TIMES_FILE_PATH).lazy()#Get execution times from all experiments
+    
     experiment_results = df.unique("ID_experiment", keep="last").sort("ID_experiment") #Final output of the GA
+    experiment_results = experiment_results.join(time_df, on="ID_experiment", how="inner")
+    
+    print("Experiment results: ")
+    print(experiment_results.collect())
+    
+    initial_fitness_df = df.unique("ID_experiment", keep="first").sort("ID_experiment").select(["ID_experiment", "Best_fitness"]).rename({"Best_fitness": "Initial_fitness"}) #Initial fitness of the GA
+    mean_initial_fitness = initial_fitness_df.select("Initial_fitness").mean().collect()
     
     # Calculate mean executed generations and best fitness
     means = experiment_results.select("Generation", "Best_fitness").mean().collect()
     print("Mean executed generations before convergence: ", means["Generation"][0])
-    print("Mean best fitness: ", means["Best_fitness"][0])
-    
+    print("Mean execution time: ", time_df.select("Execution_seconds").mean().collect()["Execution_seconds"][0], "seconds")
     #Analyze fitness values to find max and min fitness and the number of experiments that fall near those values
     fitness_analysis = experiment_results.select("ID_experiment", "Best_fitness")
     
+    fitness_increment_df =(fitness_analysis.join(initial_fitness_df, on="ID_experiment", how="inner")
+                           .with_columns(
+                               Absolute_increment = (pl.col("Best_fitness") - pl.col("Initial_fitness")).alias("Fitness_increment"),
+                               Relative_increment = (pl.col("Best_fitness") - pl.col("Initial_fitness")) / pl.col("Initial_fitness")
+                           )
+                           .sort("ID_experiment"))
+    
+    print("Fitness increment analysis:")
+    print(fitness_increment_df.collect())
+    
+    print("Mean best fitness: ", means["Best_fitness"][0])
+    print("Mean initial fitness: ", mean_initial_fitness["Initial_fitness"][0])
+    
     max_fitness_reached = fitness_analysis.select("Best_fitness").max().collect()["Best_fitness"][0]
-    experiments_with_max_fitness = fitness_analysis.filter(pl.col("Best_fitness").is_close(max_fitness_reached, abs_tol=1e-2)).collect()
-    print("Max fitness: ", max_fitness_reached)
-    print("Experiments near max fitness:")
-    print(experiments_with_max_fitness)
-    
+    print("Max final fitness: ", max_fitness_reached)
+        
     min_fitness_reached = fitness_analysis.select("Best_fitness").min().collect()["Best_fitness"][0]
-    experiments_with_min_fitness = fitness_analysis.filter(pl.col("Best_fitness").is_close(min_fitness_reached, abs_tol=1e-2)).collect()
-    print("Min fitness: ", min_fitness_reached)
-    print("Experiments near min fitness:")
-    print(experiments_with_min_fitness)
+    print("Min final fitness: ", min_fitness_reached)
     
-    # Analyze convergence behavior
-    autoconvergence_df = df.group_by("ID_experiment").agg([pl.col("Converged").any().alias("Autoconverged")])
-    convergence_df = (df
-                   .unique(subset=["ID_experiment", "Best_fitness"], keep="first", maintain_order=True)
-                   .group_by("ID_experiment")
-                   .agg([
-                       pl.col("Best_fitness").max().alias("Max Fitness"),
-                       pl.col("Generation").last().alias("Converge Generation"),
-                   ])
-                   .join(autoconvergence_df, on="ID_experiment", how="left")
-                   .sort("ID_experiment")
-    )
-    
-    autoconverged_df = convergence_df.filter((pl.col("Autoconverged") == True)).select(["ID_experiment", "Max Fitness", "Converge Generation"])
-    maxed_iter_df = convergence_df.filter((pl.col("Autoconverged") == False)).select(["ID_experiment", "Max Fitness", "Converge Generation"])
-    
-    convergence_df = convergence_df.collect()
-    
-    print("Convergence analysis:")
-    print(convergence_df)
-    
-    mean_convergence_generation = convergence_df.select("Converge Generation").mean()["Converge Generation"][0]
-    print("Mean convergence generation: ", mean_convergence_generation)
-    
-    mean_autoconverged_count = autoconverged_df.collect().height
-    mean_maxed_iter_count = maxed_iter_df.collect().height
-    
-    print("Number of experiments that autoconverged: ", mean_autoconverged_count)
-    print("Number of experiments that maxed iterations: ", mean_maxed_iter_count)
-    
-    autoconvergence_fitness_fun = autoconverged_df.select("Converge Generation", "Max Fitness").sort("Converge Generation").collect()
-    
-    autoconverged_df = autoconverged_df.with_columns(
-        min = pl.col("Max Fitness").min(),
-        q1 = pl.col("Max Fitness").quantile(0.25),
-        median = pl.col("Max Fitness").median(),
-        q3 = pl.col("Max Fitness").quantile(0.75),
-        max = pl.col("Max Fitness").max(),
-        mean = pl.col("Max Fitness").mean(),
-        std = pl.col("Max Fitness").std(),
-        iqr = (pl.col("Max Fitness").quantile(0.75) - pl.col("Max Fitness").quantile(0.25))
-    ).first().select(["min", "q1", "median", "q3", "max", "mean", "std", "iqr"])
-    
-    maxed_iter_df = maxed_iter_df.with_columns(
-        min = pl.col("Max Fitness").min(),
-        q1 = pl.col("Max Fitness").quantile(0.25),
-        median = pl.col("Max Fitness").median(),
-        q3 = pl.col("Max Fitness").quantile(0.75),
-        max = pl.col("Max Fitness").max(),
-        mean = pl.col("Max Fitness").mean(),
-        std = pl.col("Max Fitness").std(),
-        iqr = (pl.col("Max Fitness").quantile(0.75) - pl.col("Max Fitness").quantile(0.25))
-    ).first().select(["min", "q1", "median", "q3", "max", "mean", "std", "iqr"])
-
-    autoconverged_df = autoconverged_df.collect()
-    maxed_iter_df = maxed_iter_df.collect()
-    
-    print("Autoconverged statistics:")
-    print(autoconverged_df)
-    
-    print("Maxed iterations statistics:")
-    print(maxed_iter_df)
-
-    print("Autoconvergence convergence-fitness function:")
-    print(autoconvergence_fitness_fun)
-
-    #_synthetic_data_experiment()
+    mean_increment = fitness_increment_df.select("Relative_increment").mean().collect()["Relative_increment"][0]
+    print("Mean relative fitness increment: ", mean_increment * 100, "%")
+                                                
