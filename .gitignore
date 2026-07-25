@@ -3,5 +3,7 @@ target/
 __pycache__/
 .pytest_cache/
 src_py/experiments/curriculum_classifier
+src_py/experiments/genetic_algorithm/*.txt
+src_py/experiments/genetic_algorithm/*.csv
 .env
 *.png
