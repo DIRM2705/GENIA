@@ -6,6 +6,10 @@ mod utils;
 mod genia_libs {
     use crate::data::hypergraph::Hypergraph;
     use crate::ml::genetics::Individual;
+    use crate::utils::logging::log;
+    use console::{Term, style};
+    use core::panic;
+    use indicatif::{ProgressBar, ProgressStyle};
     use polars::{frame::DataFrame, prelude::*};
     use pyo3::PyErr;
     use pyo3::exceptions::PyTypeError;
@@ -13,11 +17,7 @@ mod genia_libs {
     use pyo3_polars::PyDataFrame;
     use rand::distr::{Distribution, Uniform};
     use rayon::prelude::*;
-    use core::panic;
-    use std::{format, path::Path, println};
-    use crate::utils::logging::log;
-    use indicatif::{ProgressBar, ProgressStyle};
-    use console::{Term, style};
+    use std::path::Path;
 
     #[pyfunction]
     fn hypergraph_from_dataframe(py_df: PyDataFrame, output_file: String) -> PyResult<()> {
@@ -103,27 +103,41 @@ mod genia_libs {
             generations: usize,
             spins: usize,
             elites: usize,
-            mutation_rate: u8,
-            crossover_rate: u8,
+            mutation_rate: f32,
+            crossover_rate: f32,
             log_file_path: Option<String>,
         ) -> Self {
+            if mutation_rate < 0.1 || mutation_rate > 1.0 {
+                panic!("La tasa de mutación debe estar entre 0.1 y 1");
+            }
+
+            if crossover_rate < 0.1 || crossover_rate > 1.0 {
+                panic!("La tasa de cruce debe estar entre 0.1 y 1");
+            }
             return GeneticAlgorithm {
                 population_size,
                 spins,
                 elites,
-                generations : generations + 1, // Sum 1 to include the last generation in the loop
-                mutation_rate,
-                crossover_rate,
-                log_file_path
+                generations: generations + 1, // Sum 1 to include the last generation in the loop
+                mutation_rate : (mutation_rate * 100.0) as u8,
+                crossover_rate : (crossover_rate * 100.0) as u8,
+                log_file_path,
             };
         }
 
         pub fn run(&self, num_groups: usize, input_file: String) -> Vec<Vec<usize>> {
+            const CONVERGENCE_THRESHOLD: f64 = 6.6;
+            const MAX_NO_CHANGE_GENERATIONS: usize = 1000;
+            const MAX_LIFES: u8 = 3;
+
             let hg_bar = ProgressBar::new_spinner();
             hg_bar.set_message("[1] Cargando el hipergrafo de características...");
             hg_bar.enable_steady_tick(std::time::Duration::from_millis(100));
             let hypergraph = load_hypergraph_from_file(&input_file);
-            hg_bar.println(format!("{} Hipergrafo cargado exitosamente.", style("[INFO]").bold().blue()));
+            hg_bar.println(format!(
+                "{} Hipergrafo cargado exitosamente.",
+                style("[INFO]").bold().blue()
+            ));
             hg_bar.finish_and_clear();
 
             // Create the initial population of individuals in parallel
@@ -132,86 +146,201 @@ mod genia_libs {
             pop_bar.enable_steady_tick(std::time::Duration::from_millis(100));
             let mut population =
                 create_initial_population(self.population_size, num_groups, &hypergraph);
-            pop_bar.println(format!("{} Población inicial creada exitosamente.", style("[INFO]").bold().blue()));
+            pop_bar.println(format!(
+                "{} Población inicial creada exitosamente.",
+                style("[INFO]").bold().blue()
+            ));
             pop_bar.finish_and_clear();
 
-            log(format!("Población inicial creada con {} individuos", self.population_size), &self.log_file_path, false);
+            log(
+                format!(
+                    "Población inicial creada con {} individuos",
+                    self.population_size
+                ),
+                &self.log_file_path,
+                false,
+            );
 
             let running_bar = ProgressBar::new((self.generations - 1) as u64);
             running_bar.set_style(
-                ProgressStyle::with_template(&(format!("{}: ", style("Explorando").blue()) + " [{wide_bar:.white}] Generación: {pos}/{len} | Mejor fitness: {msg} | Tiempo transcurrido: {elapsed_precise}"))
+                ProgressStyle::with_template(&(format!("{}: ", style("Explorando").blue()) + " [{wide_bar:.white}] Generación: {pos}/{len} | {msg} | Tiempo transcurrido: {elapsed_precise}"))
                 .unwrap_or(ProgressStyle::default_bar())
                 .progress_chars("##-")
             );
-            running_bar.println(format!("{} Ejecutando algoritmo genético con {} individuos y {} generaciones", style("[INFO]").bold().blue(), self.population_size, self.generations-1));
-            let mut best_fitness = 0.0;
-            let mut change_counter = 1000; // Counter to halt if the best fitness doesn't change for 1000 generations
+            running_bar.println(format!(
+                "[3] Ejecutando algoritmo genético con {} individuos y {} generaciones",
+                self.population_size,
+                self.generations - 1
+            ));
+
+            let mut best_fitness = f64::EPSILON; // Initialize best fitness to the minimum possible value
+            let mut change_counter = 1; // Counter to halt if the best fitness doesn't change for 1000 generations
+            let mut used_lifes = 0; // Lifes to re-initialize the population if it gets stuck
+            let mut last_incident_gen = 0; // Last generation where population was re-initialized due to stagnation
             for generation in 0..self.generations {
-                //Ordena la población por fitness de mayor a menor
-                population.sort_by(|a, b| b.get_fitness().partial_cmp(&a.get_fitness()).unwrap());
-
-                
-                if population[0].get_fitness() > best_fitness {
-                    best_fitness = population[0].get_fitness();
-                    change_counter = 1000;
-                } else {
-                    change_counter -= 1;
-                }
-
-                running_bar.set_message(format!("{:.4}", best_fitness));
                 running_bar.inc(1);
 
-                if best_fitness >= 6.6 || change_counter <= 0 {
-                    log(format!("{},{},true", generation, population[0].get_fitness()), &self.log_file_path, false);
+                let mean_fitness: f64 = population
+                    .par_iter()
+                    .map(|ind| ind.get_fitness())
+                    .sum::<f64>()
+                    / population.len() as f64;
+                let ratio = mean_fitness / best_fitness;
+
+                running_bar.set_message(format!(
+                    "Mejor fitness: {:.4} | Tasa de convergencia: {:.2}",
+                    best_fitness, ratio
+                ));
+
+                if population[0].get_fitness() > best_fitness {
+                    best_fitness = population[0].get_fitness();
+                    change_counter = 1; // Reset the counter if the best fitness improves
+                } else {
+                    change_counter += 1; // Increment the counter if the best fitness doesn't improve
+                }
+
+                if ratio >= 0.95 && used_lifes < MAX_LIFES && change_counter > 500 {
+                    used_lifes += 1;
+                    change_counter = 1; // Reset the counter after re-initializing the population
+                    last_incident_gen = generation; // Update the last incident generation
+                    running_bar.println(format!(" {} La población se está estancando, re-inicializando | Intento de salvación {}", 
+                        style("[WARNING]").bold().yellow(), used_lifes));
+
+                    let begining_purge_idx = ((1f64 - 0.3 * (used_lifes as f64))* population.len() as f64).floor() as usize;
+                    for i in begining_purge_idx..population.len() {
+                        population[i] = Individual::new(num_groups, &hypergraph);
+                    }
+                } else if used_lifes > 0 && last_incident_gen + 750 < generation && ratio < 0.95
+                {
+                    running_bar.println(format!(
+                        " {} Ha aumentado la varianza de la población",
+                        style("[INFO]").bold().blue()
+                    ));
+                    used_lifes = 0; // Reset lifes if the population variance improves after re-initialization
+                }
+                else if used_lifes == MAX_LIFES && change_counter > MAX_NO_CHANGE_GENERATIONS {
+                    running_bar.println(format!(
+                        " {} La población se ha estancado, terminando la ejecución",
+                        style("[FORCED]").bold().magenta()
+                    ));
                     running_bar.abandon();
                     break;
                 }
-                else {
-                    log(format!("{},{},false", generation, population[0].get_fitness()), &self.log_file_path, false);
+
+                log(
+                    format!("{},{},{}", generation, population[0].get_fitness(), ratio),
+                    &self.log_file_path,
+                    false,
+                );
+
+                if best_fitness >= CONVERGENCE_THRESHOLD {
+                    running_bar.println(format!(
+                    " {} El algoritmo genético alcanzó un valor de convergencia en {} segundos",
+                    style("[ÉXITO]").bold().green(),
+                    running_bar.elapsed().as_secs_f64()
+                ));
+                    running_bar.abandon();
+                    break;
                 }
-                change_counter -= 1;
 
                 // In parallel, create a new population by selecting parents, performing crossover and mutation
-                population = create_new_population(self, &population, &hypergraph);                
+                population = create_new_population(self, &mut population, &hypergraph);
             }
 
             if !running_bar.is_finished() {
-                running_bar.println(format!(" {} El algoritmo genético alcanzó su máximo de generaciones", 
-                    style("[EXITO]").bold().green()));
+                running_bar.println(format!(
+                    " {} El algoritmo genético alcanzó su máximo de generaciones",
+                    style("[ÉXITO]").bold().green()
+                ));
                 running_bar.finish();
-            } else {
-                running_bar.println(format!(" {} El algoritmo genético alcanzó un valor de convergencia", 
-                    style("[EXITO]").bold().green()));
-
             }
+
+            log(
+                format!(
+                    "Solución encontrada en: {} segundos",
+                    running_bar.elapsed().as_secs_f64()
+                ),
+                &self.log_file_path,
+                false,
+            );
 
             // Return the solution of the best individual in the final population
             let best_individual = population
-                .iter()
+                .par_iter()
                 .max_by(|a, b| a.get_fitness().partial_cmp(&b.get_fitness()).unwrap())
                 .unwrap();
             return best_individual.get_solution();
         }
-    
+
         pub fn show_config(&self) {
             let (_, width) = Term::stdout().size_checked().unwrap_or((0, 80));
             let title = " Configuración del Algoritmo Genético ";
             let title_len = title.len();
             let border = "=".repeat((width as usize - title_len) / 2);
 
-            println!("{}{}{}", style(&border).green(), style(title).bold().green(), style(&border).green());
-            println!("{}", style("[Configuración de la población]").bold().magenta());
-            println!("  {} {}: {}", style("+").green(), style("Tamaño de la población inicial").bold(), self.population_size-1);
-            println!("  {} {}: {}", style("+").green(), style("Número de generaciones").bold(), self.generations);
-            println!("  {} {}: {}", style("+").green(), style("Número de élites").bold(), self.elites);
-            println!("{}", style("[Configuración de la evolución]").bold().magenta());
-            println!("  {} {}: {}", style("+").green(), style("Número de spins").bold(), self.spins);
-            println!("  {} {}: {}%", style("+").green(), style("Tasa de cruce").bold(), self.crossover_rate);
-            println!("  {} {}: {}%", style("+").green(), style("Tasa de mutación").bold(), self.mutation_rate);
+            println!(
+                "{}{}{}",
+                style(&border).green(),
+                style(title).bold().green(),
+                style(&border).green()
+            );
+            println!(
+                "{}",
+                style("[Configuración de la población]").bold().magenta()
+            );
+            println!(
+                "  {} {}: {}",
+                style("+").green(),
+                style("Tamaño de la población inicial").bold(),
+                self.population_size
+            );
+            println!(
+                "  {} {}: {}",
+                style("+").green(),
+                style("Número de generaciones").bold(),
+                self.generations - 1
+            );
+            println!(
+                "  {} {}: {}",
+                style("+").green(),
+                style("Número de élites").bold(),
+                self.elites
+            );
+            println!(
+                "{}",
+                style("[Configuración de la evolución]").bold().magenta()
+            );
+            println!(
+                "  {} {}: {}",
+                style("+").green(),
+                style("Número de spins").bold(),
+                self.spins
+            );
+            println!(
+                "  {} {}: {}%",
+                style("+").green(),
+                style("Tasa de cruce").bold(),
+                self.crossover_rate
+            );
+            println!(
+                "  {} {}: {}%",
+                style("+").green(),
+                style("Tasa de mutación").bold(),
+                self.mutation_rate
+            );
             println!("{}", style("[Configuración de logging]").bold().magenta());
             match &self.log_file_path {
-                Some(path) => println!(" {} {}: {}", style("+").green(), style("Ruta del archivo de log").bold(), path),
-                None => println!("  {} {}", style("+").green(), style("Logging desactivado").bold().dim()),
+                Some(path) => println!(
+                    " {} {}: {}",
+                    style("+").green(),
+                    style("Ruta del archivo de log").bold(),
+                    path
+                ),
+                None => println!(
+                    "  {} {}",
+                    style("+").green(),
+                    style("Logging desactivado").bold().dim()
+                ),
             }
             println!("{}\n", style("=".repeat(width as usize)).green());
         }
@@ -236,7 +365,7 @@ mod genia_libs {
     }
 
     fn make_probabilities(population: &Vec<Individual>) -> Vec<f64> {
-        let total_fitness: f64 = population.iter().map(|ind| ind.get_fitness()).sum();
+        let total_fitness: f64 = population.par_iter().map(|ind| ind.get_fitness()).sum();
 
         // Calculate the cumulative probabilities for each individual based on their fitness
         let mut probabilities = vec![population[0].get_fitness() / total_fitness];
@@ -266,15 +395,12 @@ mod genia_libs {
     }
 
     fn elitism(population: &Vec<Individual>, num_elites: usize) -> Vec<Individual> {
-        return population.iter()
-            .take(num_elites)
-            .cloned()
-            .collect();
+        return population.iter().take(num_elites).cloned().collect();
     }
 
     fn create_new_population(
         config: &GeneticAlgorithm,
-        population: &Vec<Individual>,
+        population: &mut Vec<Individual>,
         hypergraph: &Hypergraph,
     ) -> Vec<Individual> {
         /*
@@ -282,6 +408,7 @@ mod genia_libs {
            from 2 parents selected by the roulette,
            performing crossover and mutation in parallel for each group of the individuals.
         */
+        let mut new_population = elitism(population, config.elites);
 
         let probabilities = make_probabilities(population);
 
@@ -297,14 +424,25 @@ mod genia_libs {
 
                 // Perform crossover to create two children from the selected parents
                 let crossover_result = parent1.crossover(parent2, config.crossover_rate);
+                //let crossover2_result = parent2.crossover(parent1, config.crossover_rate);
                 if let Err(e) = crossover_result {
                     panic!("Error en la cruza: {}", e);
                 }
-
                 let (mut child1, mut child2) = crossover_result.unwrap();
+            
+                let mut child3 = child1.mutate(config.mutation_rate).unwrap_or_else(|e|
+                {
+                    panic!("Error en la mutación del hijo 1: {}", e)
+                });
+                let mut child4 = child2.mutate(config.mutation_rate).unwrap_or_else(|e| {
+                    panic!("Error en la mutación del hijo 2: {}", e)
+                });
+
                 // Calculate the fitness of the new individuals
                 child1.calculate_fitness(hypergraph);
                 child2.calculate_fitness(hypergraph);
+                child3.calculate_fitness(hypergraph);
+                child4.calculate_fitness(hypergraph);
 
                 if cfg!(debug_assertions) {
                     println!(
@@ -317,29 +455,6 @@ mod genia_libs {
                         child2.get_solution(),
                         child2.get_fitness()
                     );
-                }
-
-                // Mutate the new individuals to create two more children
-                let mutation_result = child1.mutate(config.mutation_rate);
-
-                if let Err(e) = mutation_result {
-                    panic!("Error en la mutación: {}", e);
-                }
-
-                let mut child3 = mutation_result.unwrap();
-
-                let mutation_result = child2.mutate(config.mutation_rate);
-
-                if let Err(e) = mutation_result {
-                    panic!("Error en la mutación: {}", e);
-                }
-
-                let mut child4 = mutation_result.unwrap();
-
-                child3.calculate_fitness(hypergraph);
-                child4.calculate_fitness(hypergraph);
-
-                if cfg!(debug_assertions) {
                     println!(
                         "Child3 solution: {:?}, fitness: {}",
                         child3.get_solution(),
@@ -357,8 +472,9 @@ mod genia_libs {
             .collect::<Vec<Individual>>();
 
         // New population is formed by the elites and the children generated in parallel
-        let mut new_population = elitism(population, config.elites);
         new_population.extend(children);
+        //Ordena la población por fitness de mayor a menor
+        new_population.par_sort_by(|a, b| b.get_fitness().partial_cmp(&a.get_fitness()).unwrap());
         return new_population;
     }
 
@@ -367,44 +483,23 @@ mod genia_libs {
         num_groups: usize,
         hypergraph: &Hypergraph,
     ) -> Vec<Individual> {
-        return (0..population_size)
+        let mut population = (0..population_size)
             .map(|_| Individual::new(num_groups, hypergraph))
             .collect::<Vec<Individual>>();
+        population.par_sort_by(|a, b| b.get_fitness().partial_cmp(&a.get_fitness()).unwrap());
+        return population;
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashSet;
-    use crate::utils::bitmap::BitmapLen;
     use crate::data::hypergraph::Hypergraph;
     use crate::ml::genetics::Individual;
+    use std::collections::HashSet;
+    use std::{assert_ne, println};
 
     #[test]
-    pub fn test_bitmap_index_out_of_bounds() {
-        let mut bitmap = BitmapLen::new(16);
-        assert!(bitmap.get_chunk_mut(3).is_err());
-        assert!(bitmap.set_bit(19).is_err());
-    }
-
-    #[test]
-    pub fn test_bitmap_get_chunk_mut() {
-        let mut bitmap = BitmapLen::new(16);
-        assert!(bitmap.get_chunk_mut(0).is_ok());
-        assert!(bitmap.get_chunk_mut(1).is_ok());
-    }
-
-    #[test]
-    pub fn test_bitmap_set_and_get_bits() {
-        let mut bitmap = BitmapLen::new(16);
-        assert!(bitmap.set_bit(3).is_ok());
-        assert!(bitmap.set_bit(7).is_ok());
-        assert!(bitmap.set_bit(15).is_ok());
-    }
-
-    #[test]
-    pub fn test_hypergraph_no_students()
-    {
+    pub fn test_hypergraph_no_students() {
         let mut hg = Hypergraph::new(0);
         assert_eq!(hg.get_student_count(), 0);
 
@@ -413,8 +508,7 @@ mod tests {
     }
 
     #[test]
-    pub fn test_hypergraph()
-    {
+    pub fn test_hypergraph() {
         let mut hg = Hypergraph::new(10);
 
         assert!(hg.add_student_to_hyperedge("NoPrefix", 5).is_err());
@@ -432,23 +526,31 @@ mod tests {
         // Check duplicate students
         let mut all_students = HashSet::new();
         for group in solution {
-            for student  in group {
-                assert!(all_students.insert(student), "Duplicate student found: {}", student);
+            for student in group {
+                assert!(
+                    all_students.insert(student),
+                    "Duplicate student found: {}",
+                    student
+                );
             }
         }
+
+        // Check all students are present
+        let expected_students: HashSet<usize> = (0..30).collect();
+        assert_eq!(all_students, expected_students);
+
     }
 
     #[test]
-    pub fn test_crossover()
-    {
-        let hypergraph = Hypergraph::new(10);
+    pub fn test_crossover() {
+        let hypergraph = Hypergraph::new(30);
         let parent1 = Individual::new(3, &hypergraph);
         let parent2 = Individual::new(3, &hypergraph);
 
         parent1.get_solution();
         parent2.get_solution();
 
-        let crossover_result = parent1.crossover(&parent2, 50);
+        let crossover_result = parent1.crossover(&parent2, 100);
         let (child1, child2) = match crossover_result {
             Ok((child1, child2)) => (child1, child2),
             Err(e) => {
@@ -461,37 +563,67 @@ mod tests {
         assert_eq!(child1.get_solution().len(), 3);
         assert_eq!(child2.get_solution().len(), 3);
 
+        // Check that the children are different from the parents
+        assert_ne!(child1.get_solution(), parent1.get_solution());
+        assert_ne!(child2.get_solution(), parent2.get_solution());
+
         // Check that all students are only in one group for child 1
-        let mut unseen_students = HashSet::<usize>::from_iter(0..10);
+        let mut unseen_students = HashSet::<usize>::from_iter(0..30);
         for child1_group in child1.get_solution() {
             let mut seen_students = HashSet::<usize>::new();
             for student in child1_group {
-                assert!(seen_students.insert(student), "Duplicate student found in child 1: {}", student);
-                assert!(unseen_students.remove(&student), "Student {} is in multiple groups in child 1", student);
+                assert!(
+                    seen_students.insert(student),
+                    "Duplicate student found in child 1: {}",
+                    student
+                );
+                assert!(
+                    unseen_students.remove(&student),
+                    "Student {} is in multiple groups in child 1",
+                    student
+                );
             }
         }
 
-        assert!(unseen_students.is_empty(), "Some students are not assigned to any group in child 1: {:?}", unseen_students);
+        assert!(
+            unseen_students.is_empty(),
+            "Some students are not assigned to any group in child 1: {:?}",
+            unseen_students
+        );
 
-        unseen_students = HashSet::<usize>::from_iter(0..10);
+        unseen_students = HashSet::<usize>::from_iter(0..30);
         // Check that all students are only in one group for child 2
         for child2_group in child2.get_solution() {
             let mut seen_students = HashSet::<usize>::new();
             for student in child2_group {
-                assert!(seen_students.insert(student), "Duplicate student found in child 2: {}", student);
-                assert!(unseen_students.remove(&student), "Student {} is in multiple groups in child 2", student);
+                assert!(
+                    seen_students.insert(student),
+                    "Duplicate student found in child 2: {}",
+                    student
+                );
+                assert!(
+                    unseen_students.remove(&student),
+                    "Student {} is in multiple groups in child 2",
+                    student
+                );
             }
         }
 
-        assert!(unseen_students.is_empty(), "Some students are not assigned to any group in child 2: {:?}", unseen_students);
+        assert!(
+            unseen_students.is_empty(),
+            "Some students are not assigned to any group in child 2: {:?}",
+            unseen_students
+        );
     }
 
     #[test]
     pub fn test_mutation() {
-        let hypergraph = Hypergraph::new(10);
+        let hypergraph = Hypergraph::new(30);
         let individual = Individual::new(3, &hypergraph);
 
-        let mutation_result = individual.mutate(70);
+        let original_solution = individual.get_solution().clone();
+
+        let mutation_result = individual.mutate(100);
         let individual = match mutation_result {
             Ok(individual) => individual,
             Err(e) => {
@@ -502,19 +634,41 @@ mod tests {
 
         let mutated_solution = individual.get_solution();
 
+        println!("Original solution: {:?}", original_solution);
+        println!("Mutated solution: {:?}", mutated_solution);
+
+        // Check that the mutated solution is different from the original solution
+        let is_different = original_solution != mutated_solution;
+        assert!(
+            is_different,
+            "The mutated solution is the same as the original solution"
+        );
+
         // Check that the mutated solution has the correct number of groups
         assert_eq!(mutated_solution.len(), 3);
 
         // Check that all students are only in one group
-        let mut unseen_students = HashSet::<usize>::from_iter(0..10);
+        let mut unseen_students = HashSet::<usize>::from_iter(0..30);
         for group in mutated_solution {
             let mut seen_students = HashSet::<usize>::new();
             for student in group {
-                assert!(seen_students.insert(student), "Duplicate student found after mutation: {}", student);
-                assert!(unseen_students.remove(&student), "Student {} is in multiple groups after mutation", student);
+                assert!(
+                    seen_students.insert(student),
+                    "Duplicate student found after mutation: {}",
+                    student
+                );
+                assert!(
+                    unseen_students.remove(&student),
+                    "Student {} is in multiple groups after mutation",
+                    student
+                );
             }
         }
 
-        assert!(unseen_students.is_empty(), "Some students are not assigned to any group after mutation: {:?}", unseen_students);
+        assert!(
+            unseen_students.is_empty(),
+            "Some students are not assigned to any group after mutation: {:?}",
+            unseen_students
+        );
     }
 }

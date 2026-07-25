@@ -129,32 +129,16 @@ impl Individual {
          * This function is parallelized for each group.
          */
 
-        if crossover_rate < 1 || crossover_rate > 100 {
-            return Err(GeneticAlgorithmError::InvalidCrossoverRate);
-        }
-
-        let generator = Uniform::new_inclusive(0, 100)?;
-
-        /*
-         * The crossover determines whether to perform crossover or not based on the crossover rate.
-         * If the random value is less than the crossover rate,
-         * the crossover is performed, otherwise the parents are returned as children.
-         */
-        
-        if generator.sample(&mut rng()) >= crossover_rate {
-            if cfg!(debug_assertions) {
-                println!("Crossover not performed, returning parents as children");
-            }
+        let uniform_rng = Uniform::new_inclusive(1, 100)?;
+        if uniform_rng.sample(&mut rng()) > crossover_rate {
+            // No crossover, return clones of the parents
             return Ok((self.clone(), other.clone()));
         }
 
         let student_count = self.solution.len();
         //Generate two crossover points
-        let limit_generator = Uniform::new(1, student_count / 2)?;
-        // First crossover point must be in the first half of the solution
-        let cx_point1 = limit_generator.sample(&mut rng());
-        // Second crossover point must be after the first crossover point
-        let cx_point2 = limit_generator.sample(&mut rng()) + cx_point1;
+        let cx_point1 = Uniform::new(0, student_count - 1)?.sample(&mut rng());
+        let cx_point2 = Uniform::new(cx_point1 + 1, student_count)?.sample(&mut rng());
 
         // Init the offspring solutions
         let mut offspring1 = Individual {
@@ -176,10 +160,7 @@ impl Individual {
         };
 
         if cfg!(debug_assertions) {
-            println!(
-                "Crossover points: {} - {}",
-                cx_point1, cx_point2
-            );
+            println!("Crossover points: {} - {}", cx_point1, cx_point2);
 
             println!("Parent 1: {:?}", self.solution);
             println!("Parent 2: {:?}", other.solution);
@@ -205,7 +186,7 @@ impl Individual {
                         offspring1.solution[i] = student_idx;
                         continue;
                     }
-                    offspring1.partial_map(student_idx, i, self, cx_point1, cx_point2)?;
+                    offspring1.partial_map(student_idx, i, self, cx_point1, cx_point2);
                 }
 
                 for i in cx_point2..student_count {
@@ -214,13 +195,11 @@ impl Individual {
                         offspring1.solution[i] = student_idx;
                         continue;
                     }
-                    offspring1.partial_map(student_idx, i, self, cx_point1, cx_point2)?;
+                    offspring1.partial_map(student_idx, i, self, cx_point1, cx_point2);
                 }
 
                 if cfg!(debug_assertions) {
-                    println!(
-                        "Offspring 1 solution: {:?}", offspring1.solution
-                    );
+                    println!("Offspring 1 solution: {:?}", offspring1.solution);
                 }
 
                 return Ok(());
@@ -232,7 +211,7 @@ impl Individual {
                         offspring2.solution[i] = student_idx;
                         continue;
                     }
-                    offspring2.partial_map(student_idx, i, other, cx_point1, cx_point2)?;
+                    offspring2.partial_map(student_idx, i, other, cx_point1, cx_point2);
                 }
 
                 for i in cx_point2..student_count {
@@ -241,13 +220,11 @@ impl Individual {
                         offspring2.solution[i] = student_idx;
                         continue;
                     }
-                    offspring2.partial_map(student_idx, i, other, cx_point1, cx_point2)?;
+                    offspring2.partial_map(student_idx, i, other, cx_point1, cx_point2);
                 }
 
                 if cfg!(debug_assertions) {
-                    println!(
-                        "Offspring 2 solution: {:?}", offspring2.solution
-                    );
+                    println!("Offspring 2 solution: {:?}", offspring2.solution);
                 }
 
                 return Ok(());
@@ -263,12 +240,12 @@ impl Individual {
 
     fn partial_map(
         &mut self,
-        mut student_idx : usize,
+        mut student_idx: usize,
         position: usize,
         other: &Individual,
         cx_point1: usize,
         cx_point2: usize,
-    ) -> Result<(), GeneticAlgorithmError> {
+    )  {
         // While the student is in offspring
         while let Some(mapped_idx) = self.get_index_of_student(student_idx, cx_point1, cx_point2) {
             student_idx = other.solution[mapped_idx];
@@ -276,7 +253,6 @@ impl Individual {
 
         //Found a student that is not in offspring, set it
         self.solution[position] = student_idx;
-        return Ok(());
     }
 
     pub fn mutate(&self, mutation_rate: u8) -> Result<Individual, GeneticAlgorithmError> {
@@ -285,28 +261,38 @@ impl Individual {
          * This function is parallelized for each group.
          */
 
-        if mutation_rate < 1 || mutation_rate > 100 {
-            return Err(GeneticAlgorithmError::InvalidMutationRate);
-        }
-
-        let uniform_rng = Uniform::new_inclusive(0, 100)?;
+        let uniform_rng = Uniform::new_inclusive(1, 100)?;
 
         // Create a new individual as a clone of the current one, to apply the mutations
         let mut new_individual = self.clone();
 
-        for i in 0..self.min_students_per_group {
-            // If the gene should be mutated
-            if uniform_rng.sample(&mut rng()) < mutation_rate {
-                // Swap the student at i position with the student at the next group
-                let mut student_idx = new_individual.solution[i];
-                for group_idx in 0..self.group_amount - 1 {
-                    let idx = new_individual.base_indices[group_idx] + i;
-                    let actual_student_idx = new_individual.solution[idx];
-                    new_individual.solution[idx] = student_idx;
-                    student_idx = actual_student_idx;
-                }
-                new_individual.solution[i] = student_idx;
+        if uniform_rng.sample(&mut rng()) > mutation_rate {
+            if cfg!(debug_assertions) {
+                println!(
+                    "Mutation not applied due to mutation rate: {}",
+                    mutation_rate
+                );
             }
+            return Ok(new_individual);
+        }
+
+        let student_count = self.solution.len();
+
+        let mutation_point1 = Uniform::new(0, student_count - 1)?.sample(&mut rng());
+        let mutation_point2 = Uniform::new(mutation_point1 + 1, student_count)?.sample(&mut rng());
+
+        let mut mutation_slice = Vec::from(&self.solution[mutation_point1..mutation_point2]);
+        mutation_slice.shuffle(&mut rng());
+
+        if cfg!(debug_assertions) {
+            println!(
+                "Mutation slice: {:?} (from points {} to {})",
+                mutation_slice, mutation_point1, mutation_point2
+            );
+        }
+
+        for i in mutation_point1..mutation_point2 {
+            new_individual.solution[i] = mutation_slice[i - mutation_point1];
         }
 
         return Ok(new_individual);
@@ -325,8 +311,8 @@ impl Individual {
          */
 
         return (cx_point1..cx_point2)
-            .into_par_iter()
-            .find_any(|&i| self.solution[i] == student_idx);
+            .into_iter()
+            .find(|&i| self.solution[i] == student_idx);
     }
 }
 
@@ -339,8 +325,6 @@ fn get_random_permutation(n: usize) -> Vec<usize> {
 
 #[derive(Debug)]
 pub enum GeneticAlgorithmError {
-    InvalidCrossoverRate,
-    InvalidMutationRate,
     RNGError(rand::distr::uniform::Error),
     BitmapError(crate::utils::bitmap::BitMapError),
 }
@@ -348,9 +332,9 @@ pub enum GeneticAlgorithmError {
 impl std::fmt::Display for GeneticAlgorithmError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         return match self {
-            GeneticAlgorithmError::InvalidCrossoverRate => write!(f, "La tasa de crossover debe estar entre 1 y 100"),
-            GeneticAlgorithmError::InvalidMutationRate => write!(f, "La tasa de mutación debe estar entre 1 y 100"),
-            GeneticAlgorithmError::RNGError(e) => write!(f, "Error en el generador de números aleatorios: {}", e),
+            GeneticAlgorithmError::RNGError(e) => {
+                return write!(f, "Error en el generador de números aleatorios: {}", e)
+            }
             GeneticAlgorithmError::BitmapError(e) => write!(f, "Error en el bitmap: {}", e),
         };
     }

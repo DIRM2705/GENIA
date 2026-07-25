@@ -27,6 +27,8 @@ Configuración del algoritmo genético (Parámetros a ajustar):
 - Mutación: Probabilidad de que una solución sufra cambios aleatorios para introducir diversidad.
 - Cruzamiento: Porcentaje aproximado de alumnos que se intercambiarán entre dos soluciones
 """
+
+EXPERIMENT_FILE_PATH = "src_py/experiments/genetic_algorithm/experiment_12000.txt"
     
 def _synthetic_data_experiment():
     """_summary_
@@ -44,21 +46,22 @@ def _synthetic_data_experiment():
     - Número de grupos a formar: 16
     """
     HYPERGRAPH_PATH = "data/test_data/hypergraph_test.hg"
-    ga = GeneticAlgorithm(8, 50000, 2, 2, 90, 70, "src_py/experiments/genetic_algorithm/experiment_12000.txt")
+    ga = GeneticAlgorithm(30, 150000, 7, 2, 1, 0.7, None)
     ga.show_config()
-    for _ in range(100):
-        print(f"Running experiment {_+1}/100")
+    for _ in range(10):
+        print(f"Running experiment {_+1}/10")
         ga.run(16, HYPERGRAPH_PATH) # 16 grupos a formar
         
 if __name__ == "__main__":
-    EXPERIMENT_FILE_PATH = "src_py/experiments/genetic_algorithm/experiment_12000.txt"
-    RESULTS_FILE_PATH = "src_py/experiments/genetic_algorithm/results_12000.txt"
+    RESULTS_FILE_PATH = "src_py/experiments/genetic_algorithm/results_12000.csv"
+    TIMES_FILE_PATH = "src_py/experiments/genetic_algorithm/times_12000.csv"
     _synthetic_data_experiment()
     input("Press Enter to continue...")
     
     exp_id = -1
-    with open(EXPERIMENT_FILE_PATH, "r") as infile, open(RESULTS_FILE_PATH, "w") as outfile:
-        outfile.write("ID_experiment,Generation,Best_fitness,Converged\n")
+    with open(EXPERIMENT_FILE_PATH, "r") as infile, open(RESULTS_FILE_PATH, "w") as outfile, open(TIMES_FILE_PATH, "w") as timefile:
+        outfile.write("ID_experiment,Generation,Best_fitness,Convergence_ratio\n")
+        timefile.write("ID_experiment,Execution_seconds\n")
         for line in infile.readlines():
             strip_line = line.strip()
             if not strip_line:
@@ -66,13 +69,13 @@ if __name__ == "__main__":
             
             if strip_line.startswith("Pobl"):
                 exp_id += 1
-                continue
-                    
-            outfile.write(f"{exp_id},{strip_line}\n")
+            elif strip_line.startswith("Sol"):
+                timefile.write(f"{exp_id},{strip_line.split(":")[-1].replace(" segundos", "").strip()}\n")
+            else:    
+                outfile.write(f"{exp_id},{strip_line}\n")
     
     pl.Config.set_tbl_cols(-1)
     pl.Config.set_tbl_rows(-1)
-    
     
     df = pl.read_csv(RESULTS_FILE_PATH).lazy()#Get data from all experiments
     df = df.with_columns(pl.col("Best_fitness").round(4))
