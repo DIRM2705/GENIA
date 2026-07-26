@@ -4,7 +4,7 @@ from utils.dataframe_utils import verify_columns
 from consts import REQUIRED_INPUT_COLUMNS, REQUIRED_OUTPUT_COLUMNS
 from genia_libs import hypergraph_from_dataframe
 
-def lazy_from_csv(file_path : Path) -> pl.LazyFrame:
+def lazy_from_csv(file_path : Path | str) -> pl.LazyFrame:
     """
     Dado un archivo en formato csv, crea un dataframe de polars creando las columnas necesarias
     
@@ -44,6 +44,9 @@ def lazy_from_csv(file_path : Path) -> pl.LazyFrame:
         DataFrame: Un dataframe de polars con el formato requerido
     """
     
+    if isinstance(file_path, str):
+        file_path = Path(file_path)
+    
     if not file_path.exists():
         raise FileNotFoundError(f"El archivo {file_path.absolute()} no existe")
     
@@ -54,7 +57,7 @@ def lazy_from_csv(file_path : Path) -> pl.LazyFrame:
     
     return lf
 
-def load_preprocessed_lf(parquet_path : Path) -> pl.LazyFrame:
+def load_preprocessed_lf(parquet_path : Path | str) -> pl.LazyFrame:
     """
     Cargar un dataframe previamente procesado
 
@@ -68,6 +71,9 @@ def load_preprocessed_lf(parquet_path : Path) -> pl.LazyFrame:
     Returns:
         pl.LazyFrame: El lazyframe de polars cargado desde el archivo parquet
     """
+    if isinstance(parquet_path, str):
+        parquet_path = Path(parquet_path)
+    
     if not parquet_path.suffix == ".parquet":
         raise ValueError(f"El archivo {parquet_path.absolute()} no es un archivo parquet")
     if not parquet_path.exists():
@@ -79,7 +85,10 @@ def load_preprocessed_lf(parquet_path : Path) -> pl.LazyFrame:
     verify_columns(lf, REQUIRED_OUTPUT_COLUMNS) 
     return lf
 
-def create_hipergraph(df: pl.DataFrame, hypergraph_path: Path) -> None:
+def create_hipergraph(df: pl.DataFrame, hypergraph_path: Path | str) -> None:
+    if isinstance(hypergraph_path, str):
+        hypergraph_path = Path(hypergraph_path)
+        
     if hypergraph_path.exists():
         return
     
