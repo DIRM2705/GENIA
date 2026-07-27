@@ -1,7 +1,7 @@
 import polars as pl
 
 
-def verify_columns(lf: pl.LazyFrame | pl.DataFrame, required_columns: list) -> None:
+def validate_columns(lf: pl.LazyFrame | pl.DataFrame, required_columns: list) -> None:
     """
     Verifica que el DataFrame tenga las columnas necesarias para el preprocesamiento
     

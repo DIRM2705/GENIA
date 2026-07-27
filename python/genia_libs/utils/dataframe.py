@@ -1,8 +1,34 @@
 import polars as pl
 from pathlib import Path
 from genia_libs._internal.consts import *
-from genia_libs._internal.extentions.validation import verify_columns
-from genia_libs._internal.extentions.preprocessing import discretize_column
+from genia_libs._internal.validation import validate_columns
+from sklearn.preprocessing import KBinsDiscretizer
+import polars as pl
+
+def _discretize_column(column: pl.Series, n_bins: int) -> pl.Series:
+    """
+    Discretize a continuous column into n_bins using KBinsDiscretizer from sklearn.
+
+    Args:
+        column (pl.Series): The continuous column to be discretized.
+        n_bins (int): The number of bins to discretize into.
+
+    Returns:
+        pl.Series: A new Polars Series with the discretized values.
+    """
+    # Convertir la columna de Polars a un array de numpy para usar con KBinsDiscretizer
+    column_np = column.to_numpy().reshape(-1, 1) #reshape para convertirlo en una matriz de una sola columna, que es lo que espera KBinsDiscretizer
+    
+    # Crear el discretizador con n_bins y estrategia de cuantiles para que cada bin tenga aproximadamente la misma cantidad de muestras
+    discretizer = KBinsDiscretizer(n_bins=n_bins, encode='ordinal', strategy='kmeans')
+    
+    # Ajustar el discretizador a los datos y transformarlos
+    discretized_np = discretizer.fit_transform(column_np).astype(int).flatten() #fit_transform para ajustar el modelo y transformar los datos, astype(int) para convertir los valores a enteros, flatten() para convertir la matriz resultante en un array unidimensional
+    
+    # Convertir el array de numpy resultante de nuevo a una Serie de Polars
+    discretized_series = pl.Series(discretized_np, dtype=pl.UInt8) #Convertimos a UInt8 para ahorrar espacio, ya que el número de bins es pequeño
+    
+    return discretized_series 
 
 def get_grouping_dataframe(df: pl.DataFrame) -> pl.DataFrame:
     """
@@ -16,17 +42,17 @@ def get_grouping_dataframe(df: pl.DataFrame) -> pl.DataFrame:
     """
     
     #Verifica que el DataFrame tenga las columnas necesarias para la generación del DataFrame de agrupamiento    
-    verify_columns(df, REQUIRED_HG_COLUMNS) 
+    validate_columns(df, REQUIRED_HG_COLUMNS) 
 
     df = df.with_columns(
-        AN = discretize_column(df["AN"], 5),
-        RN = discretize_column(df["RN"], 5),
-        CN = discretize_column(df["CN"], 5),
-        BE = discretize_column(df["BE"], 5),
-        EE = discretize_column(df["EE"], 5),
-        CE = discretize_column(df["CE"], 5),
-        HS = discretize_column(df["HS"], 5),
-        PL = discretize_column(df["PL"], 5),
+        AN = _discretize_column(df["AN"], 5),
+        RN = _discretize_column(df["RN"], 5),
+        CN = _discretize_column(df["CN"], 5),
+        BE = _discretize_column(df["BE"], 5),
+        EE = _discretize_column(df["EE"], 5),
+        CE = _discretize_column(df["CE"], 5),
+        HS = _discretize_column(df["HS"], 5),
+        PL = _discretize_column(df["PL"], 5),
     )
     return df.select(REQUIRED_HG_COLUMNS)
 
@@ -79,7 +105,7 @@ def lazy_from_csv(file_path : Path | str) -> pl.LazyFrame:
     lf = pl.read_csv(file_path, infer_schema_length=1000).lazy() #infer_schema_length para que detecte bien los tipos de datos, y analice las primeras 1000 filas
     
     #Verifica que el DataFrame tenga las columnas necesarias para el preprocesamiento
-    verify_columns(lf, REQUIRED_INPUT_COLUMNS) 
+    validate_columns(lf, REQUIRED_INPUT_COLUMNS) 
     
     return lf
 
@@ -108,5 +134,5 @@ def load_preprocessed_lf(parquet_path : Path | str) -> pl.LazyFrame:
     lf = pl.read_parquet(parquet_path).lazy()
     
     #Verifica que el DataFrame tenga las columnas de salida del preprocesamiento
-    verify_columns(lf, REQUIRED_OUTPUT_COLUMNS) 
+    validate_columns(lf, REQUIRED_OUTPUT_COLUMNS) 
     return lf

@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt ### pyplot es el módulo encargado de crear las 
 import numpy as np
 import polars as pl
 
-from ._internal.consts import MI_COLUMNS, VARK_COLUMNS, IM_DISPLAY_LABELS, VARK_DISPLAY_LABELS
+from genia_libs._internal.consts import MI_COLUMNS, VARK_COLUMNS, IM_DISPLAY_LABELS, VARK_DISPLAY_LABELS
 
 default_directory = Path(".") # "." representa el directorio actual -> por si no se especifica donde, se guararan las imágenes ahí
 

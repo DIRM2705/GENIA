@@ -1,6 +1,6 @@
 import polars as pl
 from genia_libs._internal.consts import REQUIRED_INPUT_COLUMNS, MI_COLUMNS, VARK_COLUMNS
-from genia_libs._internal.extentions.validation import verify_columns
+from genia_libs._internal.validation import validate_columns
 
 def extract_characteristics(students : pl.LazyFrame) -> pl.DataFrame:
     """
@@ -42,7 +42,7 @@ def extract_characteristics(students : pl.LazyFrame) -> pl.DataFrame:
         DataFrame: Un dataframe de polars con el formato requerido
     """
     
-    verify_columns(students, REQUIRED_INPUT_COLUMNS) #Verifica que el DataFrame tenga las columnas necesarias para el preprocesamiento
+    validate_columns(students, REQUIRED_INPUT_COLUMNS) #Verifica que el DataFrame tenga las columnas necesarias para el preprocesamiento
     
     #Procesar VARK
     students = _grade_VARK_scores(students) #Selecciona las columnas de VARK y las procesa para obtener los puntajes de VARK
