@@ -1,6 +1,6 @@
 from pathlib import Path
 
-import fitz
+import pypdfium2
 import spacy
 from unicodedata import normalize
 from pathlib import Path
@@ -34,12 +34,11 @@ def _normalizar_lema(lema : str) -> str:
 def _extraer_texto_pdf(ruta_pdf : Path) -> list[str]:
     texto = []
 
-    with fitz.open(ruta_pdf) as doc:
+    with pypdfium2.PdfDocument(ruta_pdf) as doc:
         for pagina in doc:
-            texto.append(pagina.get_text())
+            texto.append(pagina.get_textpage().get_text_range())
             
     return texto
-
 
 # ==========================================================
 # Procesar texto
