@@ -6,7 +6,7 @@
 Currently, GENIA is in the early stages of development and is not yet available for public installation. We are actively working on improving the software and will provide installation instructions once it is ready for release.
 
 ## Contributing
-We welcome contributions from the community! If you would like to contribute to this project, please follow the guidelines outlined in our contributin guide. This includes information on project's direction and architecture, reporting issues and submitting pull requests.
+We welcome contributions from the community! If you would like to contribute to this project, please follow the guidelines outlined in our [contribution guide](https://app.notion.com/p/3aa880deb196808d9327cd1ed12a7f12?v=3aa880deb19680b491c2000c09988d38&source=copy_link). This includes information on project's direction and architecture, reporting issues and submitting pull requests.
 
 ## Acknowledgements
 This project uses third-party open source libraries under various licenses as detailed below.
