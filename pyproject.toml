@@ -10,15 +10,14 @@ description = "Libs to analyize and provide insights for learning environments e
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
-    "pymupdf>=1.28.0",
+    "pypdfium2 >=5.12.1",
     "joblib>=1.5.3",
     "matplotlib>=3.11.1",
     "numpy>=2.5.1",
     "polars>=1.40.1",
-    "python-dotenv>=1.2.2",
     "scikit_learn>=1.9.0",
     "spacy>=3.8.14",
-    #"es_core_news_sm @ https://github.com/explosion/spacy-models/releases/download/es_core_news_sm-3.8.0/es_core_news_sm-3.8.0-py3-none-any.whl#sha256=e451a83d6df79b87e9eed0cb553f03e99e36a3bab18a7b79f0dcfd1fdf875e12"
+    "es_core_news_sm @ https://github.com/explosion/spacy-models/releases/download/es_core_news_sm-3.8.0/es_core_news_sm-3.8.0-py3-none-any.whl#sha256=e451a83d6df79b87e9eed0cb553f03e99e36a3bab18a7b79f0dcfd1fdf875e12"
 ]
 
 [project.optional-dependencies]
