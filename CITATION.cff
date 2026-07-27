@@ -1,0 +1,11 @@
+cff-version: 0.1.0
+message: "If you use this software, please cite it as below."
+authors:
+  - family-names: "Rosas-Mendoza"
+    given-names: "Daniel Isaac"
+  - family-names: "Huerta-Gudiño"
+    given-names: "Johana"
+  - family-names: "García-Carrera"
+    given-names: "Viridiana"
+title: "GENIA: A python package for supporting motivation-based learning environments in the classroom"
+version: 0.1.0
