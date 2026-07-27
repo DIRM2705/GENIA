@@ -2,52 +2,46 @@
 
 ## Overview
 
-## Working with the code
+## Installation
+Currently, GENIA is in the early stages of development and is not yet available for public installation. We are actively working on improving the software and will provide installation instructions once it is ready for release.
 
-First, download the main branch of this repository or clone the repo through git using:
+## Contributing
+We welcome contributions from the community! If you would like to contribute to this project, please follow the guidelines outlined in our contributin guide. This includes information on project's direction and architecture, reporting issues and submitting pull requests.
 
-```bash
-git clone git@github.com/DIRM2705/GENIA.git
-```
+## Acknowledgements
+This project uses third-party open source libraries under various licenses as detailed below.
 
-You'll need Python 3.13 and Rust 1.90.0 to compile and execute all the contents of this repo
+---
 
-Create a venv in Python using
+### MIT License
 
-```bash
-py -m venv .venv
-.venv/Scripts/activate
-```
+The following dependencies are used under the terms of the MIT License:
 
-Then, install the required dependencies using:
-```bash
-pip install -r requirements.txt
-```
+- polars (Python: 1.40.1, 1.35.2; Rust: 0.52.0)
+- pyo3 (0.26.0)
+- pyo3-polars (0.25.0)
+- postcard (1.1.3)
+- serde (1.0.228)
+- rand (0.10.0)
+- rayon (1.12.0)
+- spacy (3.8.14)
 
-Python requires some self-made libraries to run the code, they got installed automatically when you ran the previous command. However, if you wish to install older versions you may do it by selecting the desired version from the [releases page](https://github.com/DIRM2705/GENIA/releases) or compile them yourself using maturin.
+You may find the full text of the MIT License [here](https://opensource.org/license/mit/).
+---
 
-## Installing the libraries from the releases page
+### BSD 3-Clause License
 
-To install the libraries from the releases page, you can use pip to install the wheel files directly. Replace `<link-to-wheel-file>` with the link to the wheel file and `<sha256>` with the corresponding SHA256 hash for that version.
+The following dependencies are used under the terms of the BSD 3-Clause License:
 
-```bash
-pip install <link-to-wheel-file>#sha256:<sha256>
-```
+- scikit-learn (1.8.0)
+- numpy (2.3.5)
+- matplotlib (3.11.0)
+- joblib (1.5.3)
+- python-dotenv (1.2.2)
+- pypdfium2 (5.12.1)
 
-## Compiling the libraries yourself via maturin
+You may find the full text of the BSD 3-Clause License [here](https://opensource.org/license/bsd-3-clause/).
+---
 
-To compile the libraries yourself, you can use maturin. First, install maturin using pip:
-
-```bash
-pip install maturin
-```
-
-Then, navigate to the directory containing the library's source code and run:
-```bash
-cd libs
-maturin develop
-```
-This command will build the library on debug mode and install it in your current Python environment. If you desire to build the library in release mode, you can use the following command instead:
-```bash
-maturin develop -r
-```
+## Legal
+This project is licensed under the MPL 2.0 license. By using, contributing or forking this project, you agree to the terms of the MPL 2.0 license. For more information, please refer to the [LICENSE](LICENSE.md) file.
