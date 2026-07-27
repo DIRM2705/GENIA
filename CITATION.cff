@@ -7,5 +7,5 @@ authors:
     given-names: "Johana"
   - family-names: "García-Carrera"
     given-names: "Viridiana"
-title: "GENIA: A python package for supporting motivation-based learning environments in the classroom"
+title: "GENIA"
 version: 0.1.0
