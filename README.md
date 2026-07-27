@@ -27,6 +27,7 @@ The following dependencies are used under the terms of the MIT License:
 - spacy (3.8.14)
 
 You may find the full text of the MIT License [here](https://opensource.org/license/mit/).
+
 ---
 
 ### BSD 3-Clause License
@@ -41,6 +42,7 @@ The following dependencies are used under the terms of the BSD 3-Clause License:
 - pypdfium2 (5.12.1)
 
 You may find the full text of the BSD 3-Clause License [here](https://opensource.org/license/bsd-3-clause/).
+
 ---
 
 ## Legal
