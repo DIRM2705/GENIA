@@ -1,11 +1,5 @@
-import sys
 import os
-
-# Get the absolute path to the parent directory
-parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
-sys.path.append(parent_dir)
-
-from preprocessing.nlp import cargar_modelo_nlp, liberar_modelo_nlp, procesar_pdf
+from genia_libs.preprocessing.nlp import cargar_modelo_nlp, liberar_modelo_nlp, procesar_pdf
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics import precision_recall_fscore_support, accuracy_score
 from sklearn.svm import SVC

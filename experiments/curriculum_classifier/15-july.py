@@ -1,23 +1,13 @@
-import sys
-import os
-
-# Get the absolute path to the parent directory
-parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
-sys.path.append(parent_dir)
-
-from preprocessing.nlp import cargar_modelo_nlp, liberar_modelo_nlp, procesar_pdf
+from genia_libs.preprocessing.nlp import cargar_modelo_nlp, liberar_modelo_nlp, procesar_pdf
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics import precision_recall_fscore_support, accuracy_score, roc_auc_score, average_precision_score
 from sklearn.svm import SVC
 from pathlib import Path
 from dotenv import load_dotenv
 from io import StringIO
-import polars as pl
+import os
 import numpy as np
 import joblib
-
-def _predict_class(vocabulary : pl.DataFrame, lemas : list[str]) -> int:
-    pass
 
 def _crear_documentos(carpeta : Path) -> tuple[list[StringIO], list[str]]:
     cargar_modelo_nlp()
@@ -52,21 +42,22 @@ def _crear_documentos(carpeta : Path) -> tuple[list[StringIO], list[str]]:
     return (filas, clases)
 
 if __name__ == "__main__":
-    """
+    """"
     load_dotenv()
     archivos, clases = _crear_documentos(Path(os.getenv("TRAINING_CURRICULUM_PATH")))
     vocabulary = TfidfVectorizer(input='file', lowercase=True, max_features=50000)
     X_train = vocabulary.fit_transform(archivos)
     print("Vocabulario creado")
-    joblib.dump(vocabulary, Path("vocabulary.pkl"))
+    joblib.dump(vocabulary, Path("experiments/curriculum_classifier/results/vocabulary.pkl"))
 
     
     model = SVC(kernel="linear", C=1.0, class_weight="balanced")
     model.fit(X_train, clases)
     
     print("Modelo entrenado")
-    joblib.dump(model, "svm_model.pkl")
+    joblib.dump(model, "experiments/curriculum_classifier/results/svm_model.pkl")
     """
+    
     
     LABELS = ["Comunicacion", "Pensamiento Humano", "Pensamiento Logico", "Pensamiento Social"]
     ASSERTIONS = {
@@ -87,12 +78,9 @@ if __name__ == "__main__":
         "QUIMICA BUAP.pdf": LABELS[2]
     }
     
+    
     load_dotenv()
-    vocabulary : TfidfVectorizer = joblib.load("vocabulary.pkl")
-    
-    #archivos, clases = _crear_documentos(Path(os.getenv("TRAINING_CURRICULUM_PATH")))
-    #X_train = vocabulary.fit_transform(archivos)
-    
+    vocabulary : TfidfVectorizer = joblib.load("experiments/curriculum_classifier/results/vocabulary.pkl")
     docs = []
     cargar_modelo_nlp()
     for pdf in Path(os.getenv("TEST_CURRICULUM_PATH")).glob("*.pdf"):
@@ -107,9 +95,7 @@ if __name__ == "__main__":
     y_true = [value for _, value in ASSERTIONS.items()]
     
     
-    #model = SVC(kernel="linear", C=1.0, class_weight="balanced")
-    #model.fit(X_train, clases)
-    model : SVC = joblib.load("svm_model.pkl")
+    model : SVC = joblib.load("experiments/curriculum_classifier/results/svm_model.pkl")
     result = model.predict(matrix)
     
     precision, recall, fscore, _ = precision_recall_fscore_support(y_true, result)
