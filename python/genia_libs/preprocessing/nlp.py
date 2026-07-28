@@ -55,11 +55,11 @@ def _procesar_texto(lineas : list[str]) -> list[str]:
     
     return list(lemmas)
 
-def cargar_modelo__nlp():
+def cargar_modelo_nlp():
     global _nlp
     _nlp = spacy.load("es_core_news_sm") 
 
-def liberar_modelo__nlp():
+def liberar_modelo_nlp():
     global _nlp
     del _nlp
     _nlp = None
