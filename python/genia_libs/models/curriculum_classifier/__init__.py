@@ -27,7 +27,7 @@ class CurriculumClassifier:
         docs = []
         
         for doc in documents:
-            docs.append(self.__process_document(doc))
+            docs.append(self._process_document(doc))
         
         liberar_modelo_nlp()
         
@@ -36,7 +36,7 @@ class CurriculumClassifier:
         
         return self
         
-    def __process_document(self, pdf_file: Path) -> StringIO:
+    def _process_document(self, pdf_file: Path) -> StringIO:
         lemas = procesar_pdf(pdf_file)
         doc_stream = StringIO()
         doc_stream.write(" ".join(lemas))
@@ -56,7 +56,7 @@ class CurriculumClassifier:
         for file in documents:
             if not file.exists() or not file.is_file() or file.suffix != ".pdf":
                 raise ValueError(f"El archivo '{file}' no es un PDF válido.")
-            doc = self.__process_document(file)
+            doc = self._process_document(file)
             clean_docs.append(doc)
         liberar_modelo_nlp()
         
@@ -74,7 +74,7 @@ class CurriculumClassifier:
         for file in documents:
             if not file.exists() or not file.is_file() or file.suffix != ".pdf":
                 raise ValueError(f"El archivo '{file}' no es un PDF válido.")
-            doc = self.__process_document(file)
+            doc = self._process_document(file)
             clean_docs.append(doc)
         liberar_modelo_nlp()
         
