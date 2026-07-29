@@ -15,7 +15,7 @@ class CurriculumClassifier:
         self._model = SVC(kernel="linear", C=1.0, class_weight="balanced")
         self._vocabulary = TfidfVectorizer(input='file', lowercase=True, max_features=50000)
 
-    def fit(self, documents : list[Path | str] | str, training_labels : list[str]) -> 'CurriculumClassifier':
+    def fit(self, documents : list[Path | str], training_labels : list[str]) -> 'CurriculumClassifier':
         if documents is None or len(documents) == 0:
             raise ValueError("No se proporcionaron documentos para entrenar el modelo.")
         elif len(documents) != len(training_labels):
