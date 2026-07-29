@@ -1,9 +1,59 @@
+from genia_libs._internal.validation import validate_parameters
 from genia_libs.utils.dataframe import get_grouping_dataframe, lazy_from_csv, load_preprocessed_lf
 from genia_libs.preprocessing.psicometrical import extract_characteristics
 from genia_libs.preprocessing.cognitive_load import Subject, get_cognitive_load_for_subjects
 from genia_libs._internal.consts import REQUIRED_HG_COLUMNS, REQUIRED_OUTPUT_COLUMNS
 from pathlib import Path
 import polars as pl
+
+def test_type_annotation_validation():
+    """
+    Test the type annotation validation decorator
+    """
+    
+    # This should raise a TypeError because the first argument is not a callable
+    try:
+        @validate_parameters
+        def invalid_function(arg1: int, arg2: str):
+            pass
+        
+        invalid_function("not an int", 123)
+    except TypeError as e:
+        assert "El parámetro 'arg1' debe ser del tipo int" in str(e)
+    else:
+        assert False, "Expected TypeError was not raised"
+    
+    # This should raise a TypeError because the second argument is not a string
+    try:
+        @validate_parameters
+        def another_invalid_function(arg1: int, arg2: str):
+            pass
+        
+        another_invalid_function(123, 456)
+    except TypeError as e:
+        assert "El parámetro 'arg2' debe ser del tipo str" in str(e)
+    else:
+        assert False, "Expected TypeError was not raised" 
+        
+    try:
+        @validate_parameters
+        def polars_function(arg1: pl.DataFrame, arg2 : list[str]) -> pl.DataFrame:
+            pass
+        
+        polars_function(pl.DataFrame({"a": [1, 2, 3]}), ["valid", "list"])
+    except TypeError as e:
+        assert False, f"Unexpected TypeError was raised: {e}"
+        
+    try:
+        @validate_parameters
+        def polars_function_invalid(arg1: pl.LazyFrame, arg2: list[int]):
+            return f"{arg1} and {arg2}"
+        
+        polars_function_invalid("not a LazyFrame", [1, 2, 3])
+    except TypeError as e:
+        assert "El parámetro 'arg1' debe ser del tipo LazyFrame" in str(e)
+    else:
+        assert False, "Expected TypeError was not raised"
 
 def test_invalid_df():
     """
@@ -37,7 +87,7 @@ def test_preprocess():
     """
     
     #This should be a valid df
-    lf = lazy_from_csv(Path("data/test_data/preprocessing_test.csv"))
+    lf = lazy_from_csv("data/test_data/preprocessing_test.csv")
     df = extract_characteristics(lf)
     
     #Missing columns should raise a ValueError
