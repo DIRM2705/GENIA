@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from genia_libs._internal.validation import validate_parameters
 import pypdfium2
 import spacy
 from unicodedata import normalize
@@ -64,10 +65,14 @@ def liberar_modelo_nlp():
     del _nlp
     _nlp = None
 
-def procesar_pdf(path_pdf : Path) -> list[str]:
+@validate_parameters
+def procesar_pdf(path_pdf : Path | str) -> list[str]:
     if _nlp is None:
         raise TypeError("No se ha cargado el modelo de procesamiento de lenguaje natural")
     
+    if isinstance(path_pdf, str):
+        path_pdf = Path(path_pdf)
+        
     if not path_pdf.exists():
         raise FileNotFoundError("El archivo no existe")
     

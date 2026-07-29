@@ -1,10 +1,11 @@
 import polars as pl
 from pathlib import Path
 from genia_libs._internal.consts import *
-from genia_libs._internal.validation import validate_columns
+from genia_libs._internal.validation import *
 from sklearn.preprocessing import KBinsDiscretizer
 import polars as pl
 
+@validate_parameters
 def _discretize_column(column: pl.Series, n_bins: int) -> pl.Series:
     """
     Discretize a continuous column into n_bins using KBinsDiscretizer from sklearn.
@@ -56,6 +57,7 @@ def get_grouping_dataframe(df: pl.DataFrame) -> pl.DataFrame:
     )
     return df.select(REQUIRED_HG_COLUMNS)
 
+@validate_parameters
 def lazy_from_csv(file_path : Path | str) -> pl.LazyFrame:
     """
     Dado un archivo en formato csv, crea un dataframe de polars creando las columnas necesarias
@@ -109,6 +111,7 @@ def lazy_from_csv(file_path : Path | str) -> pl.LazyFrame:
     
     return lf
 
+@validate_parameters
 def load_preprocessed_lf(parquet_path : Path | str) -> pl.LazyFrame:
     """
     Cargar un dataframe previamente procesado

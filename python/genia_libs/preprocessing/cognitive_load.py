@@ -1,3 +1,4 @@
+from genia_libs._internal.validation import validate_parameters
 import polars as pl
 from dataclasses import dataclass
 
@@ -47,6 +48,7 @@ class Subject:
                 raise ValueError(f"Area {self._nem_area} is not a valid area. Valid areas are: logical thinking, humanities, social sciences, comunication.")
         
 
+@validate_parameters
 def get_cognitive_load_for_subjects(students : pl.LazyFrame, subjects : list[Subject]) -> pl.DataFrame:
     """
     Estimates cognitive load for each student in the LazyFrame

@@ -1,7 +1,8 @@
 import polars as pl
 from genia_libs._internal.consts import REQUIRED_INPUT_COLUMNS, MI_COLUMNS, VARK_COLUMNS
-from genia_libs._internal.validation import validate_columns
+from genia_libs._internal.validation import validate_columns, validate_parameters
 
+@validate_parameters
 def extract_characteristics(students : pl.LazyFrame) -> pl.DataFrame:
     """
     Dado un lazyframe, crea un dataframe de polars creando las columnas necesarias
