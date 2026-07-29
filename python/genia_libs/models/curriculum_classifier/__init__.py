@@ -4,9 +4,8 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.svm import SVC
 from io import StringIO
 from genia_libs.preprocessing.nlp import cargar_modelo_nlp, liberar_modelo_nlp, procesar_pdf
-from dataclasses import dataclass
+from genia_libs._internal.validation import validate_parameters
 
-@dataclass
 class CurriculumClassifier:
     _model : SVC
     _vocabulary : TfidfVectorizer
@@ -15,6 +14,7 @@ class CurriculumClassifier:
         self._model = SVC(kernel="linear", C=1.0, class_weight="balanced")
         self._vocabulary = TfidfVectorizer(input='file', lowercase=True, max_features=50000)
 
+    @validate_parameters
     def fit(self, documents : list[Path | str], training_labels : list[str]) -> 'CurriculumClassifier':
         if documents is None or len(documents) == 0:
             raise ValueError("No se proporcionaron documentos para entrenar el modelo.")
@@ -44,7 +44,7 @@ class CurriculumClassifier:
 
         return doc_stream
 
-    
+    @validate_parameters
     def predict(self, documents : list[Path | str]) -> np.ndarray:
         if not documents:
             raise ValueError("No se proporcionaron documentos para predecir.")
@@ -63,6 +63,7 @@ class CurriculumClassifier:
         doc_matrix = self._vocabulary.transform(clean_docs)
         return self._model.predict(doc_matrix)
     
+    @validate_parameters
     def decision_function(self, documents: list[Path | str]) -> np.ndarray:
         if not documents:
             raise ValueError("No se proporcionaron documentos para predecir.")
