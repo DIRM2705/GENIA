@@ -77,6 +77,6 @@ def validate_parameters(function : callable):
                 if not _is_instance(real_type, expected_type):
                     raise TypeError(f"El parámetro '{name}' debe ser del tipo {expected_type.__name__}, pero se recibió {type(real_type).__name__}")
             except KeyError:
-                raise KeyError(f"El parámetro '{name}' no tiene una anotación de tipo en la función '{function.__name__}'")
+                pass
         return function(*args, **kwargs)
     return wrapper
