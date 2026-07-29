@@ -91,9 +91,9 @@ def test_preprocess():
     df = extract_characteristics(lf)
     
     #Missing columns should raise a ValueError
-    bad_df = df.drop("AN")
+    bad_lf = lf.drop("AN")
     try:
-        extract_characteristics(bad_df)
+        extract_characteristics(bad_lf)
     except ValueError as e:
         assert "son necesarias en el DataFrame" in str(e)
     else:
