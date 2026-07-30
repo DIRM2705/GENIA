@@ -46,7 +46,7 @@ def _resolve_download_direction(download_direction: str | Path | None) -> Path:
 
     candidate_path = Path(str(download_direction).strip().strip('"')).expanduser()
     if not candidate_path.is_absolute(): #Si la ruta especificada es no absoluta, manda error -> is_absolute() -> Devuelve True si la ruta es absoluta, False si es relativa
-        raise ValueError("La ruta debe ser absoluta. Ejemplo: C:\\Users\\Usuario\\Desktop\\Graficas")
+        candidate_path = candidate_path.absolute()
  
     return candidate_path.resolve() # Normaliza la ruta y devuelve la ruta absoluta
 

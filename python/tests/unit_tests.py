@@ -95,7 +95,8 @@ def test_visualization_helper_paths():
     from genia_libs.utils import visualization as viz
 
     assert viz._resolve_download_direction(None) == Path(".").absolute()
-    assert viz._resolve_download_direction("out") == Path("out")
+    assert viz._resolve_download_direction("out") == Path("out").absolute()
+    assert viz._resolve_download_direction(Path("out")).is_absolute()
 
 
 def test_nlp_helpers_and_pdf_processing(tmp_path: Path, monkeypatch):
