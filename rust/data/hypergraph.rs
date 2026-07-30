@@ -56,6 +56,12 @@ impl Hypergraph {
         hyperedge_name: &str,
         student_id: usize,
     ) -> Result<(), HypergraphError> {
+        if student_id >= self.student_count {
+            return Err(HypergraphError::StudentOutOfBoundsError(
+                student_id,
+                self.student_count,
+            ));
+        }
         let prefix = hyperedge_name.split("_").next().ok_or_else(|| HypergraphError::InvalidHyperedgeError)?;
 
         // If the prefix does not exist in the hyperedges map, create a new hyperedge and add the student

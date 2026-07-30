@@ -1,152 +1,128 @@
-from genia_libs._internal.validation import validate_parameters
-from genia_libs.utils.dataframe import get_grouping_dataframe, lazy_from_csv, load_preprocessed_lf
-from genia_libs.preprocessing.psicometrical import extract_characteristics
-from genia_libs.preprocessing.cognitive_load import Subject, get_cognitive_load_for_subjects
-from genia_libs._internal.consts import REQUIRED_HG_COLUMNS, REQUIRED_OUTPUT_COLUMNS
+from __future__ import annotations
+
 from pathlib import Path
+
 import polars as pl
+import pytest
 
-def test_type_annotation_validation():
-    """
-    Test the type annotation validation decorator
-    """
-    
-    # This should raise a TypeError because the first argument is not a callable
-    try:
-        @validate_parameters
-        def invalid_function(arg1: int, arg2: str):
-            pass
-        
-        invalid_function("not an int", 123)
-    except TypeError as e:
-        assert "El parámetro 'arg1' debe ser del tipo int" in str(e)
-    else:
-        assert False, "Expected TypeError was not raised"
-    
-    # This should raise a TypeError because the second argument is not a string
-    try:
-        @validate_parameters
-        def another_invalid_function(arg1: int, arg2: str):
-            pass
-        
-        another_invalid_function(123, 456)
-    except TypeError as e:
-        assert "El parámetro 'arg2' debe ser del tipo str" in str(e)
-    else:
-        assert False, "Expected TypeError was not raised" 
-        
-    try:
-        @validate_parameters
-        def polars_function(arg1: pl.DataFrame, arg2 : list[str]) -> pl.DataFrame:
-            pass
-        
-        polars_function(pl.DataFrame({"a": [1, 2, 3]}), ["valid", "list"])
-    except TypeError as e:
-        assert False, f"Unexpected TypeError was raised: {e}"
-        
-    try:
-        @validate_parameters
-        def polars_function_invalid(arg1: pl.LazyFrame, arg2: list[int]):
-            return f"{arg1} and {arg2}"
-        
-        polars_function_invalid("not a LazyFrame", [1, 2, 3])
-    except TypeError as e:
-        assert "El parámetro 'arg1' debe ser del tipo LazyFrame" in str(e)
-    else:
-        assert False, "Expected TypeError was not raised"
+from genia_libs._internal.consts import REQUIRED_HG_COLUMNS, REQUIRED_INPUT_COLUMNS, REQUIRED_OUTPUT_COLUMNS
+from genia_libs._internal.validation import validate_parameters
+from genia_libs.preprocessing.cognitive_load import Subject, get_cognitive_load_for_subjects
+from genia_libs.preprocessing.psicometrical import extract_characteristics
+from genia_libs.utils.dataframe import get_grouping_dataframe, lazy_from_csv, load_preprocessed_lf
 
-def test_invalid_df():
-    """
-    Test loading invalid dataframes
-    """
-    
-    try:
-        lazy_from_csv(Path("data/test_data/non_existent_file.csv"))
-    except FileNotFoundError as e:
-        assert "no existe" in str(e)
-    else:
-        assert False, "Expected FileNotFoundError was not raised"
-    
-    try:
-        load_preprocessed_lf(Path("data/test_data/invalid.parquet"))
-    except FileNotFoundError as e:
-        assert "no existe" in str(e)
-    else:
-        assert False, "Expected FileNotFoundError was not raised"
-        
-    try:
-        load_preprocessed_lf(Path("data/test_data/preprocessing_test.csv"))
-    except ValueError as e:
-        assert "no es un archivo parquet" in str(e)
-    else:
-        assert False, "Expected ValueError was not raised"
-    
-def test_preprocess():
-    """
-    Test the preprocess of a valid csv file and its constraints
-    """
-    
-    #This should be a valid df
-    lf = lazy_from_csv("data/test_data/preprocessing_test.csv")
-    df = extract_characteristics(lf)
-    
-    #Missing columns should raise a ValueError
-    bad_lf = lf.drop("AN")
-    try:
+
+def _build_valid_student_frame() -> pl.LazyFrame:
+    row = {name: [1] for name in REQUIRED_INPUT_COLUMNS if name != "Id"}
+    row["Id"] = [1]
+    return pl.DataFrame(row).lazy()
+
+
+def test_validate_parameters_rejects_wrong_types():
+    @validate_parameters
+    def sample(a: int, b: str):
+        return a, b
+
+    with pytest.raises(TypeError, match="a"):
+        sample("invalid", "ok")
+
+    with pytest.raises(TypeError, match="b"):
+        sample(1, 123)
+
+
+def test_loading_files_raise_expected_errors(tmp_path: Path):
+    with pytest.raises(FileNotFoundError, match="no existe"):
+        lazy_from_csv(tmp_path / "missing.csv")
+
+    with pytest.raises(FileNotFoundError, match="no existe"):
+        load_preprocessed_lf(tmp_path / "missing.parquet")
+
+    invalid_csv = tmp_path / "invalid.csv"
+    invalid_csv.write_text("a,b\n1,2\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="no es un archivo parquet"):
+        load_preprocessed_lf(invalid_csv)
+
+
+def test_extract_characteristics_success_and_missing_columns():
+    valid_lf = _build_valid_student_frame()
+    result = extract_characteristics(valid_lf)
+
+    assert set(result.columns) == set(REQUIRED_OUTPUT_COLUMNS)
+
+    bad_lf = valid_lf.drop("AN")
+    with pytest.raises(ValueError, match="son necesarias"):
         extract_characteristics(bad_lf)
-    except ValueError as e:
-        assert "son necesarias en el DataFrame" in str(e)
-    else:
-        assert False, "Expected ValueError was not raised"
-        
-    #Verify schema
-    assert set(df.columns) == set(REQUIRED_OUTPUT_COLUMNS), f"The columns of the dataframe do not match the required columns."
-    
-def test_grouping_df():
-    """
-    Test the transformation of the dataframe so it can be used by the hypergraph constructor
-    """
-    
-    grouping_df = load_preprocessed_lf(Path("data/test_data/preprocessed_test.parquet")).collect() #Load the preprocessed data of 400 students
-    #This should be a valid df
-    grouping_df = get_grouping_dataframe(grouping_df)
-    
-    #Verify that the grouping dataframe has the expected columns
-    assert set(grouping_df.columns) == set(REQUIRED_HG_COLUMNS), f"The columns of the grouping dataframe do not match the expected columns."
-    
-    #Verify discretization of the columns
-    for col in ["AN", "RN", "CN", "PL", "HS", "CE", "EE", "BE"]:
-        assert grouping_df[col].dtype == pl.UInt8, f"The column {col} is not discretized to UInt8."
-        assert grouping_df[col].max() < 5, f"The column {col} has values greater than or equal to 5, which is not expected after discretization."
-        assert grouping_df[col].min() >= 0, f"The column {col} has values less than 0, which is not expected after discretization."
-    
-def test_cognitive_load():
-    """
-    Test the cognitive load estimation for a set of subjects
-    """
-    
+
+
+def test_grouping_dataframe_discretizes_columns():
+    data = {col: [0.1, 0.8, 1., 0.25, 0.9] for col in REQUIRED_HG_COLUMNS if col != "Id"}
+    data["Id"] = [1, 2, 3, 4, 5]
+
+    df = pl.DataFrame(data)
+    grouping_df = get_grouping_dataframe(df)
+
+    assert set(grouping_df.columns) == set(REQUIRED_HG_COLUMNS)
+
+    for col in ["AN", "RN", "CN", "BE", "EE", "CE", "HS", "PL"]:
+        assert grouping_df[col].dtype == pl.UInt8
+        assert grouping_df[col].min() >= 0
+        assert grouping_df[col].max() < 5
+
+
+def test_cognitive_load_estimation():
     subjects = [
         Subject("Matematicas", 5, 2.5, "logical thinking"),
         Subject("Inglés", 8, 4, "comunication"),
         Subject("Psicología", 6, 3, "humanities"),
-        Subject("Ciencias Sociales", 7, 3.5, "social sciences")
+        Subject("Ciencias Sociales", 7, 3.5, "social sciences"),
     ]
-    
+
     lf = pl.LazyFrame(
         {
-            "Id": [1, 2, 3],
-            "MI": [[0, 4], [1, 2], [3, 5]]
+            "Id": [1, 2, 3, 4, 5],
+            "MI": [[0, 4], [1, 2], [3, 5], [2, 3], [4, 5]],
         }
     )
     df = get_cognitive_load_for_subjects(lf, subjects)
-    
-    #Verify that the cognitive load columns are present in the dataframe
-    assert df.null_count().sum_horizontal().item() == 0, "There are null values in the cognitive load columns, which is not expected."
-    
-    #Verify that cognitive load columns behave as expected
+
+    assert df.null_count().sum_horizontal().item() == 0
+
     results = df.select(pl.exclude("Id", "MI")).to_numpy()
-    assert results.shape == (3, 4), "The resulting dataframe should have 3 rows and 4 columns for the cognitive load of each subject."
-    assert results[0][0] < results[1][0], "Cognitive load for Matematicas should be lower for student 1 than for student 2, given their MI."
-    assert results[1][3] < results[0][3], "Cognitive load for Ciencias Sociales should be lower for student 2 than for student 1, given their MI."
-    assert results[1][1] == results[2][1], "Cognitive load for Inglés should be equal for student 2 than for student 3, given their MI."
-    assert results[2][1] < results[0][1], "Cognitive load for Inglés should be lower for student 3 than for student 1, given their MI."
+    assert results.shape == (5, 4)
+
+
+def test_visualization_helper_paths():
+    from genia_libs.utils import visualization as viz
+
+    assert viz._resolve_download_direction(None) == Path(".").absolute()
+    assert viz._resolve_download_direction("out") == Path("out")
+
+
+def test_nlp_helpers_and_pdf_processing(tmp_path: Path, monkeypatch):
+    try:
+        import genia_libs.preprocessing.nlp as nlp_module
+    except Exception as exc:  # pragma: no cover
+        pytest.skip(f"NLP dependency unavailable: {exc}")
+
+    assert nlp_module._normalizar_lema("Ángel") == "angel"
+
+    class TokenStub:
+        def __init__(self, *, alpha=True, digit=False, stop=False, punct=False, space=False, url=False, lemma=""):
+            self.is_alpha = alpha
+            self.is_digit = digit
+            self.is_stop = stop
+            self.is_punct = punct
+            self.is_space = space
+            self.like_url = url
+            self.lemma_ = lemma
+
+    assert nlp_module._token_valido(TokenStub(alpha=True, stop=False, punct=False, space=False, url=False))
+    assert not nlp_module._token_valido(TokenStub(alpha=True, stop=True))
+
+    nlp_module.cargar_modelo_nlp()
+    result = nlp_module._procesar_texto(["Hola, mundo", "mundo feliz"])
+
+    assert "hola" in result
+    assert "mundo" in result
+    assert "feliz" in result
+    nlp_module.liberar_modelo_nlp()

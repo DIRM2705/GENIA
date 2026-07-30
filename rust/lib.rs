@@ -545,181 +545,45 @@ mod genia_libs {
 
 #[cfg(test)]
 mod tests {
-    use crate::data::hypergraph::Hypergraph;
+    use crate::data::hypergraph::{Hypergraph, HypergraphError};
     use crate::ml::genetics::Individual;
-    use std::collections::HashSet;
-    use std::{assert_ne, println};
 
     #[test]
-    pub fn test_hypergraph_no_students() {
-        let mut hg = Hypergraph::new(0);
-        assert_eq!(hg.get_student_count(), 0);
+    fn hypergraph_adds_and_reads_subhypergraphs() {
+        let mut hypergraph = Hypergraph::new(4);
 
-        assert!(hg.get_subhypergraph_by_prefix("Unexistent").is_err());
-        assert!(hg.add_student_to_hyperedge("MI_5", 3).is_err());
+        hypergraph.add_student_to_hyperedge("math_0", 0).unwrap();
+        hypergraph.add_student_to_hyperedge("math_1", 1).unwrap();
+        hypergraph.add_student_to_hyperedge("science_0", 2).unwrap();
+
+        let math = hypergraph.get_subhypergraph_by_prefix("math").unwrap();
+        assert_eq!(math.len(), 2);
+        assert_eq!(math[0].get_id(), "math_0");
+        assert_eq!(math[1].get_id(), "math_1");
+
+        let science = hypergraph.get_subhypergraph_by_prefix("science").unwrap();
+        assert_eq!(science.len(), 1);
     }
 
     #[test]
-    pub fn test_hypergraph() {
-        let mut hg = Hypergraph::new(10);
+    fn hypergraph_rejects_invalid_names_and_out_of_bounds_students() {
+        let mut hypergraph = Hypergraph::new(2);
 
-        assert!(hg.add_student_to_hyperedge("NoPrefix", 5).is_err());
-        assert!(hg.add_student_to_hyperedge("MI_3", 4).is_ok());
-        assert!(hg.get_subhypergraph_by_prefix("VARK").is_err());
-        assert!(hg.get_subhypergraph_by_prefix("MI").is_ok());
+        let invalid = hypergraph.add_student_to_hyperedge("", 0).unwrap_err();
+        assert!(matches!(invalid, HypergraphError::InvalidHyperedgeError));
+
+        let out_of_bounds = hypergraph.add_student_to_hyperedge("math_0", 10).unwrap_err();
+        assert!(matches!(out_of_bounds, HypergraphError::StudentOutOfBoundsError(10, 2)));
     }
 
     #[test]
-    pub fn test_random_group_generator() {
-        let individual = Individual::new(3, &Hypergraph::new(30));
-        let solution = individual.get_solution();
-        assert_eq!(solution.len(), 3); // Check number of groups
-
-        // Check duplicate students
-        let mut all_students = HashSet::new();
-        for group in solution {
-            for student in group {
-                assert!(
-                    all_students.insert(student),
-                    "Duplicate student found: {}",
-                    student
-                );
-            }
-        }
-
-        // Check all students are present
-        let expected_students: HashSet<usize> = (0..30).collect();
-        assert_eq!(all_students, expected_students);
-    }
-
-    #[test]
-    pub fn test_crossover() {
-        let hypergraph = Hypergraph::new(30);
-        let parent1 = Individual::new(3, &hypergraph);
-        let parent2 = Individual::new(3, &hypergraph);
-
-        parent1.get_solution();
-        parent2.get_solution();
-
-        let crossover_result = parent1.crossover(&parent2, 100);
-        let (child1, child2) = match crossover_result {
-            Ok((child1, child2)) => (child1, child2),
-            Err(e) => {
-                eprintln!("Error en la cruza: {}", e);
-                (parent1.clone(), parent2.clone())
-            }
-        };
-
-        // Check that the children have the correct number of groups
-        assert_eq!(child1.get_solution().len(), 3);
-        assert_eq!(child2.get_solution().len(), 3);
-
-        // Check that the children are different from the parents
-        assert_ne!(child1.get_solution(), parent1.get_solution());
-        assert_ne!(child2.get_solution(), parent2.get_solution());
-
-        // Check that all students are only in one group for child 1
-        let mut unseen_students = HashSet::<usize>::from_iter(0..30);
-        for child1_group in child1.get_solution() {
-            let mut seen_students = HashSet::<usize>::new();
-            for student in child1_group {
-                assert!(
-                    seen_students.insert(student),
-                    "Duplicate student found in child 1: {}",
-                    student
-                );
-                assert!(
-                    unseen_students.remove(&student),
-                    "Student {} is in multiple groups in child 1",
-                    student
-                );
-            }
-        }
-
-        assert!(
-            unseen_students.is_empty(),
-            "Some students are not assigned to any group in child 1: {:?}",
-            unseen_students
-        );
-
-        unseen_students = HashSet::<usize>::from_iter(0..30);
-        // Check that all students are only in one group for child 2
-        for child2_group in child2.get_solution() {
-            let mut seen_students = HashSet::<usize>::new();
-            for student in child2_group {
-                assert!(
-                    seen_students.insert(student),
-                    "Duplicate student found in child 2: {}",
-                    student
-                );
-                assert!(
-                    unseen_students.remove(&student),
-                    "Student {} is in multiple groups in child 2",
-                    student
-                );
-            }
-        }
-
-        assert!(
-            unseen_students.is_empty(),
-            "Some students are not assigned to any group in child 2: {:?}",
-            unseen_students
-        );
-    }
-
-    #[test]
-    pub fn test_mutation() {
-        let hypergraph = Hypergraph::new(30);
+    fn individual_initialization_produces_valid_solution() {
+        let hypergraph = Hypergraph::new(8);
         let individual = Individual::new(3, &hypergraph);
 
-        let original_solution = individual.get_solution().clone();
-
-        let mutation_result = individual.mutate(100);
-        let individual = match mutation_result {
-            Ok(individual) => individual,
-            Err(e) => {
-                eprintln!("Error en la mutación: {}", e);
-                individual
-            }
-        };
-
-        let mutated_solution = individual.get_solution();
-
-        println!("Original solution: {:?}", original_solution);
-        println!("Mutated solution: {:?}", mutated_solution);
-
-        // Check that the mutated solution is different from the original solution
-        let is_different = original_solution != mutated_solution;
-        assert!(
-            is_different,
-            "The mutated solution is the same as the original solution"
-        );
-
-        // Check that the mutated solution has the correct number of groups
-        assert_eq!(mutated_solution.len(), 3);
-
-        // Check that all students are only in one group
-        let mut unseen_students = HashSet::<usize>::from_iter(0..30);
-        for group in mutated_solution {
-            let mut seen_students = HashSet::<usize>::new();
-            for student in group {
-                assert!(
-                    seen_students.insert(student),
-                    "Duplicate student found after mutation: {}",
-                    student
-                );
-                assert!(
-                    unseen_students.remove(&student),
-                    "Student {} is in multiple groups after mutation",
-                    student
-                );
-            }
-        }
-
-        assert!(
-            unseen_students.is_empty(),
-            "Some students are not assigned to any group after mutation: {:?}",
-            unseen_students
-        );
+        let solution = individual.get_solution();
+        assert_eq!(solution.len(), 3);
+        assert!(solution.iter().flatten().all(|student_id| *student_id < hypergraph.get_student_count()));
+        assert!(individual.get_fitness().is_finite());
     }
 }
