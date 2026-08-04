@@ -1,3 +1,8 @@
+//! This module provides a Python interface for optimizing algorithms needed by the GENIA project
+//! 
+//! # Features
+//! - Hypergraph creation from a Polars DataFrame
+//! - Genetic Algorithm implementation for optimization
 mod data;
 mod ml;
 mod utils;
@@ -19,6 +24,16 @@ mod genia_libs {
     use rayon::prelude::*;
     use std::{path::Path, unreachable};
 
+    /// Creates a hypergraph from a Polars DataFrame and saves it to a specified output file.
+    ///
+    /// # Arguments
+    /// 
+    /// * `py_df` - The input Polars DataFrame
+    /// * `output_file` - The path to the output file where the hypergraph will be saved
+    /// # Returns
+    /// 
+    /// * `Ok(())` if the hypergraph is created and saved successfully
+    /// * `Err(PyErr)` if an error occurs during the process
     #[pyfunction]
     fn hypergraph_from_dataframe(py_df: PyDataFrame, output_file: String) -> PyResult<()> {
         // Validate path
@@ -100,6 +115,17 @@ mod genia_libs {
         return Ok(());
     }
 
+    /// A Python class representing a Genetic Algorithm for optimization.
+    /// 
+    /// # Attributes
+    /// 
+    /// * `population_size` - The number of individuals in the population
+    /// * `generations` - The number of generations to run the algorithm
+    /// * `spins` - The number of spins to perform in each generation
+    /// * `elites` - The number of elite individuals to keep in each generation
+    /// * `mutation_rate` - The rate at which mutations occur
+    /// * `crossover_rate` - The rate at which crossovers occur
+    /// * `log_file_path` - The path to the log file
     #[pyclass]
     pub struct GeneticAlgorithm {
         population_size: usize,
@@ -113,6 +139,19 @@ mod genia_libs {
 
     #[pymethods]
     impl GeneticAlgorithm {
+        /// Creates a new instance of the GeneticAlgorithm class.
+        ///
+        /// # Arguments
+        /// * `population_size` - The number of individuals in the population
+        /// * `generations` - The number of generations to run the algorithm
+        /// * `spins` - The number of spins to perform in each generation
+        /// * `elites` - The number of elite individuals to keep in each generation
+        /// * `crossover_rate` - The rate at which crossovers occur
+        /// * `log_file_path` - The path to the log file
+        /// 
+        /// # Panics
+        /// 
+        /// * If the crossover rate is not between 0.1 and 1.0
         #[new]
         pub fn new(
             population_size: usize,
@@ -136,6 +175,21 @@ mod genia_libs {
             };
         }
 
+        /// Runs the genetic algorithm on a hypergraph loaded from a specified input file.
+        /// 
+        /// # Arguments
+        /// 
+        /// * `num_groups` - The number of groups to form in the solution
+        /// * `input_file` - The path to the input file containing the hypergraph
+        ///
+        /// # Returns
+        ///
+        /// * `Vec<Vec<usize>>` - A vector of vectors representing each group and the student IDs assigned to that group in the best solution found
+        /// 
+        /// # Panics
+        /// 
+        /// * If the input file does not exist or cannot be read.
+        /// * If the hypergraph cannot be loaded from the input file.
         pub fn run(&self, num_groups: usize, input_file: String) -> Vec<Vec<usize>> {
             const CONVERGENCE_THRESHOLD: f64 = 6.6;
             const MAX_NO_CHANGE_GENERATIONS: usize = 1000;
@@ -144,7 +198,17 @@ mod genia_libs {
             let hg_bar = ProgressBar::new_spinner();
             hg_bar.set_message("[1] Cargando el hipergrafo de características...");
             hg_bar.enable_steady_tick(std::time::Duration::from_millis(100));
-            let hypergraph = load_hypergraph_from_file(&input_file);
+            let hypergraph_result = Hypergraph::load_from_file(&input_file);
+            if let Err(e) = hypergraph_result {
+                hg_bar.println(format!(
+                    "{} Error al cargar el hipergrafo: {}",
+                    style("[ERROR]").bold().red(),
+                    e
+                ));
+                hg_bar.finish_and_clear();
+                panic!("Error al cargar el hipergrafo: {}", e);
+            }
+            let hypergraph = hypergraph_result.unwrap();
             hg_bar.println(format!(
                 "{} Hipergrafo cargado exitosamente.",
                 style("[INFO]").bold().blue()
@@ -312,6 +376,7 @@ mod genia_libs {
             return best_individual.get_solution();
         }
 
+        /// Displays the configuration of the genetic algorithm in a formatted manner.
         pub fn show_config(&self) {
             let (_, width) = Term::stdout().size_checked().unwrap_or((0, 80));
             let title = " Configuración del Algoritmo Genético ";
@@ -386,24 +451,15 @@ mod genia_libs {
         }
     }
 
-    fn load_hypergraph_from_file(file_path: &str) -> Hypergraph {
-        if !Path::new(file_path).exists() {
-            panic!("El archivo {} no existe", file_path);
-        }
-
-        let hg = Hypergraph::load_from_file(file_path);
-
-        if hg.is_err() {
-            panic!(
-                "Error al cargar el hipergrafo desde el archivo {}: {}",
-                file_path,
-                hg.err().unwrap()
-            );
-        }
-
-        return hg.unwrap();
-    }
-
+    /// Calculates the probabilities for each individual in the population based on their fitness.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `population` - A reference to a vector of individuals in the population
+    /// 
+    /// # Returns
+    /// 
+    /// * `Vec<f64>` - A vector of probabilities for each individual in the population
     fn make_probabilities(population: &Vec<Individual>) -> Vec<f64> {
         let total_fitness: f64 = population.par_iter().map(|ind| ind.get_fitness()).sum();
 
@@ -417,6 +473,15 @@ mod genia_libs {
         return probabilities;
     }
 
+    /// Selects an individual from the population using the roulette wheel selection method.
+    ///
+    /// # Arguments
+    /// 
+    /// * `probabilities` - A reference to a vector of cumulative probabilities for each individual in the population
+    /// 
+    /// # Returns
+    /// 
+    /// * `usize` - The index of the selected individual
     fn roulette_wheel_selection(probabilities: &Vec<f64>) -> usize {
         if let Ok(rng) = Uniform::new(0.0, 1.0) {
             let mut index = 0;
@@ -434,10 +499,38 @@ mod genia_libs {
         }
     }
 
+    /// Selects the top `num_elites` individuals from the population based on their fitness.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `population` - A reference to a vector of individuals in the population
+    /// * `num_elites` - The number of elites to select
+    /// 
+    /// # Returns
+    /// 
+    /// * `Vec<Individual>` - A vector of the top `num_elites` individuals from the population
     fn elitism(population: &Vec<Individual>, num_elites: usize) -> Vec<Individual> {
         return population.iter().take(num_elites).cloned().collect();
     }
 
+    /// Creates a new population of individuals by selecting parents, performing crossover and mutation.
+    ///
+    /// # Arguments
+    /// 
+    /// * `mutation_rate` - The rate of mutation for the new individuals
+    /// * `crossover_rate` - The rate of crossover for the new individuals
+    /// * `spins` - The number of spins to perform
+    /// * `elites` - The number of elites to keep
+    /// * `population` - A mutable reference to a vector of individuals in the population
+    /// * `hypergraph` - A reference to the hypergraph
+    /// 
+    /// # Returns
+    /// 
+    /// * `Vec<Individual>` - A vector of the new individuals in the population
+    /// 
+    /// # Panics
+    ///
+    /// This function will panic if the crossover or mutation operations fail for any individual.
     fn create_new_population(
         mutation_rate: u8,
         crossover_rate: u8,
@@ -530,6 +623,17 @@ mod genia_libs {
         return new_population;
     }
 
+    /// Creates an initial population of individuals.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `population_size` - The number of individuals in the population
+    /// * `num_groups` - The number of groups to create
+    /// * `hypergraph` - A reference to the hypergraph
+    /// 
+    /// # Returns
+    /// 
+    /// * `Vec<Individual>` - A vector of the initial individuals in the population
     fn create_initial_population(
         population_size: usize,
         num_groups: usize,

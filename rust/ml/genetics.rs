@@ -1,5 +1,3 @@
-use std::println;
-
 use crate::data::hypergraph::Hypergraph;
 use crate::ml::group::Group;
 use crate::utils::bitmap::BitmapLen;
@@ -8,6 +6,10 @@ use rand::rng;
 use rand::seq::SliceRandom;
 use rayon::prelude::*;
 
+/// Represents an individual in the genetic algorithm
+/// 
+/// # Attributes
+/// - `solution`: A vector representing the solution of the individual, where each element is a
 #[derive(Clone)]
 pub struct Individual {
     solution: Vec<usize>,

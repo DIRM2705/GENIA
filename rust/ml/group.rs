@@ -6,13 +6,27 @@ use rayon::prelude::*;
 const DELTA_CALCULATIONS: [&'static str; 9] = ["CE", "BE", "EE", "AN", "RN", "Chronotype", "PL", "HS", "CN"];
 const REPLACEMENT_CALCULATIONS: [&'static str; 2] = ["MI", "VARK"];
 
+/// Represents a group of students in the hypergraph
+/// 
+/// # Attributes
+/// - `students`: A bitmap representing the students in the group
+/// - `student_count`: The number of students in the group
 #[derive(Clone)]
 pub struct Group {
-    students: BitmapLen,  // Bitmap representing the students in the group
-    student_count: usize, // Number of students in the group
+    students: BitmapLen,
+    student_count: usize,
 }
 
 impl Group {
+    /// Creates a new group with the given students
+    /// 
+    /// # Arguments
+    /// 
+    /// * `students` - A bitmap representing the students in the group
+    /// 
+    /// # Returns
+    /// 
+    /// A new `Group` instance
     pub fn new(students: BitmapLen) -> Self {
         return Group {
             students: students.clone(),
@@ -20,15 +34,19 @@ impl Group {
         };
     }
 
+    /// Calculates the discardability of the group based on the hypergraph
+    /// 
+    /// A group's discardability is calculated from two metrics:
+    /// - Delta Discardability: Measures the group's homogeneity with respect to delta characteristics.
+    /// - Replacement Discardability: Measures the group's balance with respect to replacement characteristics.
+    /// A group's total discardability is the sum of the two metrics above.
+    /// 
+    /// # Arguments
+    /// 
+    /// * `hypergraph` - A reference to the hypergraph used for calculations
+    ///
+    /// Returns the total discardability of the group as a floating-point number
     pub fn calculate_discardability(&self, hypergraph: &Hypergraph) -> f64 {
-        /*
-         * A group's discardability is calculated from two metrics:
-         * - Delta Discardability: Measures the group's homogeneity with respect to delta characteristics.
-         * - Replacement Discardability: Measures the group's balance with respect to replacement characteristics.
-         * A group's total discardability is the sum of the two metrics above.
-         * The calculation of each metric is done in parallel using Rayon to improve performance.
-         */
-
         let calculations = [
             Self::calculate_delta_discardability,
             Self::calculate_replacement_discardability,
@@ -40,6 +58,15 @@ impl Group {
             .sum();
     }
 
+    /// Calculates the delta discardability of the group based on the hypergraph
+    ///
+    /// # Arguments
+    /// 
+    /// * `hypergraph` - A reference to the hypergraph used for calculations
+    /// 
+    /// # Returns
+    /// 
+    /// The delta discardability of the group as a floating-point number
     fn calculate_delta_discardability(&self, hypergraph: &Hypergraph) -> f64 {
         let mut probabilities = Vec::new();
         let mut discardability = 0.0;
@@ -69,6 +96,15 @@ impl Group {
         return discardability;
     }
 
+    /// Calculates the replacement discardability of the group based on the hypergraph
+    /// 
+    /// # Arguments
+    /// 
+    /// * `hypergraph` - A reference to the hypergraph used for calculations
+    /// 
+    /// # Returns
+    /// 
+    /// The replacement discardability of the group as a floating-point number
     fn calculate_replacement_discardability(&self, hypergraph: &Hypergraph) -> f64 {
         let mut probabilities = Vec::new();
         let mut discardability = 0.0;
