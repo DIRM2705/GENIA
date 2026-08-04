@@ -77,7 +77,7 @@ MI_INDICES = {
 RECOMENDATIONS = {
     "BE": "Un profesor que mantenga una buena sintonía y manejo de grupo", #Compromiso conductual
     "EE": "Un profesor inspirador, apasionado por su materia",  #Compromiso emocional
-    "CE": "Un profesor que cuente con amplios conocimientos de su tema y buena relación pedagogía", #Compromiso cognitivo
+    "CE": "Un profesor que cuente con amplios conocimientos de su tema y buena relación pedagógica", #Compromiso cognitivo
     "HS": "Un profesor con solidaridad pedagógica", #Búsqueda de ayuda
     "PL": "Un profesor que implemente el trabajo en equipo", #Aprendizaje por pares
     "TM": "Un profesor que calendarice y estipule fechas de entrega claras y precisas", #Manejo del tiempo
