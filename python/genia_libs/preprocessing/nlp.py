@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from genia_libs._internal.validation import validate_parameters
+from .._internal.validation import validate_parameters
 import pypdfium2
 import spacy
 from unicodedata import normalize

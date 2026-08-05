@@ -2,7 +2,7 @@ from genia_libs._internal.validation import validate_parameters
 import polars as pl
 from dataclasses import dataclass
 
-from genia_libs._internal.consts import MI_INDICES
+from .._internal.consts import MI_INDICES
 
 @dataclass
 class Subject:
@@ -11,7 +11,7 @@ class Subject:
     _nem_area : str
     
     def __init__(self, name: str, num_units : int, avg_topics_per_unit : float, area : str):
-        """
+        """_summary_
         Initializes a Subject instance.
 
         Parameters:
@@ -50,7 +50,7 @@ class Subject:
 
 @validate_parameters
 def get_cognitive_load_for_subjects(students : pl.LazyFrame, subjects : list[Subject]) -> pl.DataFrame:
-    """
+    """_summary_
     Estimates cognitive load for each student in the LazyFrame
     using the subjects in the dictionary.
 

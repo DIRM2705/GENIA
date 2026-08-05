@@ -43,6 +43,9 @@ def _is_instance(obj, type_hint) -> bool:
     Args:
         obj (_type_): The object to check
         type_hint (_type_): The type hint to check against
+        
+    Raises:
+        TypeError: If the type hint is not a valid type hint
     """
     
     if _is_parametrized_generic(type_hint):
