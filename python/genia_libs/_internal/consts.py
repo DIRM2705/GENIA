@@ -73,3 +73,22 @@ MI_INDICES = {
     "MIVer": 7,
     "MIVis": 8
 }
+
+RECOMENDATIONS = {
+    "BE": "Un profesor que mantenga una buena sintonía y manejo de grupo", #Compromiso conductual
+    "EE": "Un profesor inspirador, apasionado por su materia",  #Compromiso emocional
+    "CE": "Un profesor que cuente con amplios conocimientos de su tema y buena relación pedagógica", #Compromiso cognitivo
+    "HS": "Un profesor con solidaridad pedagógica", #Búsqueda de ayuda
+    "PL": "Un profesor que implemente el trabajo en equipo", #Aprendizaje por pares
+    "TM": "Un profesor que calendarice y estipule fechas de entrega claras y precisas", #Manejo del tiempo
+    "RH": "Un profesor que en la mayoría de sus sesiones tenga un método de enseñanza práctico", #Repetición
+    "EL": "Un profesor que utilice estrategias que fomenten una estructura cognitiva", #Elaboración
+    "OR": "Un profesor que presenta su contenido siguiendo una estructura cognitiva", #Organización
+    "CP": "Un profesor que promueva los debates, discusiones y expresión de ideas", #Pensamiento crítico
+    "MC": "Un profesor que fomente el autodidactismo",  #Metacognición
+    "EGO": "Un profesor que fomente la competitividad en el grupo y exija cierto grado de participación de los estudiantes", 
+    "IGO": "", 
+    "SE": "", 
+    "TV": "", 
+    "TA": ""
+}
