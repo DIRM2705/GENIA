@@ -4,7 +4,10 @@ from pathlib import Path
 
 import polars as pl
 import pytest
+import numpy as np
 
+import genia_libs.preprocessing.needs as needs_module
+from genia_libs.preprocessing.needs import _needs_analysis, make_faculty_recommendations
 from genia_libs._internal.consts import REQUIRED_HG_COLUMNS, REQUIRED_INPUT_COLUMNS, REQUIRED_OUTPUT_COLUMNS
 from genia_libs._internal.validation import validate_parameters
 from genia_libs.preprocessing.cognitive_load import Subject, get_cognitive_load_for_subjects
@@ -127,3 +130,76 @@ def test_nlp_helpers_and_pdf_processing(tmp_path: Path, monkeypatch):
     assert "mundo" in result
     assert "feliz" in result
     nlp_module.liberar_modelo_nlp()
+
+class FakePCA:
+    def __init__(self, n_components: int):
+        self.n_components = n_components
+
+    def fit(self, data):
+        feature_count = len(data.collect_schema().names())
+        self.components_ = np.zeros((self.n_components, feature_count), dtype=float)
+
+        for idx in range(min(self.n_components, feature_count)):
+            self.components_[idx, idx] = 1.0
+
+        weights = np.arange(self.n_components, 0, -1, dtype=float)
+        self.explained_variance_ratio_ = weights / weights.sum()
+        return self
+
+
+def test_needs_analysis_returns_ranked_features(monkeypatch):
+    captured = {}
+
+    def fake_validate_columns(lf, required_columns):
+        captured["lf"] = lf
+        captured["required_columns"] = required_columns
+
+    monkeypatch.setattr(needs_module, "validate_columns", fake_validate_columns)
+    monkeypatch.setattr(needs_module, "PCA", FakePCA)
+
+    lf = pl.DataFrame(
+        {
+            "feature_a": [1, 2, 3, 4],
+            "feature_b": [4, 3, 2, 1],
+            "feature_c": [2, 2, 2, 2],
+        }
+    ).lazy()
+
+    result = _needs_analysis(lf, n_components=2)
+
+    assert captured["lf"] is lf
+    assert captured["required_columns"] == needs_module.REQUIRED_OUTPUT_COLUMNS
+    assert [name for name, _ in result] == ["feature_a", "feature_b"]
+    assert result[0][1] == pytest.approx(2 / 3)
+    assert result[1][1] == pytest.approx(1 / 3)
+
+
+def test_make_faculty_recommendations_maps_needs_to_recommendations(monkeypatch):
+    keys = list(needs_module.RECOMENDATIONS.keys())[:2]
+    if not keys:
+        pytest.skip("No recommendations configured")
+
+    monkeypatch.setattr(
+        needs_module,
+        "_needs_analysis",
+        lambda lf, n_components=3: [(key, 1.0) for key in keys],
+    )
+
+    lf = pl.DataFrame({"feature_a": [1, 2], "feature_b": [3, 4]}).lazy()
+
+    result = make_faculty_recommendations(lf, n_components=2)
+
+    assert result == [needs_module.RECOMENDATIONS[key] for key in keys]
+
+
+def test_make_faculty_recommendations_raises_for_unknown_need(monkeypatch):
+    monkeypatch.setattr(
+        needs_module,
+        "_needs_analysis",
+        lambda lf, n_components=3: [("unknown_need", 1.0)],
+    )
+
+    lf = pl.DataFrame({"feature_a": [1, 2], "feature_b": [3, 4]}).lazy()
+
+    with pytest.raises(ValueError, match="No se encontró una recomendación para la necesidad: unknown_need"):
+        make_faculty_recommendations(lf, n_components=1)

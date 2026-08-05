@@ -87,8 +87,8 @@ RECOMENDATIONS = {
     "CP": "Un profesor que promueva los debates, discusiones y expresión de ideas", #Pensamiento crítico
     "MC": "Un profesor que fomente el autodidactismo",  #Metacognición
     "EGO": "Un profesor que fomente la competitividad en el grupo y exija cierto grado de participación de los estudiantes", 
-    "IGO": "", 
-    "SE": "", 
-    "TV": "", 
-    "TA": ""
+    "IGO": "Un profesor que incentive el pensamiento científico y filosófico", 
+    "SE": "Un profesor que fomente la seguridad y confianza en los estudiantes", 
+    "TV": "Un profesor que aplique metodologías de aprendizaje basado en problemas y proyectos aplicados al contexto del estudiante", 
+    "TA": "Un profesor que realice evaluaciones de proceso y simulacros de exámenes"
 }
