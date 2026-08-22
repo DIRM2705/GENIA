@@ -8,13 +8,24 @@ matplotlib.use("Agg") # Agg significa Anti-Grain Geometry, es un motor de render
 import matplotlib.pyplot as plt ### pyplot es el módulo encargado de crear las figuras
 import numpy as np
 import polars as pl
-
+from genia_libs._internal.validation import validate_parameters
 from genia_libs._internal.consts import MI_COLUMNS, VARK_COLUMNS, IM_DISPLAY_LABELS, VARK_DISPLAY_LABELS
 
 default_directory = Path(".") # "." representa el directorio actual -> por si no se especifica donde, se guararan las imágenes ahí
 
-##Construye un diccionario con la información del estudiante o del promedio del grupo, para luego usarlo en las funciones de graficación -> pero solo para las gráficas de radar que son las que necesitan datos previamente preparados (vectores)
+@validate_parameters
 def info_graphics_fromDataframe(df: pl.DataFrame, selected_id: int | None = None, view_mode: str = "person",) -> dict[str, Any]:
+    """_summary_
+    Construye un diccionario con la información del estudiante o del promedio del grupo, para luego usarlo en las funciones de graficación -> pero solo para las gráficas de radar que son las que necesitan datos previamente preparados (vectores)
+    
+    Args:
+        df (pl.DataFrame): DataFrame con los datos de los estudiantes
+        selected_id (int | None, optional): Id del estudiante seleccionado. Defaults to None.
+        view_mode (str, optional): Modo de vista. Puede ser "person" para un estudiante específico o "average" para el promedio del grupo. Defaults to "person".
+        
+    Returns:
+        dict[str, Any]: Diccionario con la información del estudiante o del promedio del grupo, incluyendo los vectores de valores para las gráficas de radar y las etiquetas correspondientes.
+    """
     ids_availables = [int(value) for value in df["Id"].to_list() if value is not None]
     
     if selected_id is None:
@@ -51,7 +62,21 @@ def _resolve_download_direction(download_direction: str | Path | None) -> Path:
     return candidate_path.resolve() # Normaliza la ruta y devuelve la ruta absoluta
 
 ##Genera y guarda las imágenes PNG
-def save_images(df: pl.DataFrame, selected_id: int | None = None, view_mode: str = "person", download_direction: str | Path | None = None, dpi: int = 180,) -> list[str]: #dpi es la resolucion de la imgen -> devuelve una lista con las rutas de las imágenes generadas
+def save_images(df: pl.DataFrame, selected_id: int | None = None, view_mode: str = "person", download_direction: str | Path | None = None, dpi: int = 180,) -> list[str]: 
+    """_summary_
+
+    Genera y guarda las imágenes PNG.
+
+    Args:
+        df (pl.DataFrame): DataFrame con los datos de los estudiantes.
+        selected_id (int | None, optional): ID del estudiante seleccionado. Defaults to None.
+        view_mode (str, optional): Modo de visualización. Defaults to "person".
+        download_direction (str | Path | None, optional): Ruta donde se guardarán las imágenes. Defaults to None.
+        dpi (int, optional): Resolución de las imágenes. Defaults to 180.
+
+    Returns:
+        list[str]: Lista de rutas de los archivos guardados.
+    """
     view_mode = view_mode.lower()
     # Si no es un estudiante individual,no existe un Id seleccionado
     if view_mode != "person":
@@ -97,7 +122,7 @@ def save_images(df: pl.DataFrame, selected_id: int | None = None, view_mode: str
     #DIAGRAMA DE CAJA DE COMPROMISO CONDUCTUAL ->bloxplot
     boxplot_fig_BE = plt.figure(figsize=(8, 6))
     ax_box = boxplot_fig_BE.add_subplot(111)
-    _draw_boxplot_chart_BE(ax=ax_box, df=df)
+    _draw_boxplot_chart(ax=ax_box, df=df, column_name="BE", title="Compromiso Conductual", color="#DFCC38")
     boxplot_path = export_dir / f"{base_name}_compromisoConductual.png"
     boxplot_fig_BE.savefig(boxplot_path, format="png", dpi=dpi, bbox_inches="tight")
     plt.close(boxplot_fig_BE)
@@ -106,7 +131,7 @@ def save_images(df: pl.DataFrame, selected_id: int | None = None, view_mode: str
     #DIAGRAMA DE CAJA DE COMPROMISO EMOCIONAL ->bloxplot
     boxplot_fig_EE = plt.figure(figsize=(8, 6))
     ax_box = boxplot_fig_EE.add_subplot(111)
-    _draw_boxplot_chart_EE(ax=ax_box, df=df)
+    _draw_boxplot_chart(ax=ax_box, df=df, column_name="EE", title="Compromiso Emocional", color="#DFCC38")
     boxplot_path = export_dir / f"{base_name}_compromisoEmocional.png"
     boxplot_fig_EE.savefig(boxplot_path, format="png", dpi=dpi, bbox_inches="tight")
     plt.close(boxplot_fig_EE)
@@ -115,7 +140,7 @@ def save_images(df: pl.DataFrame, selected_id: int | None = None, view_mode: str
     #DIAGRAMA DE CAJA DE COMPROMISO COGNITIVO ->bloxplot
     boxplot_fig_CE = plt.figure(figsize=(8, 6))
     ax_box = boxplot_fig_CE.add_subplot(111)
-    _draw_boxplot_chart_CE(ax=ax_box, df=df)
+    _draw_boxplot_chart(ax=ax_box, df=df, column_name="CE", title="Compromiso Cognitivo", color="#DFCC38")
     boxplot_path = export_dir / f"{base_name}_compromisoCognitivo.png"
     boxplot_fig_CE.savefig(boxplot_path, format="png", dpi=dpi, bbox_inches="tight")
     plt.close(boxplot_fig_CE)
@@ -124,7 +149,7 @@ def save_images(df: pl.DataFrame, selected_id: int | None = None, view_mode: str
     #DIAGRAMA DE CAJA DE MOTIVACIÓN -> Orientación a metas intrínsecas ->bloxplot
     boxplot_fig_Mot = plt.figure(figsize=(8, 6))
     ax_box = boxplot_fig_Mot.add_subplot(111)
-    _draw_boxplot_chart_MotOrientation(ax=ax_box, df=df)
+    _draw_boxplot_chart(ax=ax_box, df=df, column_name="IGO", title="Orientación a metas intrínsecas", color="#DFCC38")
     boxplot_path = export_dir / f"{base_name}_motivacionOrientacionMetasIntrinsecas.png"
     boxplot_fig_Mot.savefig(boxplot_path, format="png", dpi=dpi, bbox_inches="tight")
     plt.close(boxplot_fig_Mot)
@@ -133,7 +158,7 @@ def save_images(df: pl.DataFrame, selected_id: int | None = None, view_mode: str
     #DIAGRAMA DE CAJA DE MOTIVACIÓN -> Autoeficacia ->bloxplot
     boxplot_fig_Mot = plt.figure(figsize=(8, 6))
     ax_box = boxplot_fig_Mot.add_subplot(111)
-    _draw_boxplot_chart_MotSelfEfficacy(ax=ax_box, df=df)
+    _draw_boxplot_chart(ax=ax_box, df=df, column_name="SE", title="Autoeficacia", color="#DFCC38")
     boxplot_path = export_dir / f"{base_name}_motivacionAutoeficacia.png"
     boxplot_fig_Mot.savefig(boxplot_path, format="png", dpi=dpi, bbox_inches="tight")
     plt.close(boxplot_fig_Mot)
@@ -142,7 +167,7 @@ def save_images(df: pl.DataFrame, selected_id: int | None = None, view_mode: str
     #DIAGRAMA DE CAJA DE MOTIVACIÓN -> Valor de la tarea ->bloxplot
     boxplot_fig_Mot = plt.figure(figsize=(8, 6))
     ax_box = boxplot_fig_Mot.add_subplot(111)
-    _draw_boxplot_chart_MotTaskValue(ax=ax_box, df=df)
+    _draw_boxplot_chart(ax=ax_box, df=df, column_name="TV", title="Valor de la tarea", color="#DFCC38")
     boxplot_path = export_dir / f"{base_name}_motivacionValorTarea.png"
     boxplot_fig_Mot.savefig(boxplot_path, format="png", dpi=dpi, bbox_inches="tight")
     plt.close(boxplot_fig_Mot)
@@ -151,54 +176,12 @@ def save_images(df: pl.DataFrame, selected_id: int | None = None, view_mode: str
     #DIAGRAMA DE CAJA DE MOTIVACIÓN -> Ansiedad ante exámenes ->bloxplot
     boxplot_fig_Mot = plt.figure(figsize=(8, 6))
     ax_box = boxplot_fig_Mot.add_subplot(111)
-    _draw_boxplot_chart_MotAnxiety(ax=ax_box, df=df)
+    _draw_boxplot_chart(ax=ax_box, df=df, column_name="TA", title="Ansiedad ante exámenes", color="#DFCC38")
     boxplot_path = export_dir / f"{base_name}_motivacionAnsiedadExamenes.png"
     boxplot_fig_Mot.savefig(boxplot_path, format="png", dpi=dpi, bbox_inches="tight")
     plt.close(boxplot_fig_Mot)
     saved_files.append(str(boxplot_path))
 
-    return saved_files
-
-#Guarda una tupla con el modo de vista, el Id seleccionado y la ruta de descarga -> para luego usarla en la función save_images -> igual obtiene la información del estudiante o del promedio del grupo para luego usarla en las funciones de graficación
-def prompt_download_options(df: pl.DataFrame) -> tuple[str, int | None, str]: #-> Devuelve una tupla con el modo de vista, el Id seleccionado y la ruta de descarga
-    print("\nSeleccione el tipo de perfil del desee descargar los gráficos:")
-    print("1) Promedio del grupo")
-    print("2) Perfil de un estudiante por Id")
-    option = input("Opción [1/2]: ").strip().lower()
-
-    if option in {"1", "promedio"}:
-        view_mode = "average"
-        selected_id = None
-    else:
-        view_mode = "person"
-        selected_id_input = input("Ingrese el Id del estudiante: ").strip()
-        if not selected_id_input:
-            raise ValueError("Debe ingresar un Id válido.")
-        selected_id = int(selected_id_input)
-
-    while True:
-        export_dir = input("Ingrese la ruta donde desea guardar las imágenes (ej. C:\\Users\\TuUsuario\\Desktop\\Graficas) ó da clilc para descargarlas en la ruta actual: ").strip()
-        if not export_dir:
-            export_dir = None
-        
-        try:
-            #Verifica que la ruta sea válida
-            _resolve_download_direction(export_dir)
-            break #si no hubo error sale del ciclo
-        except ValueError as e:
-            print(f"\nError: {e}")
-            print("Vuelva a intentarlo.\n")
-
-    return view_mode, selected_id, export_dir
-
-#con la tupla obtenida de prompt_download_options, llama a save_images para generar y guardar las imágenes -> luego imprime en consola las rutas de las imágenes generadas
-def export_info_from_console(df: pl.DataFrame) -> list[str]:
-    view_mode, selected_id, export_dir = prompt_download_options(df)
-    saved_files = save_images(df=df, selected_id=selected_id, view_mode=view_mode,download_direction=export_dir,)
-
-    print("\nImágenes exportadas correctamente:")
-    for path in saved_files:
-        print(f"- {path}")
     return saved_files
 
 #Para VARK y MI
@@ -274,87 +257,23 @@ def _draw_histogram_chart(ax: plt.Axes, df:pl.DataFrame) -> None:
     ax.set_ylabel("Frecuencia")
     ax.set_title("Cronotipo")
     
+def _draw_boxplot_chart(ax: plt.Axes, df: pl.DataFrame, column_name: str, title: str, color: str) -> None:
+    """
+    Dibuja un diagrama de caja para una columna específica del DataFrame.
 
-#DIBUJAR DIAGRAMA DE CAJA DE COMPROMISO CONDUCTUAL ->BE
-def _draw_boxplot_chart_BE(ax: plt.Axes, df: pl.DataFrame) -> None:
-    engagement_values = df["BE"].to_list()  # Obtiene los valores de compromiso conductual (BE) del DataFrame de todos los estudiates 
-    bp = ax.boxplot(engagement_values, patch_artist=True) #Genera el diagrama de caja con todos los valores del grupo
-    for box in bp["boxes"]:#colorear la caja
-        box.set(facecolor="#DFCC38", alpha=0.7)
-    #configurar etiquetas
-    ax.set_xticks([1])
-    ax.set_xticklabels(["BE"])
-    ax.set_title("Compromiso Conductual")
-    ax.set_ylabel("Puntaje")
-
-#DIBUJAR DIAGRAMA DE CAJA DE COMPROMISO EMOCIONAL -> EE
-def _draw_boxplot_chart_EE(ax: plt.Axes, df: pl.DataFrame) -> None:
-    engagement_values = df["EE"].to_list()
-    bp = ax.boxplot(engagement_values, patch_artist=True)
+    Args:
+        ax (plt.Axes): Ejes de Matplotlib donde se dibujará el diagrama de caja.
+        df (pl.DataFrame): DataFrame que contiene la columna a graficar.
+        column_name (str): Nombre de la columna a graficar.
+        title (str): Título del diagrama de caja.
+        color (str): Color de la caja del diagrama.
+    """
+    values = df[column_name].to_list()
+    bp = ax.boxplot(values, patch_artist=True)
     for box in bp["boxes"]:
-        box.set(facecolor="#DFCC38", alpha=0.7)
+        box.set(facecolor=color, alpha=0.7)
 
     ax.set_xticks([1])
-    ax.set_xticklabels(["EE"])
-    ax.set_title("Compromiso Emocional")
-    ax.set_ylabel("Puntaje")
-
-#DIBUJAR DIAGRAMA DE CAJA DE COMPROMISO COGNITIVO ->CE
-def _draw_boxplot_chart_CE(ax: plt.Axes, df: pl.DataFrame) -> None:
-    engagement_values = df["CE"].to_list()
-    bp = ax.boxplot(engagement_values, patch_artist=True)
-    for box in bp["boxes"]:
-        box.set(facecolor="#DFCC38", alpha=0.7)
-
-    ax.set_xticks([1])
-    ax.set_xticklabels(["CE"])
-    ax.set_title("Compromiso Cognitivo")
-    ax.set_ylabel("Puntaje")
-
-#DIBUJAR DIAGRAMA DE CAJA DE MOTIVACIÓN -> Orientación a metas intrínsecas
-def _draw_boxplot_chart_MotOrientation(ax: plt.Axes, df: pl.DataFrame) -> None:
-    motivation_values = df["EGO"].to_list()
-    bp = ax.boxplot(motivation_values, patch_artist=True)
-    for box in bp["boxes"]:
-        box.set(facecolor="#B1A4FF", alpha=0.7)
-
-    ax.set_xticks([1])
-    ax.set_xticklabels(["Orientacion_metas_intrinsecas"])
-    ax.set_title("Motivación -> Orientacion a metas intrínsecas")
-    ax.set_ylabel("Puntaje")
-
-#DIBUJAR DIAGRAMA DE CAJA DE MOTIVACIÓN -> Autoeficacia
-def _draw_boxplot_chart_MotSelfEfficacy(ax: plt.Axes, df: pl.DataFrame) -> None:
-    motivation_values = df["SE"].to_list()
-    bp = ax.boxplot(motivation_values, patch_artist=True)
-    for box in bp["boxes"]:
-        box.set(facecolor="#B1A4FF", alpha=0.7)
-
-    ax.set_xticks([1])
-    ax.set_xticklabels(["Autoeficacia"])
-    ax.set_title("Motivación -> Autoeficacia")
-    ax.set_ylabel("Puntaje")
-    
-#DIBUJAR DIAGRAMA DE CAJA DE MOTIVACIÓN -> Valor de la tarea
-def _draw_boxplot_chart_MotTaskValue(ax: plt.Axes, df: pl.DataFrame) -> None:
-    motivation_values = df["TV"].to_list()
-    bp = ax.boxplot(motivation_values, patch_artist=True)
-    for box in bp["boxes"]:
-        box.set(facecolor="#B1A4FF", alpha=0.7)
-
-    ax.set_xticks([1])
-    ax.set_xticklabels(["Valor de la tarea"])
-    ax.set_title("Motivación -> Valor de la tarea")
-    ax.set_ylabel("Puntaje")
-
-#DIBUJAR DIAGRAMA DE CAJA DE MOTIVACIÓN -> Ansiedad ante exámenes
-def _draw_boxplot_chart_MotAnxiety(ax: plt.Axes, df: pl.DataFrame) -> None:
-    motivation_values = df["TA"].to_list()
-    bp = ax.boxplot(motivation_values, patch_artist=True)
-    for box in bp["boxes"]:
-        box.set(facecolor="#B1A4FF", alpha=0.7)
-
-    ax.set_xticks([1])
-    ax.set_xticklabels(["Ansiedad ante examenes"])
-    ax.set_title("Motivación -> Ansiedad ante exámenes")
+    ax.set_xticklabels([column_name])
+    ax.set_title(title)
     ax.set_ylabel("Puntaje")

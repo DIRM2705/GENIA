@@ -31,6 +31,7 @@ def _discretize_column(column: pl.Series, n_bins: int) -> pl.Series:
     
     return discretized_series 
 
+@validate_parameters
 def get_grouping_dataframe(df: pl.DataFrame) -> pl.DataFrame:
     """
     Obtiene las características de agrupamiento de los estudiantes
