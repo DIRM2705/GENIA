@@ -10,12 +10,14 @@ def _discretize_column(column: pl.Series, n_bins: int) -> pl.Series:
     """
     Discretize a continuous column into n_bins using KBinsDiscretizer from sklearn.
 
-    Args:
-        column (pl.Series): The continuous column to be discretized.
-        n_bins (int): The number of bins to discretize into.
+    ## Args:
+    
+        - `column (pl.Series)`: The continuous column to be discretized.
+        - `n_bins (int)`: The number of bins to discretize into.
 
-    Returns:
-        pl.Series: A new Polars Series with the discretized values.
+    ## Returns:
+    
+        - `pl.Series`: A new Polars Series with the discretized values.
     """
     # Convertir la columna de Polars a un array de numpy para usar con KBinsDiscretizer
     column_np = column.to_numpy().reshape(-1, 1) #reshape para convertirlo en una matriz de una sola columna, que es lo que espera KBinsDiscretizer
@@ -36,11 +38,13 @@ def get_grouping_dataframe(df: pl.DataFrame) -> pl.DataFrame:
     """
     Obtiene las características de agrupamiento de los estudiantes
 
-    Args:
-        df (pl.DataFrame): DataFrame con las características de los estudiantes
+    ## Args:
+    
+        - `df (pl.DataFrame)`: DataFrame con las características de los estudiantes
 
-    Returns:
-        pl.DataFrame: DataFrame con las características de agrupamiento
+    ## Returns:
+    
+        - `pl.DataFrame`: DataFrame con las características de agrupamiento
     """
     
     #Verifica que el DataFrame tenga las columnas necesarias para la generación del DataFrame de agrupamiento    
@@ -63,8 +67,9 @@ def lazy_from_csv(file_path : Path | str) -> pl.LazyFrame:
     """
     Dado un archivo en formato csv, crea un dataframe de polars creando las columnas necesarias
     
-    Args:
-        file_path (str): La ruta de un archivo csv con las siguientes columnas:
+    ## Args:
+    
+        - `file_path (Path | str)`: La ruta de un archivo csv con las siguientes columnas:
             - "ID": Identificador único del estudiante
             - "Cronotype": El cronotipo del estudiante
             - "AN": Porcentaje de satisfacción de la necesidad de autonomía
@@ -95,8 +100,9 @@ def lazy_from_csv(file_path : Path | str) -> pl.LazyFrame:
             - "VARKReadWrite": Puntaje del estilo de aprendizaje lectura/escritura
             - "VARKKinesthetic": Puntaje del estilo de aprendizaje kinestésico
             
-    Returns:
-        DataFrame: Un dataframe de polars con el formato requerido
+    ## Returns:
+    
+        - `pl.LazyFrame`: Un dataframe de polars con el formato requerido
     """
     
     if isinstance(file_path, str):
@@ -117,15 +123,18 @@ def load_preprocessed_lf(parquet_path : Path | str) -> pl.LazyFrame:
     """
     Cargar un dataframe previamente procesado
 
-    Args:
-        parquet_path (Path): La ruta del archivo parquet que contiene el dataframe previamente procesado
+    ## Args:
+    
+        - `parquet_path (Path | str)`: La ruta del archivo parquet que contiene el dataframe previamente procesado
 
-    Raises:
-        ValueError: Si el archivo no es un archivo parquet
-        FileNotFoundError: Si el archivo no existe
+    ## Raises:
+    
+        - `ValueError`: Si el archivo no es un archivo parquet
+        - `FileNotFoundError`: Si el archivo no existe
 
-    Returns:
-        pl.LazyFrame: El lazyframe de polars cargado desde el archivo parquet
+    ## Returns:
+    
+        - `pl.LazyFrame`: El lazyframe de polars cargado desde el archivo parquet
     """
     if isinstance(parquet_path, str):
         parquet_path = Path(parquet_path)

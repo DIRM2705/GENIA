@@ -7,6 +7,9 @@ from genia_libs.preprocessing.nlp import cargar_modelo_nlp, liberar_modelo_nlp, 
 from genia_libs._internal.validation import validate_parameters
 
 class CurriculumClassifier:
+    """
+    Clasifica los temarios en áreas de conocimiento según el modelo de la Nueva Escuela Mexcana (NEM)
+    """
     _model : SVC
     _vocabulary : TfidfVectorizer
 
@@ -16,6 +19,23 @@ class CurriculumClassifier:
 
     @validate_parameters
     def fit(self, documents : list[Path | str], training_labels : list[str]) -> 'CurriculumClassifier':
+        """
+        Entrena el modelo de clasificación con los documentos y etiquetas de entrenamiento proporcionados.
+
+        ## Args:
+        
+        - `documents (list[Path | str])`: Lista de rutas a los documentos PDF o strings que representan los documentos a utilizar para entrenar el modelo.
+        - `training_labels (list[str])`: Lista de etiquetas de entrenamiento correspondientes a cada documento. Cada etiqueta debe ser una cadena que represente el área de conocimiento según el modelo de la Nueva Escuela Mexicana (NEM).
+
+        ## Raises:
+        
+        - `ValueError`: Si no se proporcionan documentos o si la cantidad de documentos y etiquetas de entrenamiento no coincide.
+        - `ValueError`: Si algún documento no es un archivo PDF válido.
+
+        ## Returns:
+        
+        - `CurriculumClassifier`: La instancia del clasificador entrenada.
+        """
         if documents is None or len(documents) == 0:
             raise ValueError("No se proporcionaron documentos para entrenar el modelo.")
         elif len(documents) != len(training_labels):
@@ -46,6 +66,21 @@ class CurriculumClassifier:
 
     @validate_parameters
     def predict(self, documents : list[Path | str]) -> np.ndarray:
+        """
+        Realiza la predicción de las etiquetas de los documentos proporcionados.
+
+        ## Parameters:
+        
+        - `documents (list[Path | str])`: Lista de rutas a los documentos PDF o strings que representan los documentos a utilizar para predecir.
+
+        ## Returns:
+        
+        - `np.ndarray`: Array con las etiquetas predichas para cada documento.
+
+        ## Raises:
+        
+        - `ValueError`: Si no se proporcionan documentos o si algún documento no es un archivo PDF válido.
+        """
         if not documents:
             raise ValueError("No se proporcionaron documentos para predecir.")
                 
@@ -65,6 +100,19 @@ class CurriculumClassifier:
     
     @validate_parameters
     def decision_function(self, documents: list[Path | str]) -> np.ndarray:
+        """
+        Devuelve la función de decisión utilizada para clasificar
+
+        ## Args:
+        - `documents (list[Path  |  str])`: Lista de rutas a los documentos PDF o strings que representan los documentos a utilizar para calcular la función de decisión.
+
+        ## Raises:
+        
+        - `ValueError`: Si no se proporcionan documentos o si algún documento no es un archivo PDF válido.
+
+        ## Returns:
+        - `np.ndarray`: Array con los valores de la función de decisión para cada documento.
+        """
         if not documents:
             raise ValueError("No se proporcionaron documentos para predecir.")
                 

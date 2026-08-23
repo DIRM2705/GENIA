@@ -7,40 +7,42 @@ def extract_characteristics(students : pl.LazyFrame) -> pl.DataFrame:
     """
     Dado un lazyframe, crea un dataframe de polars creando las columnas necesarias
     
-    Args:
-        students (pl.LazyFrame): Un lazyframe de polars con las siguientes columnas:
-            - "Id": Identificador único del estudiante
-            - "Cronotype": El cronotipo del estudiante
-            - "AN": Porcentaje de satisfacción de la necesidad de autonomía
-            - "RN": Porcentaje de satisfacción de la necesidad de relaciones
-            - "CN": Porcentaje de satisfacción de la necesidad de competencia
-            - "BE": Porcentaje de compromiso conductual
-            - "EE": Porcentaje de compromiso emocional
-            - "CE": Porcentaje de compromiso cognitivo
-            - "HS": Porcentaje de búsqueda de ayuda
-            - "PL": Porcentaje de aprendizaje por pares
-            - "TM": Porcentaje de manejo del tiempo
-            - "RH": Porcentaje de repetición
-            - "EL": Porcentaje de elaboración
-            - "OR": Porcentaje de organización
-            - "CP": Porcentaje de pensamiento crítico
-            - "MC": Porcentaje de metacognición
-            - "MIKin": Puntaje de la inteligencia múltiple cinestésica
-            - "MIExis": Puntaje de la inteligencia múltiple existencial
-            - "MIInter": Puntaje de la inteligencia múltiple interpersonal
-            - "MIIntra": Puntaje de la inteligencia múltiple intrapersonal
-            - "MILog": Puntaje de la inteligencia múltiple lógico-matemática
-            - "MIMus": Puntaje de la inteligencia múltiple musical
-            - "MINat": Puntaje de la inteligencia múltiple naturalista
-            - "MIVer": Puntaje de la inteligencia múltiple verbal
-            - "MIVis": Puntaje de la inteligencia múltiple visual
-            - "VARKVisual": Puntaje del estilo de aprendizaje visual
-            - "VARKAural": Puntaje del estilo de aprendizaje auditivo
-            - "VARKReadWrite": Puntaje del estilo de aprendizaje lectura/escritura
-            - "VARKKinesthetic": Puntaje del estilo de aprendizaje kinestésico
+    ## Args:
+    
+    - `students (pl.LazyFrame)`: Un lazyframe de polars con las siguientes columnas:
+        - `Id`: Identificador único del estudiante
+        - `Cronotype`: El cronotipo del estudiante
+        - `AN`: Porcentaje de satisfacción de la necesidad de autonomía
+        - `RN`: Porcentaje de satisfacción de la necesidad de relaciones
+        - `CN`: Porcentaje de satisfacción de la necesidad de competencia
+        - `BE`: Porcentaje de compromiso conductual
+        - `EE`: Porcentaje de compromiso emocional
+        - `CE`: Porcentaje de compromiso cognitivo
+        - `HS`: Porcentaje de búsqueda de ayuda
+        - `PL`: Porcentaje de aprendizaje por pares
+        - `TM`: Porcentaje de manejo del tiempo
+        - `RH`: Porcentaje de repetición
+        - `EL`: Porcentaje de elaboración
+        - `OR`: Porcentaje de organización
+        - `CP`: Porcentaje de pensamiento crítico
+        - `MC`: Porcentaje de metacognición
+        - `MIKin`: Puntaje de la inteligencia múltiple cinestésica
+        - `MIExis`: Puntaje de la inteligencia múltiple existencial
+        - `MIInter`: Puntaje de la inteligencia múltiple interpersonal
+        - `MIIntra`: Puntaje de la inteligencia múltiple intrapersonal
+        - `MILog`: Puntaje de la inteligencia múltiple lógico-matemática
+        - `MIMus`: Puntaje de la inteligencia múltiple musical
+        - `MINat`: Puntaje de la inteligencia múltiple naturalista
+        - `MIVer`: Puntaje de la inteligencia múltiple verbal
+        - `MIVis`: Puntaje de la inteligencia múltiple visual
+        - `VARKVisual`: Puntaje del estilo de aprendizaje visual
+        - `VARKAural`: Puntaje del estilo de aprendizaje auditivo
+        - `VARKReadWrite`: Puntaje del estilo de aprendizaje lectura/escritura
+        - `VARKKinesthetic`: Puntaje del estilo de aprendizaje kinestésico
             
-    Returns:
-        DataFrame: Un dataframe de polars con el formato requerido
+    ## Returns:
+    
+    - `pl.DataFrame`: Un dataframe de polars con el formato requerido
     """
     
     validate_columns(students, REQUIRED_INPUT_COLUMNS) #Verifica que el DataFrame tenga las columnas necesarias para el preprocesamiento
@@ -61,18 +63,20 @@ def _grade_motivations(students : pl.LazyFrame) -> pl.LazyFrame:
     Dado el porcentaje de satisfacción de cada necesidad genera un dataframe 
     con las dimensiones de motivación del MSLQ
     
-    Args:
-        student (pl.LazyFrame): Un LazyFrame de polars con al menos las siguientes columnas:
-            - "Id": Identificador único del estudiante
-            - "AN": Porcentaje de satisfacción de la necesidad de autonomía
-            - "RN": Porcentaje de satisfacción de la necesidad de relaciones
-            - "CN": Porcentaje de satisfacción de la necesidad de competencia
-            - "BE": Porcentaje de compromiso conductual
-            - "EE": Porcentaje de compromiso emocional
-            - "CE": Porcentaje de compromiso cognitivo
+    ## Args:
+    
+    - `students (pl.LazyFrame)`: Un LazyFrame de polars con al menos las siguientes columnas:
+        - `Id`: Identificador único del estudiante
+        - `AN`: Porcentaje de satisfacción de la necesidad de autonomía
+        - `RN`: Porcentaje de satisfacción de la necesidad de relaciones
+        - `CN`: Porcentaje de satisfacción de la necesidad de competencia
+        - `BE`: Porcentaje de compromiso conductual
+        - `EE`: Porcentaje de compromiso emocional
+        - `CE`: Porcentaje de compromiso cognitivo
             
-    Returns:
-        LazyFrame: El LazyFrame con las dimensiones de motivación del MSLQ añadidas como nuevas columnas
+    ## Returns:
+    
+    - `pl.LazyFrame`: El LazyFrame con las dimensiones de motivación del MSLQ añadidas como nuevas columnas
     """
     
     #Dimensiones de Motivación evaluadas por el MSLQ
@@ -91,22 +95,23 @@ def _grade_IM_scores(mi_df: pl.LazyFrame) -> pl.LazyFrame:
     Dado un LazyFrame con el puntaje asignado a cada inteligencia múltiple genera un dataframe
     que rankea cada inteligencia
     
-    Args:
-        students (pl.LazyFrame): LazyFrame con el puntaje de cada inteligencia múltiple,
-        con al menos las siguientes columnas:
-            - "Id": Identificador único del estudiante
-            - "MIKin": Puntaje de la inteligencia cinestésica
-            - "MIExis": Puntaje de la inteligencia existencial
-            - "MIInter": Puntaje de la inteligencia interpersonal
-            - "MIIntra": Puntaje de la inteligencia intrapersonal
-            - "MILog": Puntaje de la inteligencia lógico-matemática
-            - "MIMus": Puntaje de la inteligencia musical
-            - "MINat": Puntaje de la inteligencia naturalista
-            - "MIVer": Puntaje de la inteligencia verbal
-            - "MIVis": Puntaje de la inteligencia visual
+    ## Args:
+    
+    - `mi_df (pl.LazyFrame)`: LazyFrame con el puntaje de cada inteligencia múltiple, con al menos las siguientes columnas:
+        - "Id": Identificador único del estudiante
+        - "MIKin": Puntaje de la inteligencia cinestésica
+        - "MIExis": Puntaje de la inteligencia existencial
+        - "MIInter": Puntaje de la inteligencia interpersonal
+        - "MIIntra": Puntaje de la inteligencia intrapersonal
+        - "MILog": Puntaje de la inteligencia lógico-matemática
+        - "MIMus": Puntaje de la inteligencia musical
+        - "MINat": Puntaje de la inteligencia naturalista
+        - "MIVer": Puntaje de la inteligencia verbal
+        - "MIVis": Puntaje de la inteligencia visual
         
-    Returns:
-        pl.LazyFrame: LazyFrame que le asigna una posición a cada inteligencia
+    ## Returns:
+    
+    - `pl.LazyFrame`: LazyFrame que le asigna una posición a cada inteligencia
     """
     
     # Crear RANKING por estudiante (1 = mayor puntaje)
@@ -152,17 +157,18 @@ def _grade_VARK_scores(vark_df: pl.LazyFrame) -> pl.LazyFrame:
     Dado un lazyframe con los puntajes asignados a cada estilo de aprendizaje añade al lazyframe
     la columna de rankeo
     
-    Args:
-        vark_df (pl.LazyFrame): Lazyframe con el puntaje de los estilos de aprendizaje,
-        con al menos las siguientes columnas:
-            - "Id": Identificador único del estudiante
-            - "VARKVisual": Puntaje del estilo de aprendizaje visual
-            - "VARKAural": Puntaje del estilo de aprendizaje auditivo
-            - "VARKReadWrite": Puntaje del estilo de aprendizaje lectura/escritura
-            - "VARKKinesthetic": Puntaje del estilo de aprendizaje kinestésico
+    ## Args:
+    
+    - `vark_df (pl.LazyFrame)`: Lazyframe con el puntaje de los estilos de aprendizaje, con al menos las siguientes columnas:
+        - "Id": Identificador único del estudiante
+        - "VARKVisual": Puntaje del estilo de aprendizaje visual
+        - "VARKAural": Puntaje del estilo de aprendizaje auditivo
+        - "VARKReadWrite": Puntaje del estilo de aprendizaje lectura/escritura
+        - "VARKKinesthetic": Puntaje del estilo de aprendizaje kinestésico
         
-    Returns:
-        pl.LazyFrame: Lazyframe con la columna de rankeo añadida
+    ## Returns:
+    
+    - `pl.LazyFrame`: Lazyframe con la columna de rankeo añadida
     """
     
     vark_df = vark_df.with_columns( 

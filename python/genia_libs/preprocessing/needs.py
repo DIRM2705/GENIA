@@ -5,13 +5,17 @@ import numpy as np
 import polars as pl
 
 def _needs_analysis(lf: pl.LazyFrame, n_components: int = 3):
-    """_summary_
+    """
     Genera un análisis de necesidades de los estudiantes en base a sus preferencias de aprendizaje y características personales. Se utiliza PCA para reducir la dimensionalidad de los datos y determinar las variables más importantes que afectan las necesidades de los estudiantes.
-    Args:
-        lf (pl.DataFrame): LazyFrame con los integrantes del grupo
-        n_components (int, optional): Número de variables más importantes a tomar. Defaults to 3.
-    Returns:
-        list[tuple[str, float]]: Lista de tuplas con el nombre de la variable y su importancia
+    
+    ## Args:
+    
+    - `lf (pl.LazyFrame)`: LazyFrame con los integrantes del grupo
+    - `n_components (int)`: Número de variables más importantes a tomar. Defaults to 3.
+        
+    ## Returns:
+    
+    - `list[tuple[str, float]]`: Lista de tuplas con el nombre de la variable y su importancia
     """
     
     validate_columns(lf, REQUIRED_OUTPUT_COLUMNS)
@@ -32,15 +36,21 @@ def _needs_analysis(lf: pl.LazyFrame, n_components: int = 3):
 
 @validate_parameters
 def make_faculty_recommendations(lf: pl.LazyFrame, n_components: int = 3) -> list[str]:
-    """_summary_
+    """
     Genera recomendaciones para el profesorado en base a las necesidades de los estudiantes. Se utiliza PCA para reducir la dimensionalidad de los datos y determinar las variables más importantes que afectan las necesidades de los estudiantes.
-    Args:
-        lf (pl.DataFrame): LazyFrame con los integrantes del grupo
-        n_components (int, optional): Número de variables más importantes a tomar. Defaults to 3.
-    Returns:
-        list[str]: Lista de recomendaciones para el profesorado
-    Raises:
-        ValueError: Si no se encuentra una recomendación para alguna de las necesidades identificadas
+    
+    ## Args:
+    
+    - `lf (pl.LazyFrame)`: LazyFrame con los integrantes del grupo 
+    - `n_components (int)`: Número de variables más importantes a tomar. Defaults to 3.
+        
+    ## Returns:
+    
+    - `list[str]`: Lista de recomendaciones para el profesorado
+        
+    ## Raises:
+    
+    - `ValueError`: Si no se encuentra una recomendación para alguna de las necesidades identificadas
     """
     
     needs = _needs_analysis(lf, n_components)

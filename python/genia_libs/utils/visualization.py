@@ -15,16 +15,18 @@ default_directory = Path(".") # "." representa el directorio actual -> por si no
 
 @validate_parameters
 def info_graphics_fromDataframe(df: pl.DataFrame, selected_id: int | None = None, view_mode: str = "person",) -> dict[str, Any]:
-    """_summary_
+    """
     Construye un diccionario con la información del estudiante o del promedio del grupo, para luego usarlo en las funciones de graficación -> pero solo para las gráficas de radar que son las que necesitan datos previamente preparados (vectores)
     
-    Args:
-        df (pl.DataFrame): DataFrame con los datos de los estudiantes
-        selected_id (int | None, optional): Id del estudiante seleccionado. Defaults to None.
-        view_mode (str, optional): Modo de vista. Puede ser "person" para un estudiante específico o "average" para el promedio del grupo. Defaults to "person".
+    ## Args:
+    
+        - `df (pl.DataFrame)`: DataFrame con los datos de los estudiantes
+        - `selected_id (int | None)`: Id del estudiante seleccionado. Defaults to None.
+        - `view_mode (str)`: Modo de vista. Puede ser "person" para un estudiante específico o "average" para el promedio del grupo. Defaults to "person".
         
-    Returns:
-        dict[str, Any]: Diccionario con la información del estudiante o del promedio del grupo, incluyendo los vectores de valores para las gráficas de radar y las etiquetas correspondientes.
+    ## Returns:
+    
+        - `dict[str, Any]`: Diccionario con la información del estudiante o del promedio del grupo, incluyendo los vectores de valores para las gráficas de radar y las etiquetas correspondientes.
     """
     ids_availables = [int(value) for value in df["Id"].to_list() if value is not None]
     
@@ -63,19 +65,20 @@ def _resolve_download_direction(download_direction: str | Path | None) -> Path:
 
 ##Genera y guarda las imágenes PNG
 def save_images(df: pl.DataFrame, selected_id: int | None = None, view_mode: str = "person", download_direction: str | Path | None = None, dpi: int = 180,) -> list[str]: 
-    """_summary_
-
+    """
     Genera y guarda las imágenes PNG.
 
-    Args:
-        df (pl.DataFrame): DataFrame con los datos de los estudiantes.
-        selected_id (int | None, optional): ID del estudiante seleccionado. Defaults to None.
-        view_mode (str, optional): Modo de visualización. Defaults to "person".
-        download_direction (str | Path | None, optional): Ruta donde se guardarán las imágenes. Defaults to None.
-        dpi (int, optional): Resolución de las imágenes. Defaults to 180.
+    ## Args:
+    
+        - `df (pl.DataFrame)`: DataFrame con los datos de los estudiantes.
+        - `selected_id (int | None)`: ID del estudiante seleccionado. Defaults to None.
+        - `view_mode (str)`: Modo de visualización. Defaults to "person".
+        - `download_direction (str | Path | None)`: Ruta donde se guardarán las imágenes. Defaults to None.
+        - `dpi (int)`: Resolución de las imágenes. Defaults to 180.
 
-    Returns:
-        list[str]: Lista de rutas de los archivos guardados.
+    ## Returns:
+    
+        - `list[str]`: Lista de rutas de los archivos guardados.
     """
     view_mode = view_mode.lower()
     # Si no es un estudiante individual,no existe un Id seleccionado
@@ -261,12 +264,13 @@ def _draw_boxplot_chart(ax: plt.Axes, df: pl.DataFrame, column_name: str, title:
     """
     Dibuja un diagrama de caja para una columna específica del DataFrame.
 
-    Args:
-        ax (plt.Axes): Ejes de Matplotlib donde se dibujará el diagrama de caja.
-        df (pl.DataFrame): DataFrame que contiene la columna a graficar.
-        column_name (str): Nombre de la columna a graficar.
-        title (str): Título del diagrama de caja.
-        color (str): Color de la caja del diagrama.
+    ## Args:
+    
+        - `ax (plt.Axes)`: Ejes de Matplotlib donde se dibujará el diagrama de caja.
+        - `df (pl.DataFrame)`: DataFrame que contiene la columna a graficar.
+        - `column_name (str)`: Nombre de la columna a graficar.
+        - `title (str)`: Título del diagrama de caja.
+        - `color (str)`: Color de la caja del diagrama.
     """
     values = df[column_name].to_list()
     bp = ax.boxplot(values, patch_artist=True)

@@ -9,11 +9,11 @@ def validate_columns(lf: pl.LazyFrame | pl.DataFrame, required_columns: list) ->
     """
     Verifica que el DataFrame tenga las columnas necesarias para el preprocesamiento
     
-    Args:
-        lf (pl.LazyFrame | pl.DataFrame): DataFrame a verificar
+    ## Args:
+        - `lf (pl.LazyFrame | pl.DataFrame)`: DataFrame a verificar
         
-    Raises:
-        ValueError: Si falta alguna columna necesaria
+    ## Raises:
+        - `ValueError`: Si falta alguna columna necesaria
     """
     
     if isinstance(lf, pl.DataFrame):
@@ -28,8 +28,8 @@ def _is_parametrized_generic(type_hint) -> bool:
     """_summary_
     Check wether the type hint is a prameterized generic type (e.g. list[int], dict[str, int], etc.)
 
-    Args:
-        type_hint (_type_): The type hint to check
+    ## Args:
+        - `type_hint (_type_)`: The type hint to check
     """
     
     origin = get_origin(type_hint)
@@ -40,12 +40,12 @@ def _is_instance(obj, type_hint) -> bool:
     """_summary_
     Check wether the object is an instance of the type hint, including parameterized generic types (e.g. list[int], dict[str, int], etc.)
 
-    Args:
-        obj (_type_): The object to check
+    ## Args:
+        - `obj (_type_)`: The object to check
         type_hint (_type_): The type hint to check against
         
-    Raises:
-        TypeError: If the type hint is not a valid type hint
+    ## Raises:
+        - `TypeError`: If the type hint is not a valid type hint
     """
     
     if _is_parametrized_generic(type_hint):

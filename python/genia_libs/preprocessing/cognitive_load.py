@@ -11,15 +11,15 @@ class Subject:
     _nem_area : str
     
     def __init__(self, name: str, num_units : int, avg_topics_per_unit : float, area : str):
-        """_summary_
+        """
         Initializes a Subject instance.
 
-        Parameters:
-        name (str): The name of the subject.
-        num_units (int): The number of units in the subject.
-        avg_topics_per_unit (float): The average number of topics per unit.
-        area (str): The area within the following [logical thinking, humanities, social sciences, comunication]
-        to which the subject belongs.
+        ## Args:
+        
+        - `name (str)`: The name of the subject.
+        - `num_units (int)`: The number of units in the subject.
+        - `avg_topics_per_unit (float)`: The average number of topics per unit.
+        - `area (str)`: The area within the following [logical thinking, humanities, social sciences, comunication] to which the subject belongs.
         """
         self._name = name
         self._interacting_elements = num_units * avg_topics_per_unit
@@ -50,17 +50,18 @@ class Subject:
 
 @validate_parameters
 def get_cognitive_load_for_subjects(students : pl.LazyFrame, subjects : list[Subject]) -> pl.DataFrame:
-    """_summary_
+    """
     Estimates cognitive load for each student in the LazyFrame
     using the subjects in the dictionary.
 
-    Parameters:
-    students (pd.LazyFrame): The LazyFrame containing students top Multiple Intelligences
-    subjects (list[Subject]): A list of Subject instances.
+    ## Args:
     
+    - `students (pd.LazyFrame)`: The LazyFrame containing students top Multiple Intelligences
+    - `subjects (list[Subject])`: A list of Subject instances.
 
-    Returns:
-    pd.DataFrame: DataFrame with estimated cognitive load features.
+    ## Returns:
+    
+    - `pl.DataFrame`: DataFrame with estimated cognitive load features.
     """
     students = students.select("Id", "MI")
     for subject in subjects:
