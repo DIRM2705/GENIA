@@ -9,7 +9,9 @@ Para instalar y utilizar las librerías genia, puedes mirar la [documentación o
 ¡Estamos abiertos a contribuciones de la comunidad! Si te gustaría aportar a este proyecto, por favor sigue las pautas descritas en nuestra [guía de contribución](https://app.notion.com/p/3aa880deb196808d9327cd1ed12a7f12?v=3aa880deb19680b491c2000c09988d38&source=copy_link). Esto incluye información sobre la dirección y arquitectura del proyecto, cómo reportar problemas y enviar pull requests.
 
 ## Reconocimientos
+
 Este proyecto utiliza bibliotecas de código abierto de terceros bajo varias licencias, como se detalla a continuación.
+
 ---
 
 ### MIT License
