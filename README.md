@@ -1,21 +1,20 @@
 # GENIA
 
-## Overview
+## Descripción
 
-## Installation
-Currently, GENIA is in the early stages of development and is not yet available for public installation. We are actively working on improving the software and will provide installation instructions once it is ready for release.
+## Instalación y uso
+Para instalar y utilizar las librerías genia, puedes mirar la [documentación oficial](https://pollen-war-708.notion.site/API-p-blica-de-GENIA-3c5880deb196805ea213f588d7bda611?source=copy_link)
 
-## Contributing
-We welcome contributions from the community! If you would like to contribute to this project, please follow the guidelines outlined in our [contribution guide](https://app.notion.com/p/3aa880deb196808d9327cd1ed12a7f12?v=3aa880deb19680b491c2000c09988d38&source=copy_link). This includes information on project's direction and architecture, reporting issues and submitting pull requests.
+## Contribuciones
+¡Estamos abiertos a contribuciones de la comunidad! Si te gustaría aportar a este proyecto, por favor sigue las pautas descritas en nuestra [guía de contribución](https://app.notion.com/p/3aa880deb196808d9327cd1ed12a7f12?v=3aa880deb19680b491c2000c09988d38&source=copy_link). Esto incluye información sobre la dirección y arquitectura del proyecto, cómo reportar problemas y enviar pull requests.
 
-## Acknowledgements
-This project uses third-party open source libraries under various licenses as detailed below.
-
+## Reconocimientos
+Este proyecto utiliza bibliotecas de código abierto de terceros bajo varias licencias, como se detalla a continuación.
 ---
 
 ### MIT License
 
-The following dependencies are used under the terms of the MIT License:
+Las siguientes dependencias se utilizan bajo los términos de la Licencia MIT:
 
 - polars (Python: 1.40.1, 1.35.2; Rust: 0.52.0)
 - pyo3 (0.26.0)
@@ -26,13 +25,13 @@ The following dependencies are used under the terms of the MIT License:
 - rayon (1.12.0)
 - spacy (3.8.14)
 
-You may find the full text of the MIT License [here](https://opensource.org/license/mit/).
+Encontrarás el texto completo de la Licencia MIT [aquí](https://opensource.org/license/mit/).
 
 ---
 
 ### BSD 3-Clause License
 
-The following dependencies are used under the terms of the BSD 3-Clause License:
+Las siguientes dependencias se utilizan bajo los términos de la Licencia BSD 3-Clause:
 
 - scikit-learn (1.8.0)
 - numpy (2.3.5)
@@ -41,9 +40,10 @@ The following dependencies are used under the terms of the BSD 3-Clause License:
 - python-dotenv (1.2.2)
 - pypdfium2 (5.12.1)
 
-You may find the full text of the BSD 3-Clause License [here](https://opensource.org/license/bsd-3-clause/).
+Encontrarás el texto completo de la Licencia BSD 3-Clause [aquí](https://opensource.org/license/bsd-3-clause/).
 
 ---
 
 ## Legal
-This project is licensed under the MPL 2.0 license. By using, contributing or forking this project, you agree to the terms of the MPL 2.0 license. For more information, please refer to the [LICENSE](LICENSE.md) file.
+
+Este proyecto está licenciado bajo la licencia MPL 2.0. Al usar, contribuir o bifurcar este proyecto, aceptas los términos de la licencia MPL 2.0. Para obtener más información, consulta el archivo [LICENSE](LICENSE.md).

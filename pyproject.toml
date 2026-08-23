@@ -5,7 +5,7 @@ build-backend = "maturin"
 
 [project]
 name = "genia"
-version = "0.1.0"
+version = "0.1.1"
 description = "Libs to analyize and provide insights for learning environments enhancing"
 readme = "README.md"
 requires-python = ">=3.13"
