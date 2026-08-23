@@ -32,7 +32,7 @@ def _synthetic_data_experiment():
     - Number of groups to form: 16
     """
 
-    ga = GeneticAlgorithm(30, 300000, 7, 2, 0.95, None) 
+    ga = GeneticAlgorithm(30, 300000, 7, 2, 0.95, EXPERIMENT_FILE_PATH) #Initial population, max generations, spins per generation, elitism, crossover probability, experiment file path
     ga.show_config()
     for test in range(10):
         print(f"Running test {test+1}/10")
