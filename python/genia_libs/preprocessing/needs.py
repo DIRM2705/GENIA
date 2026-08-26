@@ -21,11 +21,11 @@ def _needs_analysis(lf: pl.LazyFrame, n_components: int = 3):
     validate_columns(lf, REQUIRED_OUTPUT_COLUMNS)
     
     lf = lf.select(
-        pl.exclude("VARK", "MI", "Chronotype", "AN", "RN", "CN")
+        pl.exclude("Id", "VARK", "MI", "Chronotype", "AN", "RN", "CN")
     )
     
     pca = PCA(n_components = n_components)
-    pca.fit(lf) #obtiene las cargas de los componentes principales
+    pca.fit(lf.collect()) #obtiene las cargas de los componentes principales
     pca.components_.T
     pesos = pca.explained_variance_ratio_ #Obtiene la varianza explicada por cada componente principal
     
